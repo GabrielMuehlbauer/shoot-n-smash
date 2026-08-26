@@ -31,7 +31,11 @@ WaveSystem -> EnemySystem <------------ CollisionSystem
 
 ## Cliente
 
-- `GameApp` será responsável pela composição e pelo ciclo de vida da aplicação.
+- `RenderContext` já concentra `Scene`, `PerspectiveCamera`, `WebGLRenderer`,
+  luzes, chão, resize e descarte dos recursos gráficos.
+- `GameApp` já controla o único `setAnimationLoop`, a composição e o ciclo de
+  vida da cena, limita o delta entre frames e pausa atualizações quando a aba
+  está oculta.
 - `GameSession` coordenará a ordem de atualização durante uma partida.
 - Sistemas de gameplay não dependerão diretamente do mouse ou dos controles XR.
 - `DesktopInput` e `XRInput` produzirão intenções comuns de mirar, tensionar e

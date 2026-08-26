@@ -16,7 +16,7 @@ Resposta sem banco configurado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 1,
+  "phase": 2,
   "database": {
     "status": "not-configured"
   }
@@ -29,7 +29,7 @@ Resposta com banco conectado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 1,
+  "phase": 2,
   "database": {
     "status": "connected"
   }
@@ -43,7 +43,7 @@ Resposta quando existe configuração, mas o banco está indisponível —
 {
   "status": "degraded",
   "service": "shoot-n-smash-api",
-  "phase": 1,
+  "phase": 2,
   "database": {
     "status": "unavailable"
   }

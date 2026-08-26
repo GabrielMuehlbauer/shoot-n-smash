@@ -4,8 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 1 — estrutura inicial**. A fundação web e a API estão
-> executáveis; a cena Three.js começa na Fase 2.
+> Status atual: **Fase 2 — cena base Three.js**. A tela inicial abre uma cena 3D
+> responsiva com câmera, iluminação, chão e game loop.
 
 ## Equipe
 
@@ -27,7 +27,7 @@ para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
 - Node.js 22.12 ou superior;
 - npm 10 ou superior;
-- MySQL será necessário a partir da fase de persistência. Na Fase 1 ele é
+- MySQL será necessário a partir da fase de persistência. Na fase atual ele é
   opcional.
 
 ## Instalação
@@ -38,13 +38,14 @@ Na raiz do projeto:
 npm install
 ```
 
-Crie a configuração local a partir do exemplo:
+Crie a configuração local a partir do exemplo, sem sobrescrever um arquivo que
+já exista:
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 1.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 2.
 
 ## Execução em desenvolvimento
 
@@ -56,12 +57,16 @@ npm run dev
 
 URLs locais:
 
-- jogo: [http://localhost:5173](http://localhost:5173);
+- jogo: [http://127.0.0.1:5173](http://127.0.0.1:5173);
 - API: [http://127.0.0.1:3000](http://127.0.0.1:3000);
 - diagnóstico: [http://127.0.0.1:3000/api/health](http://127.0.0.1:3000/api/health).
 
 Na tela inicial, use **Verificar API** para validar a comunicação entre o cliente
-e o servidor.
+e o servidor. Use **Abrir cena 3D** para entrar no protótipo da Fase 2 e
+**Voltar ao menu** ou `Esc` para sair.
+
+Para instruções detalhadas e o resultado esperado, consulte o
+[guia da Fase 2](docs/phases/phase-02-cena-threejs.md).
 
 ## Build e execução de produção
 
@@ -89,6 +94,9 @@ Também é possível executar somente os testes:
 npm test
 ```
 
+O procedimento visual completo está no
+[guia de teste da Fase 2](docs/phases/phase-02-cena-threejs.md#como-testar).
+
 ## Scripts
 
 | Comando | Finalidade |
@@ -112,7 +120,13 @@ DATABASE_URL=mysql://usuario:senha@localhost:3306/shoot_n_smash
 O `.env` não deve ser versionado. A aplicação não imprime senha ou URL do banco
 nos diagnósticos públicos.
 
-## Controles planejados
+## Controles atuais da demonstração
+
+- **Abrir cena 3D**: inicia a cena e o game loop;
+- **Voltar ao menu** ou `Esc`: encerra o loop, libera os recursos e retorna à
+  tela inicial.
+
+## Controles de gameplay planejados
 
 ### Navegador
 
@@ -126,7 +140,7 @@ nos diagnósticos públicos.
 - mão não dominante: segurar o estilingue;
 - mão dominante: puxar e soltar o projétil.
 
-Os controles ainda não estão ativos na Fase 1.
+Os controles de gameplay ainda não estão ativos na Fase 2.
 
 ## Modo VR
 
@@ -138,9 +152,13 @@ Testes no Meta Quest 3 exigirão uma URL HTTPS acessível pelo headset.
 
 ```text
 shoot-n-smash/
-├── client/       # interface web e futuro jogo Three.js
+├── client/
+│   └── src/
+│       ├── config/  # valores do renderer e da câmera
+│       ├── core/    # GameApp e RenderContext
+│       └── utils/   # resize e cálculos testáveis
 ├── server/       # API Express e futura integração MySQL
-├── docs/         # arquitetura, decisões e instruções técnicas
+├── docs/         # arquitetura, fases e instruções técnicas
 ├── .env.example
 └── package.json  # scripts e workspaces
 ```
@@ -154,8 +172,8 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Limitações conhecidas
 
-- a cena 3D ainda não foi implementada;
-- o botão **Iniciar jogo** está desabilitado;
+- a cena utiliza apenas chão, grade e formas provisórias;
+- a câmera ainda é fixa e não permite observação em 360°;
 - não existem inimigos, projéteis ou ondas nesta fase;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
@@ -163,8 +181,8 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Próxima etapa
 
-Fase 2: criar `Scene`, `PerspectiveCamera`, `WebGLRenderer`, iluminação, chão,
-resize e game loop usando formas simples.
+Fase 3: transformar a cena estrutural em um protótipo leve do cenário de neve,
+com terreno, gelo, pedras, montanhas provisórias e atmosfera fria.
 
 Consulte também:
 
@@ -173,3 +191,4 @@ Consulte também:
 - [API](docs/api.md)
 - [Banco de dados](docs/database.md)
 - [Estratégia de testes](docs/testing.md)
+- [Guia da Fase 2](docs/phases/phase-02-cena-threejs.md)

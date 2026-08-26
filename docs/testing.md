@@ -43,16 +43,41 @@ npm run build
 npm run check
 ```
 
-### Teste manual
+### Teste manual de regressão da base
 
 1. Execute `npm run dev`.
 2. Abra `http://localhost:5173`.
 3. Confirme título, cenário e os quatro integrantes.
-4. Confirme que **Iniciar jogo** está desabilitado nesta etapa.
-5. Pressione **Verificar API**.
-6. Confirme a mensagem “API online”.
-7. Acesse `http://127.0.0.1:3000/api/health`.
-8. Sem `DATABASE_URL`, confirme `database.status = not-configured`.
+4. Pressione **Verificar API**.
+5. Confirme a mensagem “API online”.
+6. Acesse `http://127.0.0.1:3000/api/health`.
+7. Sem `DATABASE_URL`, confirme `database.status = not-configured`.
+
+## Fase 2
+
+### Cobertura automatizada adicionada
+
+- dimensões e proporção do viewport;
+- limite do pixel ratio;
+- atualização coordenada de câmera e renderer;
+- idempotência de `GameApp.start()`, `stop()` e `dispose()`;
+- limite do delta após pausas longas;
+- suspensão das atualizações quando a aba está oculta;
+- descarte de observer, listener, geometrias, materiais, renderer e canvas;
+- limpeza transacional quando a inicialização da cena falha parcialmente.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev`.
+2. Abra `http://127.0.0.1:5173/`.
+3. Pressione **Abrir cena 3D**.
+4. Confirme chão, grade, iluminação e objeto azul girando.
+5. Redimensione a janela e confirme que a imagem não fica deformada.
+6. Saia com `Esc`, entre novamente e confirme que existe somente um canvas.
+7. Use **Verificar API** e confirme que a Fase 1 continua funcionando.
+
+O roteiro detalhado, os resultados esperados e a solução de problemas estão em
+[Fase 2 — Cena base Three.js](phases/phase-02-cena-threejs.md).
 
 ## Estratégia futura
 

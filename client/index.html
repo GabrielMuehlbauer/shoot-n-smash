@@ -17,20 +17,21 @@
       <span></span><span></span><span></span><span></span><span></span>
     </div>
 
-    <main id="main-content" class="shell">
+    <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 1 concluída</div>
+        <div class="phase-badge"><span></span> Fase 2 concluída</div>
         <p class="eyebrow">Ilha de Gelo · Protótipo WebXR</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
           Prepare o estilingue. Monstros de gelo estão cercando a arena em 360°.
-          A fundação técnica está pronta; a cena 3D será o próximo incremento.
+          A fundação técnica agora inclui uma cena Three.js responsiva, pronta
+          para receber o protótipo do cenário de neve.
         </p>
 
         <div class="hero-actions">
-          <button class="primary-action" type="button" disabled>
-            Iniciar jogo
-            <small>Disponível após a cena 3D</small>
+          <button id="start-scene-button" class="primary-action" type="button">
+            Abrir cena 3D
+            <small>Protótipo estrutural da Fase 2</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -52,7 +53,7 @@
           <article>
             <span class="status-number">01</span>
             <h3>Cliente</h3>
-            <p>Vite e JavaScript modular preparados para receber a cena Three.js.</p>
+            <p>Scene, câmera, renderer e loop Three.js executando de forma modular.</p>
           </article>
           <article>
             <span class="status-number">02</span>
@@ -80,6 +81,37 @@
         <span>Neve · Navegador · WebXR</span>
       </footer>
     </main>
+
+    <section
+      id="prototype-view"
+      class="game-view"
+      aria-labelledby="scene-title"
+      hidden
+    >
+      <div id="scene-container" class="scene-container"></div>
+
+      <div class="scene-topbar">
+        <div class="scene-heading">
+          <span class="scene-phase">Fase 2 · Cena base</span>
+          <h2 id="scene-title">Protótipo Three.js</h2>
+        </div>
+        <button id="exit-scene-button" class="exit-scene-button" type="button">
+          Voltar ao menu <kbd>Esc</kbd>
+        </button>
+      </div>
+
+      <div class="scene-reticle" aria-hidden="true"></div>
+
+      <div class="scene-caption">
+        <strong>Teste estrutural</strong>
+        <span>O objeto azul girando confirma que o game loop está ativo.</span>
+      </div>
+
+      <p id="scene-error" class="scene-error" role="alert" hidden>
+        Não foi possível iniciar a cena 3D. Verifique se WebGL e a aceleração de
+        hardware estão habilitados no navegador.
+      </p>
+    </section>
 
     <script type="module" src="/src/main.js"></script>
   </body>

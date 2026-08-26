@@ -12,6 +12,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   min-width: 320px;
   min-height: 100%;
@@ -38,6 +42,10 @@ body::after {
   background:
     linear-gradient(171deg, transparent 0 38%, rgba(217, 244, 255, 0.08) 39% 48%, transparent 49%),
     linear-gradient(189deg, transparent 0 44%, rgba(229, 248, 255, 0.12) 45% 57%, transparent 58%);
+}
+
+body.scene-active {
+  overflow: hidden;
 }
 
 button,
@@ -321,6 +329,160 @@ footer {
   font-size: 0.75rem;
 }
 
+.game-view {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  color: #eff8ff;
+  background: #07172f;
+}
+
+.scene-container,
+.scene-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.scene-container {
+  position: absolute;
+  inset: 0;
+}
+
+.scene-topbar {
+  position: absolute;
+  inset: 1.25rem 1.25rem auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  pointer-events: none;
+}
+
+.scene-heading,
+.exit-scene-button,
+.scene-caption,
+.scene-error {
+  background: rgba(4, 18, 35, 0.78);
+  border: 1px solid rgba(157, 229, 255, 0.24);
+  box-shadow: 0 1rem 3rem rgba(0, 5, 18, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.scene-heading {
+  padding: 0.8rem 1rem;
+  border-radius: 0.8rem;
+}
+
+.scene-heading h2 {
+  margin-top: 0.18rem;
+  font-size: clamp(1.15rem, 2.4vw, 1.75rem);
+  letter-spacing: -0.025em;
+}
+
+.scene-phase {
+  color: #78def7;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.exit-scene-button {
+  padding: 0.75rem 0.9rem;
+  color: #e8faff;
+  border-radius: 0.7rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.exit-scene-button:hover {
+  border-color: rgba(157, 229, 255, 0.58);
+}
+
+kbd {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.32rem;
+  color: #9ce9ff;
+  background: rgba(113, 208, 239, 0.1);
+  border: 1px solid rgba(157, 229, 255, 0.24);
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+}
+
+.scene-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.3rem;
+  height: 1.3rem;
+  border: 1px solid rgba(235, 252, 255, 0.72);
+  border-radius: 50%;
+  box-shadow: 0 0 1rem rgba(85, 220, 255, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.scene-reticle::before,
+.scene-reticle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  content: '';
+  background: rgba(235, 252, 255, 0.8);
+  transform: translate(-50%, -50%);
+}
+
+.scene-reticle::before {
+  width: 0.34rem;
+  height: 1px;
+}
+
+.scene-reticle::after {
+  width: 1px;
+  height: 0.34rem;
+}
+
+.scene-caption {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: grid;
+  max-width: 22rem;
+  padding: 0.85rem 1rem;
+  gap: 0.2rem;
+  border-radius: 0.75rem;
+  pointer-events: none;
+}
+
+.scene-caption strong {
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.scene-caption span {
+  color: #adc8d9;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.scene-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(34rem, calc(100% - 2rem));
+  margin: 0;
+  padding: 1.2rem;
+  color: #ffd1d1;
+  border-color: rgba(255, 144, 144, 0.42);
+  border-radius: 0.85rem;
+  line-height: 1.6;
+  transform: translate(-50%, -50%);
+}
+
 @media (max-width: 760px) {
   .hero {
     min-height: auto;
@@ -343,6 +505,26 @@ footer {
 
   .status-number {
     margin-bottom: 1.8rem;
+  }
+
+  .scene-topbar {
+    inset: 0.75rem 0.75rem auto;
+  }
+
+  .scene-heading {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .exit-scene-button {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .scene-caption {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    max-width: none;
   }
 }
 

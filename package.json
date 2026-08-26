@@ -1,6 +1,6 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Shoot 'n' Smash — jogo 3D de sobrevivência em ondas para navegador e WebXR.",
   "type": "module",
