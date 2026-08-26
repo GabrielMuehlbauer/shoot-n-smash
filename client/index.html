@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Shoot 'n' Smash: sobreviva a ondas de monstros de gelo usando um estilingue, no navegador e em realidade virtual."
+    />
+    <meta name="theme-color" content="#07172f" />
+    <title>Shoot 'n' Smash</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
+
+    <div class="snowfield" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+
+    <main id="main-content" class="shell">
+      <header class="hero" aria-labelledby="game-title">
+        <div class="phase-badge"><span></span> Fase 1 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Protótipo WebXR</p>
+        <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
+        <p class="hero-copy">
+          Prepare o estilingue. Monstros de gelo estão cercando a arena em 360°.
+          A fundação técnica está pronta; a cena 3D será o próximo incremento.
+        </p>
+
+        <div class="hero-actions">
+          <button class="primary-action" type="button" disabled>
+            Iniciar jogo
+            <small>Disponível após a cena 3D</small>
+          </button>
+          <button id="api-status-button" class="secondary-action" type="button">
+            Verificar API
+          </button>
+        </div>
+
+        <p id="api-status" class="api-status" role="status" aria-live="polite">
+          A API ainda não foi verificada.
+        </p>
+      </header>
+
+      <section class="foundation" aria-labelledby="foundation-title">
+        <div class="section-heading">
+          <p class="eyebrow">Fundação do projeto</p>
+          <h2 id="foundation-title">Pronto para crescer por etapas</h2>
+        </div>
+
+        <div class="status-grid">
+          <article>
+            <span class="status-number">01</span>
+            <h3>Cliente</h3>
+            <p>Vite e JavaScript modular preparados para receber a cena Three.js.</p>
+          </article>
+          <article>
+            <span class="status-number">02</span>
+            <h3>API</h3>
+            <p>Servidor Express com diagnóstico e execução independente do banco.</p>
+          </article>
+          <article>
+            <span class="status-number">03</span>
+            <h3>Dados</h3>
+            <p>Configuração MySQL pronta para as futuras partidas e o ranking global.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="team" aria-labelledby="team-title">
+        <div>
+          <p class="eyebrow">Equipe de desenvolvimento</p>
+          <h2 id="team-title">Criado por</h2>
+        </div>
+        <ul id="team-list" aria-label="Integrantes da equipe"></ul>
+      </section>
+
+      <footer>
+        <span id="project-version">Shoot 'n' Smash</span>
+        <span>Neve · Navegador · WebXR</span>
+      </footer>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
