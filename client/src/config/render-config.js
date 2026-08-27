@@ -10,12 +10,8 @@ export const RENDER_CONFIG = Object.freeze({
     maxPixelRatio: 2,
     clearColor: 0x07172f,
   }),
-  ground: Object.freeze({
-    size: 60,
-    color: 0xe5f3f8,
-  }),
   loop: Object.freeze({
     maxDeltaSeconds: 0.05,
-    markerRotationRadiansPerSecond: 0.65,
+    beaconRotationRadiansPerSecond: 0.65,
   }),
 });

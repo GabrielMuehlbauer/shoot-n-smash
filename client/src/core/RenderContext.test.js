@@ -15,6 +15,7 @@ function createFixture() {
     observerDisconnect: 0,
     observerObserve: 0,
     rendererDispose: 0,
+    worldUpdates: [],
     windowAdd: 0,
     windowRemove: 0,
   };
@@ -77,28 +78,53 @@ function createRenderContextClass(fixture) {
     createLights() {}
 
     createGround() {
-      const resource = new Group();
-      resource.geometry = {
+      this.snowArena = {
+        update: (deltaSeconds) => {
+          fixture.counters.worldUpdates.push(deltaSeconds);
+        },
+      };
+      const geometry = {
         dispose: () => {
           fixture.counters.geometryDispose += 1;
         },
       };
-      resource.material = {
+      const material = {
         dispose: () => {
           fixture.counters.materialDispose += 1;
         },
       };
-      this.scene.add(resource);
+      const firstResource = new Group();
+      const secondResource = new Group();
+      firstResource.geometry = geometry;
+      secondResource.geometry = geometry;
+      firstResource.material = material;
+      secondResource.material = material;
+      this.scene.add(firstResource, secondResource);
     }
 
-    createDiagnosticMarker() {
+    createIceBeacon() {
       return { rotation: { y: 0 } };
     }
 
   };
 }
 
-test('dispose libera observer, listener, recursos, renderer e canvas uma única vez', () => {
+test('repassa o delta ao cenário e ao farol de gelo', () => {
+  const fixture = createFixture();
+  const TestRenderContext = createRenderContextClass(fixture);
+  const context = new TestRenderContext(fixture.container, {
+    windowRef: fixture.windowRef,
+    ResizeObserverClass: fixture.ResizeObserverFake,
+  });
+
+  context.update(0.5);
+
+  assert.deepEqual(fixture.counters.worldUpdates, [0.5]);
+  assert.ok(context.iceBeacon.rotation.y > 0);
+  context.dispose();
+});
+
+test('dispose libera recursos compartilhados, renderer e canvas uma única vez', () => {
   const fixture = createFixture();
   const TestRenderContext = createRenderContextClass(fixture);
   const context = new TestRenderContext(fixture.container, {

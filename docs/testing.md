@@ -79,6 +79,31 @@ npm run check
 O roteiro detalhado, os resultados esperados e a solução de problemas estão em
 [Fase 2 — Cena base Three.js](phases/phase-02-cena-threejs.md).
 
+## Fase 3
+
+### Cobertura automatizada adicionada
+
+- composição da ilha, placas de gelo, pedras, montanhas e neve suspensa;
+- obstáculos decorativos fora do raio livre do jogador;
+- posições determinísticas das partículas dentro dos limites da arena;
+- animação atmosférica proporcional ao delta e protegida contra delta negativo;
+- encaminhamento do delta pelo `RenderContext` para o cenário;
+- metadados e diagnóstico da API atualizados para a Fase 3.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev`.
+2. Abra `http://127.0.0.1:5173/` e confirme **Fase 3 concluída**.
+3. Pressione **Abrir cena 3D**.
+4. Confirme ilha clara, gelo azulado, pedras, montanhas, névoa e neve suspensa.
+5. Confirme que não existe mais grade e que a área central está livre.
+6. Redimensione a janela, saia com `Esc` e entre novamente três vezes.
+7. Confirme um único canvas, animação estável e console sem erros.
+8. Use **Verificar API** e confirme que o diagnóstico continua funcionando.
+
+O roteiro completo está em
+[Fase 3 — Protótipo do cenário de neve](phases/phase-03-cenario-neve.md).
+
 ## Estratégia futura
 
 - testes unitários para vida, dano, estados, pontuação e ondas;

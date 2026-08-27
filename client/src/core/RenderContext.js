@@ -2,21 +2,22 @@ import {
   Color,
   CylinderGeometry,
   DirectionalLight,
-  GridHelper,
+  Fog,
   Group,
   HemisphereLight,
   IcosahedronGeometry,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
-  PlaneGeometry,
   Scene,
   SRGBColorSpace,
   WebGLRenderer,
 } from 'three';
 
 import { RENDER_CONFIG } from '../config/render-config.js';
+import { SNOW_ARENA_CONFIG } from '../config/snow-arena-config.js';
 import { resizeRendererToContainer } from '../utils/viewport.js';
+import { SnowArena } from '../world/SnowArena.js';
 
 export class RenderContext {
   constructor(
@@ -49,7 +50,7 @@ export class RenderContext {
 
       this.createLights();
       this.createGround();
-      this.diagnosticMarker = this.createDiagnosticMarker();
+      this.iceBeacon = this.createIceBeacon();
       this.connectResizeObserver();
       this.resize();
     } catch (error) {
@@ -98,7 +99,7 @@ export class RenderContext {
     renderer.domElement.setAttribute('role', 'img');
     renderer.domElement.setAttribute(
       'aria-label',
-      'Cena 3D estrutural do cenário de neve.',
+      'Protótipo 3D de uma arena cercada por neve, gelo e montanhas.',
     );
 
     return renderer;
@@ -113,27 +114,17 @@ export class RenderContext {
   }
 
   createGround() {
-    const geometry = new PlaneGeometry(
-      RENDER_CONFIG.ground.size,
-      RENDER_CONFIG.ground.size,
+    this.scene.background = new Color(SNOW_ARENA_CONFIG.fog.color);
+    this.scene.fog = new Fog(
+      SNOW_ARENA_CONFIG.fog.color,
+      SNOW_ARENA_CONFIG.fog.near,
+      SNOW_ARENA_CONFIG.fog.far,
     );
-    const material = new MeshStandardMaterial({
-      color: RENDER_CONFIG.ground.color,
-      metalness: 0.02,
-      roughness: 0.9,
-    });
-    const ground = new Mesh(geometry, material);
-    ground.rotation.x = -Math.PI / 2;
-    this.scene.add(ground);
-
-    const grid = new GridHelper(RENDER_CONFIG.ground.size, 30, 0x5da8c5, 0xa6cedd);
-    grid.position.y = 0.003;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.24;
-    this.scene.add(grid);
+    this.snowArena = new SnowArena();
+    this.scene.add(this.snowArena);
   }
 
-  createDiagnosticMarker() {
+  createIceBeacon() {
     const group = new Group();
     group.position.set(0, 0, -6);
 
@@ -199,8 +190,9 @@ export class RenderContext {
   }
 
   update(deltaSeconds) {
-    this.diagnosticMarker.rotation.y +=
-      deltaSeconds * RENDER_CONFIG.loop.markerRotationRadiansPerSecond;
+    this.snowArena?.update(deltaSeconds);
+    this.iceBeacon.rotation.y +=
+      deltaSeconds * RENDER_CONFIG.loop.beaconRotationRadiansPerSecond;
   }
 
   render() {

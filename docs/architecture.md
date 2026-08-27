@@ -31,8 +31,10 @@ WaveSystem -> EnemySystem <------------ CollisionSystem
 
 ## Cliente
 
-- `RenderContext` já concentra `Scene`, `PerspectiveCamera`, `WebGLRenderer`,
-  luzes, chão, resize e descarte dos recursos gráficos.
+- `RenderContext` concentra `Scene`, `PerspectiveCamera`, `WebGLRenderer`,
+  luzes, névoa, resize e descarte dos recursos gráficos.
+- `SnowArena` compõe a ilha, placas de gelo, pedras, montanhas e partículas de
+  neve com primitivas low-poly e recursos compartilhados.
 - `GameApp` já controla o único `setAnimationLoop`, a composição e o ciclo de
   vida da cena, limita o delta entre frames e pausa atualizações quando a aba
   está oculta.
@@ -43,6 +45,8 @@ WaveSystem -> EnemySystem <------------ CollisionSystem
 - A interface convencional utilizará HTML/CSS; a interface imersiva será criada
   dentro da cena 3D.
 - Um único `renderer.setAnimationLoop()` atenderá navegador e WebXR.
+- A área central da arena permanece livre para o futuro estilingue e para o
+  jogador estacionário.
 
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
 MVP. Colisões iniciais utilizarão volumes simples e teste de segmento para os

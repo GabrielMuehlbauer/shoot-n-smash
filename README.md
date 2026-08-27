@@ -4,8 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 2 — cena base Three.js**. A tela inicial abre uma cena 3D
-> responsiva com câmera, iluminação, chão e game loop.
+> Status atual: **Fase 3 — protótipo do cenário de neve**. A cena 3D responsiva
+> agora apresenta ilha de gelo, neve, pedras, montanhas low-poly, névoa e neve
+> suspensa, mantendo a fundação técnica da Fase 2.
 
 ## Equipe
 
@@ -45,7 +46,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 2.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 3.
 
 ## Execução em desenvolvimento
 
@@ -62,11 +63,11 @@ URLs locais:
 - diagnóstico: [http://127.0.0.1:3000/api/health](http://127.0.0.1:3000/api/health).
 
 Na tela inicial, use **Verificar API** para validar a comunicação entre o cliente
-e o servidor. Use **Abrir cena 3D** para entrar no protótipo da Fase 2 e
+e o servidor. Use **Abrir cena 3D** para entrar no protótipo da Fase 3 e
 **Voltar ao menu** ou `Esc` para sair.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 2](docs/phases/phase-02-cena-threejs.md).
+[guia da Fase 3](docs/phases/phase-03-cenario-neve.md).
 
 ## Build e execução de produção
 
@@ -95,7 +96,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 2](docs/phases/phase-02-cena-threejs.md#como-testar).
+[guia de teste da Fase 3](docs/phases/phase-03-cenario-neve.md#como-testar).
 
 ## Scripts
 
@@ -140,7 +141,7 @@ nos diagnósticos públicos.
 - mão não dominante: segurar o estilingue;
 - mão dominante: puxar e soltar o projétil.
 
-Os controles de gameplay ainda não estão ativos na Fase 2.
+Os controles de gameplay ainda não estão ativos na Fase 3.
 
 ## Modo VR
 
@@ -154,9 +155,10 @@ Testes no Meta Quest 3 exigirão uma URL HTTPS acessível pelo headset.
 shoot-n-smash/
 ├── client/
 │   └── src/
-│       ├── config/  # valores do renderer e da câmera
+│       ├── config/  # valores do renderer, câmera e arena
 │       ├── core/    # GameApp e RenderContext
-│       └── utils/   # resize e cálculos testáveis
+│       ├── utils/   # resize e cálculos testáveis
+│       └── world/   # composição visual do cenário de neve
 ├── server/       # API Express e futura integração MySQL
 ├── docs/         # arquitetura, fases e instruções técnicas
 ├── .env.example
@@ -172,7 +174,7 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Limitações conhecidas
 
-- a cena utiliza apenas chão, grade e formas provisórias;
+- o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
 - a câmera ainda é fixa e não permite observação em 360°;
 - não existem inimigos, projéteis ou ondas nesta fase;
 - MySQL ainda não possui migration ou tabelas;
@@ -181,8 +183,8 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Próxima etapa
 
-Fase 3: transformar a cena estrutural em um protótipo leve do cenário de neve,
-com terreno, gelo, pedras, montanhas provisórias e atmosfera fria.
+Fase 4: permitir observação em 360° no navegador com mouse e pointer lock,
+mantendo o jogador estacionário e ainda sem disparos.
 
 Consulte também:
 
@@ -192,3 +194,4 @@ Consulte também:
 - [Banco de dados](docs/database.md)
 - [Estratégia de testes](docs/testing.md)
 - [Guia da Fase 2](docs/phases/phase-02-cena-threejs.md)
+- [Guia da Fase 3](docs/phases/phase-03-cenario-neve.md)
