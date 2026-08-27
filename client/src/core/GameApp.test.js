@@ -12,6 +12,10 @@ function createFixture() {
     dispose: 0,
     unlock: 0,
   };
+  const documentCalls = {
+    add: 0,
+    remove: 0,
+  };
   const documentListeners = new Map();
   const renderContext = {
     disposeCalls: 0,
@@ -45,8 +49,12 @@ function createFixture() {
   };
   const documentRef = {
     hidden: false,
-    addEventListener: (name, listener) => documentListeners.set(name, listener),
+    addEventListener: (name, listener) => {
+      documentCalls.add += 1;
+      documentListeners.set(name, listener);
+    },
     removeEventListener: (name, listener) => {
+      documentCalls.remove += 1;
       if (documentListeners.get(name) === listener) {
         documentListeners.delete(name);
       }
@@ -55,6 +63,7 @@ function createFixture() {
 
   return {
     animationLoops,
+    documentCalls,
     documentListeners,
     documentRef,
     lookCalls,
@@ -73,6 +82,7 @@ test('start é idempotente e registra apenas um loop', () => {
   assert.equal(app.isRunning, true);
   assert.equal(fixture.animationLoops.length, 1);
   assert.equal(fixture.documentListeners.size, 1);
+  assert.deepEqual(fixture.documentCalls, { add: 1, remove: 0 });
 });
 
 test('limita o delta após uma pausa longa', () => {
@@ -110,6 +120,7 @@ test('stop e dispose removem loop e listeners sem duplicação', () => {
   assert.equal(app.stop(), false);
   assert.equal(fixture.animationLoops.at(-1), null);
   assert.equal(fixture.documentListeners.size, 0);
+  assert.deepEqual(fixture.documentCalls, { add: 1, remove: 1 });
 
   assert.equal(app.dispose(), true);
   assert.equal(app.dispose(), false);
@@ -129,6 +140,53 @@ test('desfaz o controle de visão quando o loop falha ao iniciar', () => {
 
   assert.throws(() => app.start(), /falha simulada/);
   assert.equal(fixture.lookCalls.connect, 1);
+  assert.equal(fixture.lookCalls.disconnect, 1);
+  assert.equal(app.isRunning, false);
+});
+
+test('desfaz o loop já instalado quando um passo posterior falha', () => {
+  const fixture = createFixture();
+  const originalError = new Error('falha simulada ao registrar listener');
+  fixture.documentRef.addEventListener = () => {
+    throw originalError;
+  };
+  const app = new GameApp(fixture);
+
+  assert.throws(
+    () => app.start(),
+    (error) => error === originalError,
+  );
+  assert.equal(fixture.animationLoops.length, 2);
+  assert.equal(typeof fixture.animationLoops[0], 'function');
+  assert.equal(fixture.animationLoops[1], null);
+  assert.equal(fixture.lookCalls.disconnect, 1);
+  assert.equal(app.isRunning, false);
+});
+
+test('rollback tenta toda a limpeza sem mascarar o erro original', () => {
+  const fixture = createFixture();
+  const originalError = new Error('falha original de inicialização');
+  fixture.documentRef.addEventListener = () => {
+    throw originalError;
+  };
+  fixture.renderContext.setAnimationLoop = (callback) => {
+    fixture.animationLoops.push(callback);
+
+    if (callback === null) {
+      throw new Error('falha secundária ao remover loop');
+    }
+  };
+  fixture.lookController.disconnect = () => {
+    fixture.lookCalls.disconnect += 1;
+    throw new Error('falha secundária ao desconectar visão');
+  };
+  const app = new GameApp(fixture);
+
+  assert.throws(
+    () => app.start(),
+    (error) => error === originalError,
+  );
+  assert.deepEqual(fixture.animationLoops, [app.animationFrame, null]);
   assert.equal(fixture.lookCalls.disconnect, 1);
   assert.equal(app.isRunning, false);
 });

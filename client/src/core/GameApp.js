@@ -37,21 +37,46 @@ export class GameApp {
     }
 
     let connectedLookController = false;
+    let animationLoopInstalled = false;
 
     try {
       connectedLookController = this.lookController?.connect?.() ?? false;
       this.previousTimestamp = null;
       this.renderContext.setAnimationLoop(this.animationFrame);
+      animationLoopInstalled = true;
       this.documentRef?.addEventListener?.(
         'visibilitychange',
         this.handleVisibilityChange,
       );
       this.running = true;
     } catch (error) {
-      if (connectedLookController) {
-        this.lookController?.disconnect?.();
+      try {
+        this.documentRef?.removeEventListener?.(
+          'visibilitychange',
+          this.handleVisibilityChange,
+        );
+      } catch {
+        // A limpeza é best-effort; o erro original de inicialização prevalece.
       }
 
+      if (animationLoopInstalled) {
+        try {
+          this.renderContext.setAnimationLoop(null);
+        } catch {
+          // A limpeza é best-effort; o erro original de inicialização prevalece.
+        }
+      }
+
+      if (connectedLookController) {
+        try {
+          this.lookController?.disconnect?.();
+        } catch {
+          // A limpeza é best-effort; o erro original de inicialização prevalece.
+        }
+      }
+
+      this.previousTimestamp = null;
+      this.running = false;
       throw error;
     }
 

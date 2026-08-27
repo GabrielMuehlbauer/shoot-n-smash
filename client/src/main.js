@@ -21,7 +21,6 @@ const pointerLockStatus = document.querySelector('#pointer-lock-status');
 let gameApp = null;
 let lookController = null;
 let pointerLocked = false;
-let suppressEscapeUntil = 0;
 
 for (const member of PROJECT_INFO.team) {
   const item = document.createElement('li');
@@ -32,10 +31,6 @@ for (const member of PROJECT_INFO.team) {
 projectVersion.textContent = `${PROJECT_INFO.name} · v${PROJECT_INFO.version}`;
 
 function updateLookState({ locked, supported }) {
-  if (pointerLocked && !locked) {
-    suppressEscapeUntil = Date.now() + 300;
-  }
-
   pointerLocked = locked;
   prototypeView.dataset.lookState = locked
     ? 'locked'
@@ -62,8 +57,10 @@ function handleLookError({ message }) {
   pointerLockButton.disabled = !lookController?.isSupported;
   pointerLockStatus.textContent = message;
 
-  if (!pointerLockButton.disabled && !prototypeView.hidden) {
-    pointerLockButton.focus({ preventScroll: true });
+  if (!prototypeView.hidden) {
+    (pointerLockButton.disabled ? exitSceneButton : pointerLockButton).focus({
+      preventScroll: true,
+    });
   }
 }
 
@@ -114,7 +111,6 @@ function exitPrototype() {
   gameApp = null;
   lookController = null;
   pointerLocked = false;
-  suppressEscapeUntil = 0;
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;
   landing.hidden = false;
@@ -123,10 +119,12 @@ function exitPrototype() {
 }
 
 function handleSceneKeyboard(event) {
-  if (event.key === 'Escape' && !prototypeView.hidden) {
+  if (
+    event.key === 'Escape' &&
+    !event.repeat &&
+    !prototypeView.hidden
+  ) {
     if (pointerLocked || lookController?.isLocked) {
-      suppressEscapeUntil = Date.now() + 300;
-
       if (!lookController?.unlock()) {
         updateLookState({
           locked: false,
@@ -134,10 +132,6 @@ function handleSceneKeyboard(event) {
         });
       }
 
-      return;
-    }
-
-    if (Date.now() < suppressEscapeUntil) {
       return;
     }
 
