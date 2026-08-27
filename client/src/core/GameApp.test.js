@@ -6,6 +6,12 @@ import { GameApp } from './GameApp.js';
 function createFixture() {
   const animationLoops = [];
   const updates = [];
+  const lookCalls = {
+    connect: 0,
+    disconnect: 0,
+    dispose: 0,
+    unlock: 0,
+  };
   const documentListeners = new Map();
   const renderContext = {
     disposeCalls: 0,
@@ -17,6 +23,24 @@ function createFixture() {
     },
     dispose() {
       this.disposeCalls += 1;
+    },
+  };
+  const lookController = {
+    connect: () => {
+      lookCalls.connect += 1;
+      return true;
+    },
+    disconnect: () => {
+      lookCalls.disconnect += 1;
+      return true;
+    },
+    dispose: () => {
+      lookCalls.dispose += 1;
+      return true;
+    },
+    unlock: () => {
+      lookCalls.unlock += 1;
+      return true;
     },
   };
   const documentRef = {
@@ -33,6 +57,8 @@ function createFixture() {
     animationLoops,
     documentListeners,
     documentRef,
+    lookCalls,
+    lookController,
     renderContext,
     updates,
   };
@@ -72,6 +98,7 @@ test('não atualiza a cena enquanto o documento está oculto', () => {
 
   assert.deepEqual(fixture.updates, []);
   assert.equal(fixture.renderContext.renderCalls, 0);
+  assert.equal(fixture.lookCalls.unlock, 1);
 });
 
 test('stop e dispose removem loop e listeners sem duplicação', () => {
@@ -87,5 +114,21 @@ test('stop e dispose removem loop e listeners sem duplicação', () => {
   assert.equal(app.dispose(), true);
   assert.equal(app.dispose(), false);
   assert.equal(fixture.renderContext.disposeCalls, 1);
+  assert.equal(fixture.lookCalls.connect, 1);
+  assert.equal(fixture.lookCalls.disconnect, 1);
+  assert.equal(fixture.lookCalls.dispose, 1);
   assert.throws(() => app.start(), /GameApp descartada/);
+});
+
+test('desfaz o controle de visão quando o loop falha ao iniciar', () => {
+  const fixture = createFixture();
+  fixture.renderContext.setAnimationLoop = () => {
+    throw new Error('falha simulada no loop');
+  };
+  const app = new GameApp(fixture);
+
+  assert.throws(() => app.start(), /falha simulada/);
+  assert.equal(fixture.lookCalls.connect, 1);
+  assert.equal(fixture.lookCalls.disconnect, 1);
+  assert.equal(app.isRunning, false);
 });

@@ -37,11 +37,16 @@ WaveSystem -> EnemySystem <------------ CollisionSystem
   neve com primitivas low-poly e recursos compartilhados.
 - `GameApp` já controla o único `setAnimationLoop`, a composição e o ciclo de
   vida da cena, limita o delta entre frames e pausa atualizações quando a aba
-  está oculta.
+  está oculta. Na Fase 4, ele também coordena conexão, desbloqueio e descarte
+  do controle de observação desktop.
+- `DesktopLookController` adapta o `PointerLockControls` oficial do Three.js,
+  limita o pitch a ±85°, mantém yaw livre e não expõe qualquer operação de
+  translação. A posição da câmera permanece fixa no centro da arena.
 - `GameSession` coordenará a ordem de atualização durante uma partida.
 - Sistemas de gameplay não dependerão diretamente do mouse ou dos controles XR.
-- `DesktopInput` e `XRInput` produzirão intenções comuns de mirar, tensionar e
-  disparar.
+- O controle de câmera desktop é o primeiro adaptador de entrada concreto.
+  `DesktopInput` e `XRInput` ainda produzirão intenções comuns de tensionar e
+  disparar quando o vertical slice avançar.
 - A interface convencional utilizará HTML/CSS; a interface imersiva será criada
   dentro da cena 3D.
 - Um único `renderer.setAnimationLoop()` atenderá navegador e WebXR.

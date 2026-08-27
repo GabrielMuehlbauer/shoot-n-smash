@@ -4,9 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 3 — protótipo do cenário de neve**. A cena 3D responsiva
-> agora apresenta ilha de gelo, neve, pedras, montanhas low-poly, névoa e neve
-> suspensa, mantendo a fundação técnica da Fase 2.
+> Status atual: **Fase 4 — observação em 360°**. O jogador permanece no centro
+> da arena de neve e pode olhar em qualquer direção com mouse e Pointer Lock,
+> com limite vertical seguro e lifecycle testado.
 
 ## Equipe
 
@@ -46,7 +46,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 3.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 4.
 
 ## Execução em desenvolvimento
 
@@ -63,11 +63,12 @@ URLs locais:
 - diagnóstico: [http://127.0.0.1:3000/api/health](http://127.0.0.1:3000/api/health).
 
 Na tela inicial, use **Verificar API** para validar a comunicação entre o cliente
-e o servidor. Use **Abrir cena 3D** para entrar no protótipo da Fase 3 e
-**Voltar ao menu** ou `Esc` para sair.
+e o servidor. Use **Abrir cena 3D** e depois **Ativar visão 360°**. Mova o
+mouse para observar a arena; o primeiro `Esc` libera o cursor e um novo `Esc`,
+já desbloqueado, retorna ao menu. O botão **Voltar ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 3](docs/phases/phase-03-cenario-neve.md).
+[guia da Fase 4](docs/phases/phase-04-observacao-360.md).
 
 ## Build e execução de produção
 
@@ -96,7 +97,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 3](docs/phases/phase-03-cenario-neve.md#como-testar).
+[guia de teste da Fase 4](docs/phases/phase-04-observacao-360.md#como-testar).
 
 ## Scripts
 
@@ -124,24 +125,27 @@ nos diagnósticos públicos.
 ## Controles atuais da demonstração
 
 - **Abrir cena 3D**: inicia a cena e o game loop;
-- **Voltar ao menu** ou `Esc`: encerra o loop, libera os recursos e retorna à
-  tela inicial.
+- **Ativar visão 360°**: captura o ponteiro após uma ação explícita;
+- **Mover o mouse**: gira somente a câmera; o jogador não se desloca;
+- primeiro `Esc`: libera o ponteiro e mantém a cena;
+- segundo `Esc`, com o ponteiro livre, ou **Voltar ao menu**: encerra o loop,
+  libera listeners e recursos e retorna à tela inicial.
 
 ## Controles de gameplay planejados
 
 ### Navegador
 
-- mouse com pointer lock: observar e mirar em 360°;
 - segurar botão esquerdo: acumular tensão;
 - soltar botão esquerdo: disparar;
-- `Esc`: pausar/liberar o ponteiro.
+- `Esc`: pausar/liberar o ponteiro durante o gameplay.
 
 ### Realidade virtual
 
 - mão não dominante: segurar o estilingue;
 - mão dominante: puxar e soltar o projétil.
 
-Os controles de gameplay ainda não estão ativos na Fase 3.
+Observação e mira já estão ativas. Tensão, disparo e controles XR ainda não
+fazem parte da Fase 4.
 
 ## Modo VR
 
@@ -157,6 +161,7 @@ shoot-n-smash/
 │   └── src/
 │       ├── config/  # valores do renderer, câmera e arena
 │       ├── core/    # GameApp e RenderContext
+│       ├── input/   # adaptador desktop de Pointer Lock
 │       ├── utils/   # resize e cálculos testáveis
 │       └── world/   # composição visual do cenário de neve
 ├── server/       # API Express e futura integração MySQL
@@ -175,7 +180,8 @@ A estrutura crescerá somente quando cada sistema for implementado.
 ## Limitações conhecidas
 
 - o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
-- a câmera ainda é fixa e não permite observação em 360°;
+- a visão 360° desta fase é exclusiva do navegador desktop e requer Pointer Lock;
+- dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
 - não existem inimigos, projéteis ou ondas nesta fase;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
@@ -183,8 +189,9 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Próxima etapa
 
-Fase 4: permitir observação em 360° no navegador com mouse e pointer lock,
-mantendo o jogador estacionário e ainda sem disparos.
+Fase 5: iniciar o próximo incremento do vertical slice convencional sem
+antecipar ondas, ranking ou WebXR. O escopo exato será detalhado antes da
+implementação, preservando a câmera e o jogador estacionário desta fase.
 
 Consulte também:
 
@@ -195,3 +202,4 @@ Consulte também:
 - [Estratégia de testes](docs/testing.md)
 - [Guia da Fase 2](docs/phases/phase-02-cena-threejs.md)
 - [Guia da Fase 3](docs/phases/phase-03-cenario-neve.md)
+- [Guia da Fase 4](docs/phases/phase-04-observacao-360.md)

@@ -81,6 +81,12 @@ a:focus-visible {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.game-view:not([data-look-state='locked']) .scene-reticle {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.72);
 }
 
 .snowfield span {
@@ -458,6 +464,76 @@ kbd {
   pointer-events: none;
 }
 
+.scene-look-control {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  display: grid;
+  width: min(28rem, calc(100% - 2rem));
+  justify-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.pointer-lock-button,
+.pointer-lock-status {
+  background: rgba(4, 18, 35, 0.86);
+  border: 1px solid rgba(157, 229, 255, 0.3);
+  box-shadow: 0 1rem 3rem rgba(0, 5, 18, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.pointer-lock-button {
+  display: grid;
+  min-width: min(22rem, 100%);
+  padding: 0.8rem 1.1rem;
+  gap: 0.18rem;
+  color: #f1fcff;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.pointer-lock-button:not(:disabled):hover {
+  background: rgba(9, 50, 82, 0.9);
+  border-color: rgba(157, 229, 255, 0.65);
+}
+
+.pointer-lock-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.pointer-lock-button small {
+  color: #9fc9da;
+  font-size: 0.69rem;
+  font-weight: 600;
+}
+
+.pointer-lock-status {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.42rem 0.7rem;
+  color: #b8d5e2;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.game-view[data-look-state='locked'] .pointer-lock-status {
+  color: #dffcff;
+  border-color: rgba(84, 224, 255, 0.48);
+}
+
+.game-view[data-look-state='error'] .pointer-lock-status,
+.game-view[data-look-state='unsupported'] .pointer-lock-status {
+  color: #ffd1d1;
+  border-color: rgba(255, 144, 144, 0.42);
+}
+
 .scene-caption strong {
   color: #ffffff;
   font-size: 0.82rem;
@@ -525,6 +601,14 @@ kbd {
     bottom: 0.75rem;
     left: 0.75rem;
     max-width: none;
+  }
+
+  .scene-look-control {
+    right: 0.75rem;
+    bottom: 6.8rem;
+    left: 0.75rem;
+    width: auto;
+    transform: none;
   }
 }
 

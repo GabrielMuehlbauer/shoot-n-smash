@@ -3,6 +3,7 @@ import { RENDER_CONFIG } from '../config/render-config.js';
 export class GameApp {
   constructor({
     renderContext,
+    lookController = null,
     documentRef = document,
     maxDeltaSeconds = RENDER_CONFIG.loop.maxDeltaSeconds,
   }) {
@@ -11,6 +12,7 @@ export class GameApp {
     }
 
     this.renderContext = renderContext;
+    this.lookController = lookController;
     this.documentRef = documentRef;
     this.maxDeltaSeconds = maxDeltaSeconds;
     this.previousTimestamp = null;
@@ -34,13 +36,24 @@ export class GameApp {
       return false;
     }
 
-    this.previousTimestamp = null;
-    this.renderContext.setAnimationLoop(this.animationFrame);
-    this.documentRef?.addEventListener?.(
-      'visibilitychange',
-      this.handleVisibilityChange,
-    );
-    this.running = true;
+    let connectedLookController = false;
+
+    try {
+      connectedLookController = this.lookController?.connect?.() ?? false;
+      this.previousTimestamp = null;
+      this.renderContext.setAnimationLoop(this.animationFrame);
+      this.documentRef?.addEventListener?.(
+        'visibilitychange',
+        this.handleVisibilityChange,
+      );
+      this.running = true;
+    } catch (error) {
+      if (connectedLookController) {
+        this.lookController?.disconnect?.();
+      }
+
+      throw error;
+    }
 
     return true;
   }
@@ -51,6 +64,7 @@ export class GameApp {
     }
 
     this.renderContext.setAnimationLoop(null);
+    this.lookController?.disconnect?.();
     this.documentRef?.removeEventListener?.(
       'visibilitychange',
       this.handleVisibilityChange,
@@ -68,6 +82,7 @@ export class GameApp {
 
     if (this.documentRef?.hidden) {
       this.previousTimestamp = null;
+      this.lookController?.unlock?.();
       return;
     }
 
@@ -87,6 +102,7 @@ export class GameApp {
   handleVisibilityChange() {
     if (this.documentRef?.hidden) {
       this.previousTimestamp = null;
+      this.lookController?.unlock?.();
     }
   }
 
@@ -96,6 +112,7 @@ export class GameApp {
     }
 
     this.stop();
+    this.lookController?.dispose?.();
     this.renderContext.dispose();
     this.disposed = true;
 

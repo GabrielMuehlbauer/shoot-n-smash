@@ -51,3 +51,17 @@ pontos e sua derrota conclui a fase, concedendo mais 1.000 pontos.
 HTML/CSS será usado no navegador. Informações necessárias durante uma sessão
 imersiva serão representadas em world-space dentro da cena, sem depender de
 overlay HTML.
+
+## ADR-007 — Observação desktop e semântica do Escape
+
+**Status:** aceita em 27 de agosto de 2026.
+
+A observação desktop usa o `PointerLockControls` oficial do Three.js com a
+sensibilidade padrão de 0,002 radiano por unidade de movimento, multiplicador
+1 e pitch limitado a ±85°. O yaw permanece livre para permitir giros de 360°.
+Nenhuma função de translação do addon é exposta pelo adaptador do jogo.
+
+Pointer Lock nunca é solicitado automaticamente: o usuário ativa a visão por
+um botão focável. O primeiro `Esc` libera o cursor e preserva a cena; outro
+`Esc`, já desbloqueado, retorna ao menu. Ao ocultar a aba, sair da cena ou
+descartar a aplicação, o ponteiro é liberado e os listeners são removidos.

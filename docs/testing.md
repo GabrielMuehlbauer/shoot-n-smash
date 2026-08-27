@@ -104,6 +104,34 @@ O roteiro detalhado, os resultados esperados e a solução de problemas estão e
 O roteiro completo está em
 [Fase 3 — Protótipo do cenário de neve](phases/phase-03-cenario-neve.md).
 
+## Fase 4
+
+### Cobertura automatizada adicionada
+
+- conexão, desconexão e descarte idempotentes do controle desktop;
+- captura e liberação de Pointer Lock sem duplicar listeners;
+- movimento do mouse ignorado enquanto o ponteiro está livre;
+- conversão da sensibilidade padrão em rotação da câmera;
+- pitch limitado a ±85° e yaw sem clamp horizontal;
+- posição da câmera preservada durante qualquer rotação;
+- fallback quando Pointer Lock não é suportado;
+- lifecycle do controle coordenado por `GameApp` e rollback se o loop falhar;
+- liberação do ponteiro quando a aba fica oculta;
+- metadados e diagnóstico da API atualizados para a Fase 4.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 4 concluída**, abra a cena e ative a visão 360°.
+3. Gire horizontalmente uma volta completa e teste os limites para cima e baixo.
+4. Confirme que a câmera não se desloca e que cliques não disparam nada.
+5. Pressione `Esc` uma vez para liberar o cursor e novamente para voltar ao menu.
+6. Repita três ciclos de entrada e saída, verificando canvas e sensibilidade únicos.
+7. Redimensione a janela, verifique a API e confirme o Console sem erros.
+
+O roteiro completo está em
+[Fase 4 — Observação em 360°](phases/phase-04-observacao-360.md).
+
 ## Estratégia futura
 
 - testes unitários para vida, dano, estados, pontuação e ondas;

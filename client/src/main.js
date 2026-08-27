@@ -1,6 +1,7 @@
 import { describeApiHealth } from './api-health.js';
 import { GameApp } from './core/GameApp.js';
 import { RenderContext } from './core/RenderContext.js';
+import { DesktopLookController } from './input/DesktopLookController.js';
 import { PROJECT_INFO } from './project-info.js';
 import './styles.css';
 
@@ -14,8 +15,13 @@ const prototypeView = document.querySelector('#prototype-view');
 const sceneContainer = document.querySelector('#scene-container');
 const sceneError = document.querySelector('#scene-error');
 const exitSceneButton = document.querySelector('#exit-scene-button');
+const pointerLockButton = document.querySelector('#pointer-lock-button');
+const pointerLockStatus = document.querySelector('#pointer-lock-status');
 
 let gameApp = null;
+let lookController = null;
+let pointerLocked = false;
+let suppressEscapeUntil = 0;
 
 for (const member of PROJECT_INFO.team) {
   const item = document.createElement('li');
@@ -24,6 +30,42 @@ for (const member of PROJECT_INFO.team) {
 }
 
 projectVersion.textContent = `${PROJECT_INFO.name} · v${PROJECT_INFO.version}`;
+
+function updateLookState({ locked, supported }) {
+  if (pointerLocked && !locked) {
+    suppressEscapeUntil = Date.now() + 300;
+  }
+
+  pointerLocked = locked;
+  prototypeView.dataset.lookState = locked
+    ? 'locked'
+    : supported
+      ? 'unlocked'
+      : 'unsupported';
+  pointerLockButton.hidden = locked;
+  pointerLockButton.disabled = !supported;
+  pointerLockStatus.textContent = locked
+    ? 'Visão 360° ativa. Mova o mouse para olhar; Esc libera o cursor.'
+    : supported
+      ? 'Cursor livre. Ative a visão 360° para voltar a olhar com o mouse.'
+      : 'Pointer Lock não está disponível neste navegador.';
+
+  if (!locked && supported && !prototypeView.hidden) {
+    pointerLockButton.focus({ preventScroll: true });
+  }
+}
+
+function handleLookError({ message }) {
+  pointerLocked = false;
+  prototypeView.dataset.lookState = 'error';
+  pointerLockButton.hidden = false;
+  pointerLockButton.disabled = !lookController?.isSupported;
+  pointerLockStatus.textContent = message;
+
+  if (!pointerLockButton.disabled && !prototypeView.hidden) {
+    pointerLockButton.focus({ preventScroll: true });
+  }
+}
 
 function enterPrototype() {
   let renderContext = null;
@@ -36,27 +78,43 @@ function enterPrototype() {
 
   try {
     renderContext = new RenderContext(sceneContainer);
-    gameApp = new GameApp({ renderContext });
+    lookController = new DesktopLookController({
+      camera: renderContext.camera,
+      domElement: renderContext.renderer.domElement,
+      onLockChange: updateLookState,
+      onError: handleLookError,
+    });
+    gameApp = new GameApp({ renderContext, lookController });
     gameApp.start();
   } catch (error) {
     if (gameApp) {
       gameApp.dispose();
     } else {
+      lookController?.dispose();
       renderContext?.dispose();
     }
     gameApp = null;
+    lookController = null;
     sceneContainer.replaceChildren();
     sceneError.hidden = false;
     console.error('Falha ao iniciar a cena Three.js.', error);
   } finally {
     startSceneButton.disabled = false;
-    exitSceneButton.focus({ preventScroll: true });
+    (gameApp && lookController?.isSupported
+      ? pointerLockButton
+      : exitSceneButton
+    ).focus({
+      preventScroll: true,
+    });
   }
 }
 
 function exitPrototype() {
   gameApp?.dispose();
   gameApp = null;
+  lookController = null;
+  pointerLocked = false;
+  suppressEscapeUntil = 0;
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;
   landing.hidden = false;
@@ -66,12 +124,39 @@ function exitPrototype() {
 
 function handleSceneKeyboard(event) {
   if (event.key === 'Escape' && !prototypeView.hidden) {
+    if (pointerLocked || lookController?.isLocked) {
+      suppressEscapeUntil = Date.now() + 300;
+
+      if (!lookController?.unlock()) {
+        updateLookState({
+          locked: false,
+          supported: lookController?.isSupported ?? false,
+        });
+      }
+
+      return;
+    }
+
+    if (Date.now() < suppressEscapeUntil) {
+      return;
+    }
+
     exitPrototype();
   }
 }
 
+function requestPointerLock() {
+  if (!lookController) {
+    return;
+  }
+
+  pointerLockStatus.textContent = 'Solicitando captura do ponteiro…';
+  lookController.requestLock();
+}
+
 startSceneButton.addEventListener('click', enterPrototype);
 exitSceneButton.addEventListener('click', exitPrototype);
+pointerLockButton.addEventListener('click', requestPointerLock);
 document.addEventListener('keydown', handleSceneKeyboard);
 
 apiButton.addEventListener('click', async () => {
@@ -105,6 +190,7 @@ if (import.meta.hot) {
     gameApp?.dispose();
     startSceneButton.removeEventListener('click', enterPrototype);
     exitSceneButton.removeEventListener('click', exitPrototype);
+    pointerLockButton.removeEventListener('click', requestPointerLock);
     document.removeEventListener('keydown', handleSceneKeyboard);
   });
 }
