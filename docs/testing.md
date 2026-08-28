@@ -132,6 +132,45 @@ O roteiro completo está em
 O roteiro completo está em
 [Fase 4 — Observação em 360°](phases/phase-04-observacao-360.md).
 
+## Fase 5
+
+### Cobertura automatizada adicionada
+
+- carga normalizada entre 0 e 1 e saturação após 1,2 segundo;
+- início somente com o botão esquerdo e enquanto a mira está ativa;
+- disparo ao soltar o botão, com cancelamento seguro quando a mira é liberada;
+- conversão da carga em velocidade linear entre 10 e 24 unidades por segundo;
+- criação do projétil na direção atual da câmera;
+- delegação e ordem de atualização entre `GameSession`, `SlingshotSystem` e
+  `ProjectileSystem`;
+- trajetória atualizada com gravidade de -9,8;
+- descarte no contato com o chão, após 5 segundos ou fora do raio horizontal 40;
+- limite de 24 projéteis ativos, removendo o mais antigo;
+- reinício do HUD após disparo, cancelamento e saída da cena;
+- integração do ciclo de atualização e descarte com `GameApp`.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 5 concluída**, abra a cena e pressione **Ativar mira**.
+3. Segure o botão esquerdo e confirme que o HUD cresce de 0% a 100% em cerca
+   de 1,2 segundo.
+4. Solte antes da carga máxima e observe um disparo mais lento; repita com 100%
+   e observe um disparo mais rápido.
+5. Mire para cima e para baixo e confirme que os projéteis seguem a mira e
+   descrevem uma trajetória com gravidade.
+6. Inicie uma carga e pressione `Esc`; confirme cancelamento, HUD em 0% e
+   nenhum disparo involuntário.
+7. Confirme que os projéteis desaparecem ao tocar o chão e que disparos
+   repetidos não degradam progressivamente a cena.
+8. Verifique que não há inimigos, dano, ondas, pontuação ou controles WebXR.
+9. Repita três ciclos de entrada e saída e confirme um único canvas, HUD zerado
+   e Console sem erros.
+10. Use **Verificar API** para confirmar que a regressão cliente/API não mudou.
+
+O roteiro completo e os critérios de aceite estão em
+[Fase 5 — Disparo convencional](phases/phase-05-disparo-convencional.md).
+
 ## Estratégia futura
 
 - testes unitários para vida, dano, estados, pontuação e ondas;

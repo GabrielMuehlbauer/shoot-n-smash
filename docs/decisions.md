@@ -65,3 +65,23 @@ Pointer Lock nunca é solicitado automaticamente: o usuário ativa a visão por
 um botão focável. O primeiro `Esc` libera o cursor e preserva a cena; outro
 `Esc`, já desbloqueado, retorna ao menu. Ao ocultar a aba, sair da cena ou
 descartar a aplicação, o ponteiro é liberado e os listeners são removidos.
+
+## ADR-008 — Fase 5 como menor vertical slice de disparo
+
+**Status:** aceita em 27 de agosto de 2026.
+
+A conversa de continuidade aprovou reordenar o roadmap original: antes de
+inimigos, dano e ondas, a Fase 5 valida isoladamente o caminho completo entre
+entrada convencional, carga, feedback no HUD, criação, trajetória e descarte de
+um projétil. Essa sequência reduz o número de sistemas novos que precisam ser
+diagnosticados ao mesmo tempo e mantém o incremento executável.
+
+O botão esquerdo acumula uma carga normalizada de 0 a 1 em até 1,2 segundo. Ao
+soltar, a carga define uma velocidade linear entre 10 e 24 unidades por segundo.
+Os projéteis recebem gravidade de -9,8 e são descartados ao tocar o chão, após
+5 segundos, fora do raio horizontal 40 ou pelo limite de 24 objetos ativos.
+
+O recorte não antecipa inimigos, detecção de acerto em alvos, dano, ondas,
+pontuação, ranking ou WebXR. Esses itens continuam no produto planejado; apenas
+a ordem de implementação foi alterada para que cada risco seja validado em um
+incremento menor.

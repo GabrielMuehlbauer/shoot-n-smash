@@ -1,6 +1,8 @@
 import { describeApiHealth } from './api-health.js';
 import { GameApp } from './core/GameApp.js';
+import { GameSession } from './core/GameSession.js';
 import { RenderContext } from './core/RenderContext.js';
+import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
 import { PROJECT_INFO } from './project-info.js';
 import './styles.css';
@@ -17,10 +19,19 @@ const sceneError = document.querySelector('#scene-error');
 const exitSceneButton = document.querySelector('#exit-scene-button');
 const pointerLockButton = document.querySelector('#pointer-lock-button');
 const pointerLockStatus = document.querySelector('#pointer-lock-status');
+const slingshotHud = document.querySelector('#slingshot-hud');
+const slingshotTension = document.querySelector('#slingshot-tension');
+const slingshotTensionValue = document.querySelector(
+  '#slingshot-tension-value',
+);
+const shotStatus = document.querySelector('#shot-status');
 
 let gameApp = null;
 let lookController = null;
+let fireController = null;
+let gameSession = null;
 let pointerLocked = false;
+let announcedChargeStage = -1;
 
 for (const member of PROJECT_INFO.team) {
   const item = document.createElement('li');
@@ -29,6 +40,77 @@ for (const member of PROJECT_INFO.team) {
 }
 
 projectVersion.textContent = `${PROJECT_INFO.name} · v${PROJECT_INFO.version}`;
+
+function setShotStatus(state, message) {
+  slingshotHud.dataset.state = state;
+  shotStatus.dataset.state = state;
+  shotStatus.textContent = message;
+}
+
+function resetSlingshotHud(state = 'ready') {
+  slingshotTension.value = 0;
+  slingshotTension.textContent = '0%';
+  slingshotTension.setAttribute('aria-valuetext', '0% de tensão');
+  slingshotTensionValue.textContent = '0%';
+  slingshotHud.dataset.state = state;
+  announcedChargeStage = -1;
+}
+
+function updateChargeState({ charging, ratio }) {
+  const normalizedRatio = Math.min(Math.max(Number(ratio) || 0, 0), 1);
+  const percent = Math.round(normalizedRatio * 100);
+
+  slingshotTension.value = percent;
+  slingshotTension.textContent = `${percent}%`;
+  slingshotTension.setAttribute(
+    'aria-valuetext',
+    `${percent}% de tensão`,
+  );
+  slingshotTensionValue.textContent = `${percent}%`;
+
+  if (!charging) {
+    resetSlingshotHud(pointerLocked ? 'ready' : 'idle');
+    return;
+  }
+
+  const announcementStage = percent === 100 ? 100 : 0;
+
+  if (announcementStage !== announcedChargeStage) {
+    announcedChargeStage = announcementStage;
+    setShotStatus(
+      'charging',
+      announcementStage === 100
+        ? 'Carga máxima. Solte o botão para disparar.'
+        : 'Carregando o estilingue. Solte o botão quando quiser disparar.',
+    );
+  }
+}
+
+function handleShot(shot) {
+  const percent = Math.round(Math.min(Math.max(shot.ratio, 0), 1) * 100);
+  const projectileLabel =
+    shot.activeProjectileCount === 1
+      ? '1 projétil ativo'
+      : `${shot.activeProjectileCount} projéteis ativos`;
+
+  setShotStatus(
+    'ready',
+    `Disparo de ${percent}% lançado · ${projectileLabel}.`,
+  );
+}
+
+function handleChargeCancel({ reason = 'manual' } = {}) {
+  gameSession?.cancelCharge();
+  resetSlingshotHud('idle');
+
+  const messages = {
+    'document-hidden': 'Carga cancelada porque a página ficou oculta.',
+    'pointer-lock-lost': 'Carga cancelada. Ative a mira para tentar novamente.',
+    'window-blur': 'Carga cancelada porque a janela perdeu o foco.',
+  };
+
+  setShotStatus('idle', messages[reason] ?? 'Carga cancelada com segurança.');
+}
 
 function updateLookState({ locked, supported }) {
   pointerLocked = locked;
@@ -39,11 +121,29 @@ function updateLookState({ locked, supported }) {
       : 'unsupported';
   pointerLockButton.hidden = locked;
   pointerLockButton.disabled = !supported;
+  pointerLockButton.removeAttribute('aria-busy');
   pointerLockStatus.textContent = locked
-    ? 'Visão 360° ativa. Mova o mouse para olhar; Esc libera o cursor.'
+    ? 'Mira ativa. Segure o botão esquerdo e solte para disparar; Esc libera o cursor.'
     : supported
-      ? 'Cursor livre. Ative a visão 360° para voltar a olhar com o mouse.'
+      ? 'Cursor livre. Ative a mira para olhar e usar o estilingue.'
       : 'Pointer Lock não está disponível neste navegador.';
+
+  if (locked) {
+    resetSlingshotHud('ready');
+    setShotStatus(
+      'ready',
+      'Mira ativa. Segure o botão esquerdo para carregar.',
+    );
+  } else {
+    gameSession?.cancelCharge();
+    resetSlingshotHud('idle');
+    setShotStatus(
+      'idle',
+      supported
+        ? 'Ative a mira para preparar o estilingue.'
+        : 'Disparo indisponível sem suporte a Pointer Lock.',
+    );
+  }
 
   if (!locked && supported && !prototypeView.hidden) {
     pointerLockButton.focus({ preventScroll: true });
@@ -51,11 +151,16 @@ function updateLookState({ locked, supported }) {
 }
 
 function handleLookError({ message }) {
+  fireController?.cancelCharge('look-error');
+  gameSession?.cancelCharge();
   pointerLocked = false;
   prototypeView.dataset.lookState = 'error';
   pointerLockButton.hidden = false;
   pointerLockButton.disabled = !lookController?.isSupported;
+  pointerLockButton.removeAttribute('aria-busy');
   pointerLockStatus.textContent = message;
+  resetSlingshotHud('error');
+  setShotStatus('error', 'Carga cancelada porque a mira não está disponível.');
 
   if (!prototypeView.hidden) {
     (pointerLockButton.disabled ? exitSceneButton : pointerLockButton).focus({
@@ -81,16 +186,37 @@ function enterPrototype() {
       onLockChange: updateLookState,
       onError: handleLookError,
     });
-    gameApp = new GameApp({ renderContext, lookController });
+    gameSession = new GameSession({
+      camera: renderContext.camera,
+      scene: renderContext.scene,
+      onChargeChange: updateChargeState,
+      onShot: handleShot,
+    });
+    fireController = new DesktopFireController({
+      canvas: renderContext.renderer.domElement,
+      onChargeStart: () => gameSession.beginCharge(),
+      onChargeRelease: () => gameSession.releaseShot(),
+      onChargeCancel: handleChargeCancel,
+    });
+    gameApp = new GameApp({
+      renderContext,
+      lookController,
+      fireController,
+      gameSession,
+    });
     gameApp.start();
   } catch (error) {
     if (gameApp) {
       gameApp.dispose();
     } else {
+      fireController?.dispose();
+      gameSession?.dispose();
       lookController?.dispose();
       renderContext?.dispose();
     }
     gameApp = null;
+    fireController = null;
+    gameSession = null;
     lookController = null;
     sceneContainer.replaceChildren();
     sceneError.hidden = false;
@@ -109,8 +235,12 @@ function enterPrototype() {
 function exitPrototype() {
   gameApp?.dispose();
   gameApp = null;
+  fireController = null;
+  gameSession = null;
   lookController = null;
   pointerLocked = false;
+  resetSlingshotHud('idle');
+  setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;
   landing.hidden = false;
@@ -145,7 +275,13 @@ function requestPointerLock() {
   }
 
   pointerLockStatus.textContent = 'Solicitando captura do ponteiro…';
-  lookController.requestLock();
+  pointerLockButton.disabled = true;
+  pointerLockButton.setAttribute('aria-busy', 'true');
+
+  if (!lookController.requestLock()) {
+    pointerLockButton.disabled = !lookController.isSupported;
+    pointerLockButton.removeAttribute('aria-busy');
+  }
 }
 
 startSceneButton.addEventListener('click', enterPrototype);

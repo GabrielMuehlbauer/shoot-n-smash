@@ -32,6 +32,7 @@ export class DesktopLookController {
     this.connected = false;
     this.disposed = false;
     this.connectionGeneration = 0;
+    this.lockRequestGeneration = 0;
 
     if (!this.documentRef?.addEventListener) {
       throw new Error('DesktopLookController requer um documento válido.');
@@ -117,6 +118,8 @@ export class DesktopLookController {
 
     try {
       const connectionGeneration = this.connectionGeneration;
+      this.lockRequestGeneration += 1;
+      const lockRequestGeneration = this.lockRequestGeneration;
       const request = this.domElement.requestPointerLock({
         unadjustedMovement: DESKTOP_LOOK_CONFIG.unadjustedMovement,
       });
@@ -124,7 +127,9 @@ export class DesktopLookController {
       request?.catch?.((error) => {
         if (
           !this.connected ||
-          this.connectionGeneration !== connectionGeneration
+          this.connectionGeneration !== connectionGeneration ||
+          this.lockRequestGeneration !== lockRequestGeneration ||
+          this.isLocked
         ) {
           return;
         }
@@ -157,6 +162,7 @@ export class DesktopLookController {
   }
 
   handleLock() {
+    this.lockRequestGeneration += 1;
     this.onLockChange({ locked: true, supported: this.isSupported });
   }
 
@@ -165,6 +171,10 @@ export class DesktopLookController {
   }
 
   handlePointerLockError(event) {
+    if (this.isLocked) {
+      return;
+    }
+
     this.reportError(
       'pointer-lock-error',
       'O navegador informou uma falha ao capturar o ponteiro.',
@@ -182,6 +192,7 @@ export class DesktopLookController {
     }
 
     this.connectionGeneration += 1;
+    this.lockRequestGeneration += 1;
     this.unlock();
     this.controls.removeEventListener('lock', this.handleLock);
     this.controls.removeEventListener('unlock', this.handleUnlock);

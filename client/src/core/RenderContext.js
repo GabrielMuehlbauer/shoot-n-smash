@@ -99,7 +99,7 @@ export class RenderContext {
     renderer.domElement.setAttribute('role', 'img');
     renderer.domElement.setAttribute(
       'aria-label',
-      'Arena 3D de neve com observação em 360 graus pelo mouse.',
+      'Arena 3D de neve com mira, carregamento e disparos convencionais.',
     );
 
     return renderer;

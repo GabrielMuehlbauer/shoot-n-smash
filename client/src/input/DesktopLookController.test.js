@@ -244,6 +244,42 @@ test('ignora rejeição assíncrona pertencente a uma sessão anterior', async (
   controller.dispose();
 });
 
+test('ignora rejeição antiga após uma solicitação mais nova obter o lock', async () => {
+  const fixture = createDocumentFixture();
+  const errors = [];
+  let rejectOldRequest;
+  let requestCount = 0;
+  fixture.domElement.requestPointerLock = () => {
+    requestCount += 1;
+
+    if (requestCount === 1) {
+      return new Promise((resolve, reject) => {
+        rejectOldRequest = reject;
+      });
+    }
+
+    fixture.documentRef.pointerLockElement = fixture.domElement;
+    fixture.documentRef.dispatch('pointerlockchange');
+    return Promise.resolve();
+  };
+  const controller = new DesktopLookController({
+    camera: createCamera(),
+    domElement: fixture.domElement,
+    documentRef: fixture.documentRef,
+    onError: (error) => errors.push(error),
+  });
+
+  controller.connect();
+  controller.requestLock();
+  controller.requestLock();
+  rejectOldRequest(new Error('rejeição antiga da mesma conexão'));
+  await Promise.resolve();
+
+  assert.equal(controller.isLocked, true);
+  assert.deepEqual(errors, []);
+  controller.dispose();
+});
+
 test('relata rejeição assíncrona da sessão ativa', async () => {
   const fixture = createDocumentFixture();
   const errors = [];
