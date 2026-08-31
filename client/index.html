@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash: sobreviva a ondas de monstros de gelo usando um estilingue, no navegador e em realidade virtual."
+      content="Shoot 'n' Smash — protótipo da Fase 6 com visão 360°, estilingue, alvo, colisão contínua e dano no navegador desktop."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,19 +19,19 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 5 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Protótipo convencional</p>
+        <div class="phase-badge"><span></span> Fase 6 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Alvo, colisão e dano</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
-          Prepare o estilingue. A arena de neve agora permite mirar em 360°,
-          carregar a tensão e lançar projéteis. Ative a mira, mantenha o botão
-          esquerdo pressionado e solte quando quiser disparar.
+          Observe a arena em 360°, mire no alvo low-poly e use o estilingue sem
+          sair do centro. Cada acerto causa 25 de dano; quatro impactos destroem
+          o alvo de treinamento.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Disparo convencional da Fase 5</small>
+            <small>Alvo e dano da Fase 6</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -78,7 +78,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Neve · Navegador · WebXR</span>
+        <span>Alvo · Colisão contínua · WebXR planejado</span>
       </footer>
     </main>
 
@@ -93,13 +93,47 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 5 · Disparo convencional</span>
+          <span class="scene-phase">Fase 6 · Alvo, colisão e dano</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
           Voltar ao menu <kbd>Esc</kbd>
         </button>
       </div>
+
+      <section
+        id="target-hud"
+        class="target-hud"
+        data-target-state="active"
+        aria-labelledby="target-health-label"
+      >
+        <div class="target-health-heading">
+          <strong id="target-health-label">Vida do alvo</strong>
+          <span id="target-health-value" aria-hidden="true">100 / 100</span>
+        </div>
+        <div
+          id="target-health"
+          class="target-health"
+          role="progressbar"
+          aria-labelledby="target-health-label"
+          aria-describedby="target-status"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="100"
+          aria-valuetext="Alvo com 100 de 100 pontos de vida"
+        >
+          <span class="target-health-fill" aria-hidden="true"></span>
+        </div>
+        <p
+          id="target-status"
+          class="target-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Alvo ativo. Quatro acertos para destruir.
+        </p>
+      </section>
 
       <div class="scene-reticle" aria-hidden="true"></div>
 
@@ -142,10 +176,10 @@
       </section>
 
       <div class="scene-caption">
-        <strong>Recorte jogável da Fase 5</strong>
+        <strong>Alvo estático · 100 PV</strong>
         <span>
-          O jogador continua estacionário. Inimigos, dano, ondas, pontuação e
-          WebXR não fazem parte deste incremento.
+          Cada impacto causa 25 de dano. Inimigos, ondas, pontuação e WebXR não
+          fazem parte deste incremento.
         </span>
       </div>
 

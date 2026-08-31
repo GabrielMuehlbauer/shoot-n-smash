@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { PerspectiveCamera, Scene } from 'three';
+import { PerspectiveCamera, Scene, Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { GameSession } from './GameSession.js';
@@ -190,7 +190,16 @@ test('coordena o estilingue antes dos projéteis e delega intenções', () => {
     update: (delta) => calls.push(['slingshot.update', delta]),
     dispose: () => calls.push(['slingshot.dispose']),
   };
-  const session = new GameSession({ projectileSystem, slingshotSystem });
+  const targetSystem = {
+    alive: false,
+    state: { alive: false, health: 0, maxHealth: 100, ratio: 0 },
+    dispose: () => calls.push(['target.dispose']),
+  };
+  const session = new GameSession({
+    projectileSystem,
+    slingshotSystem,
+    targetSystem,
+  });
 
   assert.equal(session.beginCharge(), true);
   assert.deepEqual(session.releaseShot(), { ratio: 0.5 });
@@ -208,7 +217,125 @@ test('coordena o estilingue antes dos projéteis e delega intenções', () => {
     ['projectiles.update', 0.016],
     ['slingshot.dispose'],
     ['projectiles.dispose'],
+    ['target.dispose'],
   ]);
+});
+
+test('anexa o alvo à cena e expõe o estado inicial de leitura', () => {
+  const scene = new Scene();
+  const session = new GameSession({ camera: createCamera(), scene });
+
+  assert.equal(session.targetSystem.parent, scene);
+  assert.deepEqual(session.targetState, {
+    alive: true,
+    health: 100,
+    maxHealth: 100,
+    ratio: 1,
+  });
+  session.dispose();
+  assert.equal(session.targetSystem.parent, null);
+});
+
+test('colisão varrida impede tunneling, aplica quatro danos e consome o projétil', () => {
+  const healthChanges = [];
+  const hits = [];
+  const destructions = [];
+  const scene = new Scene();
+  const config = {
+    ...GAMEPLAY_CONFIG,
+    projectile: {
+      ...GAMEPLAY_CONFIG.projectile,
+      gravity: 0,
+      groundY: -100,
+    },
+  };
+  const session = new GameSession({
+    camera: createCamera(),
+    scene,
+    config,
+    onTargetDestroy: (state) => destructions.push(state),
+    onTargetHealthChange: (state) => healthChanges.push(state),
+    onTargetHit: (hit) => hits.push(hit),
+  });
+
+  for (let hit = 0; hit < 4; hit += 1) {
+    session.projectileSystem.spawn({
+      origin: new Vector3(4, 2.15, 0),
+      direction: new Vector3(0, 0, -1),
+      speed: 24,
+    });
+    session.update(0.5);
+    assert.equal(session.activeProjectileCount, 0);
+  }
+
+  assert.deepEqual(
+    healthChanges.map(({ health }) => health),
+    [75, 50, 25, 0],
+  );
+  assert.deepEqual(
+    hits.map(({ health }) => health),
+    [75, 50, 25, 0],
+  );
+  assert.equal(destructions.length, 1);
+  assert.deepEqual(session.targetState, {
+    alive: false,
+    health: 0,
+    maxHealth: 100,
+    ratio: 0,
+  });
+  assert.equal(hits[0].damage, 25);
+  assert.ok(hits[0].impactPoint.z < -9);
+  assert.ok(hits[0].impactRatio > 0 && hits[0].impactRatio < 1);
+
+  session.projectileSystem.spawn({
+    origin: new Vector3(4, 2.15, 0),
+    direction: new Vector3(0, 0, -1),
+    speed: 24,
+  });
+  session.update(0.5);
+  assert.equal(session.targetState.health, 0);
+  assert.equal(healthChanges.length, 4);
+  assert.equal(hits.length, 4);
+  session.dispose();
+});
+
+test('um disparo fora do volume não causa dano nem é consumido', () => {
+  const scene = new Scene();
+  const config = {
+    ...GAMEPLAY_CONFIG,
+    projectile: {
+      ...GAMEPLAY_CONFIG.projectile,
+      gravity: 0,
+      groundY: -100,
+    },
+  };
+  const session = new GameSession({ camera: createCamera(), scene, config });
+
+  session.projectileSystem.spawn({
+    origin: new Vector3(-4, 2.15, 0),
+    direction: new Vector3(0, 0, -1),
+    speed: 24,
+  });
+  session.update(0.5);
+
+  assert.equal(session.targetState.health, 100);
+  assert.equal(session.activeProjectileCount, 1);
+  session.dispose();
+});
+
+test('valida o callback de impacto antes de criar recursos', () => {
+  const scene = new Scene();
+
+  assert.throws(
+    () =>
+      new GameSession({
+        camera: createCamera(),
+        scene,
+        onTargetHit: null,
+      }),
+    /onTargetHit como função/,
+  );
+  assert.equal(scene.children.length, 0);
 });
 
 test('remove recursos criados quando a construção do estilingue falha', () => {

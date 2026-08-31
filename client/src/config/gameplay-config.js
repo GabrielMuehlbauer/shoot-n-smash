@@ -21,4 +21,16 @@ export const GAMEPLAY_CONFIG = freeze({
     horizontalLimit: 40,
     maxActive: 24,
   }),
+  target: freeze({
+    position: freeze({ x: 4, y: 2.15, z: -11 }),
+    radius: 1.25,
+    maxHealth: 100,
+    damagePerHit: 25,
+    colors: freeze({
+      active: 0x79d9ff,
+      damaged: 0xffb45f,
+      destroyed: 0x4c6175,
+      emissive: 0x0c4c66,
+    }),
+  }),
 });

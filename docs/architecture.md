@@ -36,7 +36,7 @@ WaveSystem -> EnemySystem (futuros) <──────────── Collis
   neve com primitivas low-poly e recursos compartilhados.
 - `GameApp` controla o único `setAnimationLoop`, a composição e o ciclo de vida
   da cena, limita o delta entre frames e pausa atualizações quando a aba está
-  oculta. Na Fase 5, ele também coordena `DesktopFireController` e `GameSession`,
+  oculta. Desde a Fase 5, ele também coordena `DesktopFireController` e `GameSession`,
   além do controle de observação desktop.
 - `DesktopLookController` adapta o `PointerLockControls` oficial do Three.js,
   limita o pitch a ±85°, mantém yaw livre e não expõe qualquer operação de
@@ -46,8 +46,9 @@ WaveSystem -> EnemySystem (futuros) <──────────── Collis
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Seu `update(deltaSeconds)` preserva a ordem estilingue →
-  projéteis; `dispose()` encerra ambos de forma idempotente.
+  fachada da partida. Na Fase 6, seu `update(deltaSeconds)` preserva a ordem
+  estilingue → projéteis → resolução do impacto; `dispose()` encerra todos os
+  sistemas de forma idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
   não conhece mouse, Pointer Lock nem elementos do DOM.
@@ -56,6 +57,12 @@ WaveSystem -> EnemySystem (futuros) <──────────── Collis
   uma esfera visual de raio 0,18, preserva a posição anterior para a futura
   colisão por segmento e tem ciclo de vida limitado. `update()` e `dispose()`
   não dependem do DOM e são idempotentes.
+- `TargetSystem` é dono do único alvo de treinamento, de seu visual, collider,
+  vida e transição terminal. Ele publica snapshots de estado por callbacks e não
+  conhece elementos do DOM.
+- `CollisionSystem` contém matemática pura para segmento–esfera. O raio do
+  projétil é somado ao raio do alvo e o primeiro contato em `[0, 1]` impede
+  tunneling sem introduzir uma engine física.
 - O HUD HTML observa `onChargeChange({ charging, ratio })` e o resultado do
   disparo por callbacks, convertendo `ratio * 100` para a apresentação. O núcleo
   de gameplay não consulta nem altera elementos do DOM. Cancelamentos informam
@@ -104,6 +111,25 @@ indefinido de objetos e recursos durante o protótipo.
 Este fluxo ainda não contém inimigos, detecção de acerto em alvos, dano, ondas,
 pontuação ou qualquer entrada WebXR. A colisão com o chão existe apenas para
 encerrar o ciclo de vida do projétil.
+
+## Recorte executável da Fase 6
+
+```text
+projétil: posição anterior ─────────────> posição atual
+                    │
+                    v
+          CollisionSystem segmento–esfera
+                    │ acerto
+                    v
+          TargetSystem.applyDamage(25)
+                    │
+                    ├──> HUD 100 → 75 → 50 → 25 → 0
+                    └──> consumo do projétil
+```
+
+O alvo estático tem raio 1,25 e ocupa `(4, 2,15, -11)`. Quando a vida chega a
+zero, o collider deixa de aceitar dano e o visual assume estado destruído. Não
+há respawn, pontuação, ataque ao jogador ou progressão de onda nesta fase.
 
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
 MVP. Colisões iniciais utilizarão volumes simples e teste de segmento para os

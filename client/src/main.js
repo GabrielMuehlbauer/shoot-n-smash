@@ -25,6 +25,10 @@ const slingshotTensionValue = document.querySelector(
   '#slingshot-tension-value',
 );
 const shotStatus = document.querySelector('#shot-status');
+const targetHud = document.querySelector('#target-hud');
+const targetHealth = document.querySelector('#target-health');
+const targetHealthValue = document.querySelector('#target-health-value');
+const targetStatus = document.querySelector('#target-status');
 
 let gameApp = null;
 let lookController = null;
@@ -54,6 +58,37 @@ function resetSlingshotHud(state = 'ready') {
   slingshotTensionValue.textContent = '0%';
   slingshotHud.dataset.state = state;
   announcedChargeStage = -1;
+}
+
+function resetTargetHud() {
+  targetHud.dataset.targetState = 'active';
+  targetHud.style.setProperty('--target-health', '100');
+  targetHealthValue.textContent = '100 / 100';
+  targetHealth.setAttribute('aria-valuemax', '100');
+  targetHealth.setAttribute('aria-valuenow', '100');
+  targetHealth.setAttribute(
+    'aria-valuetext',
+    'Alvo com 100 de 100 pontos de vida',
+  );
+  targetStatus.textContent = 'Alvo ativo. Quatro acertos para destruir.';
+}
+
+function updateTargetState({ alive, health, maxHealth }) {
+  const percent = Math.round((health / maxHealth) * 100);
+  targetHud.dataset.targetState = alive ? 'damaged' : 'destroyed';
+  targetHud.style.setProperty('--target-health', String(percent));
+  targetHealthValue.textContent = `${health} / ${maxHealth}`;
+  targetHealth.setAttribute('aria-valuemax', String(maxHealth));
+  targetHealth.setAttribute('aria-valuenow', String(health));
+  targetHealth.setAttribute(
+    'aria-valuetext',
+    alive
+      ? `Alvo com ${health} de ${maxHealth} pontos de vida`
+      : 'Alvo destruído, sem pontos de vida',
+  );
+  targetStatus.textContent = alive
+    ? `Acerto confirmado. Restam ${health} pontos de vida.`
+    : 'Alvo destruído em quatro acertos.';
 }
 
 function updateChargeState({ charging, ratio }) {
@@ -177,6 +212,7 @@ function enterPrototype() {
   prototypeView.hidden = false;
   sceneError.hidden = true;
   document.body.classList.add('scene-active');
+  resetTargetHud();
 
   try {
     renderContext = new RenderContext(sceneContainer);
@@ -191,6 +227,7 @@ function enterPrototype() {
       scene: renderContext.scene,
       onChargeChange: updateChargeState,
       onShot: handleShot,
+      onTargetHealthChange: updateTargetState,
     });
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
@@ -240,6 +277,7 @@ function exitPrototype() {
   lookController = null;
   pointerLocked = false;
   resetSlingshotHud('idle');
+  resetTargetHud();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

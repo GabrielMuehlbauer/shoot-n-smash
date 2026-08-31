@@ -125,9 +125,13 @@ export class ProjectileSystem {
     return mesh;
   }
 
-  update(deltaSeconds) {
+  update(deltaSeconds, onProjectileStep = null) {
     if (this.disposed) {
       return false;
+    }
+
+    if (onProjectileStep !== null && typeof onProjectileStep !== 'function') {
+      throw new TypeError('ProjectileSystem requer callback de passo válido.');
     }
 
     const delta = Math.max(0, Number(deltaSeconds) || 0);
@@ -149,6 +153,20 @@ export class ProjectileSystem {
       mesh.position.y += halfAccelerationStep;
       velocity.y += accelerationY * delta;
       projectile.ageSeconds += delta;
+
+      const consumed =
+        onProjectileStep?.({
+          currentPosition: mesh.position,
+          mesh,
+          previousPosition: projectile.previousPosition,
+          projectile,
+          radius: this.config.radius,
+        }) === true;
+
+      if (consumed) {
+        this.removeProjectile(projectile);
+        continue;
+      }
 
       const outsideHorizontalLimit =
         mesh.position.x ** 2 + mesh.position.z ** 2 > horizontalLimitSquared;

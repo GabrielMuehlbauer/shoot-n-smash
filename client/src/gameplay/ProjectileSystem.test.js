@@ -45,6 +45,41 @@ test('cria uma esfera e integra a trajetória balística', () => {
   system.dispose();
 });
 
+test('expõe o segmento varrido e consome o projétil antes do descarte ambiental', () => {
+  const { system } = createSystem({
+    gravity: 0,
+    groundY: 10,
+    lifetimeSeconds: 0.1,
+  });
+  const origin = new Vector3(0, 2, 0);
+  const segments = [];
+
+  system.spawn({
+    origin,
+    direction: new Vector3(0, 0, -1),
+    speed: 24,
+  });
+
+  assert.equal(
+    system.update(0.5, (step) => {
+      segments.push({
+        current: step.currentPosition.clone(),
+        previous: step.previousPosition.clone(),
+        radius: step.radius,
+      });
+      return true;
+    }),
+    true,
+  );
+
+  assert.equal(system.activeProjectileCount, 0);
+  assert.deepEqual(segments[0].previous.toArray(), origin.toArray());
+  assert.deepEqual(segments[0].current.toArray(), [0, 2, -12]);
+  assert.equal(segments[0].radius, GAMEPLAY_CONFIG.projectile.radius);
+  assert.throws(() => system.update(0.1, 'invalid'), /callback de passo/);
+  system.dispose();
+});
+
 test('remove projéteis ao tocar o solo, expirar ou sair do limite horizontal', () => {
   const groundFixture = createSystem();
   groundFixture.system.spawn({

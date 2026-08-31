@@ -85,3 +85,16 @@ O recorte não antecipa inimigos, detecção de acerto em alvos, dano, ondas,
 pontuação, ranking ou WebXR. Esses itens continuam no produto planejado; apenas
 a ordem de implementação foi alterada para que cada risco seja validado em um
 incremento menor.
+
+## ADR-009 — Colisão contínua analítica antes de uma engine física
+
+**Status:** aceita em 31 de agosto de 2026.
+
+`ProjectileSystem` fornece a posição anterior e atual de cada bola de neve.
+`GameSession` usa `CollisionSystem` para testar o segmento contra uma esfera com
+o raio combinado do projétil e do alvo, aplica o dano pelo `TargetSystem` e
+consome o projétil no primeiro impacto.
+
+A posição final isolada permitiria que projéteis rápidos atravessassem um alvo
+entre frames. A solução analítica é determinística, pequena e testável, sem
+adicionar engine física, ECS ou `Raycaster` acoplado à aparência do objeto.

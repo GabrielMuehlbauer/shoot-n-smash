@@ -171,6 +171,33 @@ O roteiro completo está em
 O roteiro completo e os critérios de aceite estão em
 [Fase 5 — Disparo convencional](phases/phase-05-disparo-convencional.md).
 
+## Fase 6
+
+### Cobertura automatizada adicionada
+
+- interseção segmento–esfera com tunneling, tangência e início interno;
+- validação de vetores, raios e segmentos degenerados;
+- raio combinado do projétil e do alvo;
+- consumo do projétil antes das regras ambientais de descarte;
+- vida `100 → 75 → 50 → 25 → 0`, sem valor negativo;
+- uma única transição para destruído e dano ignorado depois dela;
+- visual, reset, callbacks e descarte idempotente do alvo;
+- integração entre `GameSession`, projétil, colisão e alvo;
+- metadados e diagnóstico da API atualizados para a Fase 6.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 6 concluída**, abra a cena e localize o alvo azul.
+3. Ative a mira e confirme quatro impactos de 25 pontos no HUD.
+4. Erre um disparo e confirme que a vida não muda.
+5. Após 0 PV, confirme que novos disparos não causam dano adicional.
+6. Entre e saia três vezes; cada sessão deve recomeçar em 100 PV.
+7. Verifique a API e confirme o Console sem erros.
+
+O roteiro completo está em
+[Fase 6 — Alvo, colisão e dano](phases/phase-06-alvo-colisao-dano.md).
+
 ## Estratégia futura
 
 - testes unitários para vida, dano, estados, pontuação e ondas;

@@ -26,7 +26,7 @@ test('GET /api/health funciona sem MySQL configurado', async (testContext) => {
 
   assert.equal(response.status, 200);
   assert.equal(body.status, 'ok');
-  assert.equal(body.phase, 5);
+  assert.equal(body.phase, 6);
   assert.equal(body.database.status, 'not-configured');
 });
 
