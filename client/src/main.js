@@ -70,7 +70,8 @@ function resetTargetHud() {
     'aria-valuetext',
     'Alvo com 100 de 100 pontos de vida',
   );
-  targetStatus.textContent = 'Alvo ativo. Quatro acertos para destruir.';
+  targetStatus.textContent =
+    'Alvo móvel ativo. Acompanhe a patrulha e acerte quatro vezes.';
 }
 
 function updateTargetState({ alive, health, maxHealth }) {
@@ -87,8 +88,8 @@ function updateTargetState({ alive, health, maxHealth }) {
       : 'Alvo destruído, sem pontos de vida',
   );
   targetStatus.textContent = alive
-    ? `Acerto confirmado. Restam ${health} pontos de vida.`
-    : 'Alvo destruído em quatro acertos.';
+    ? `Impacto confirmado. Restam ${health} pontos de vida.`
+    : 'Alvo destruído no ponto do quarto impacto.';
 }
 
 function updateChargeState({ charging, ratio }) {

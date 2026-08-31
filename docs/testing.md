@@ -198,10 +198,42 @@ O roteiro completo e os critérios de aceite estão em
 O roteiro completo está em
 [Fase 6 — Alvo, colisão e dano](phases/phase-06-alvo-colisao-dano.md).
 
+## Fase 7
+
+### Cobertura automatizada adicionada
+
+- movimento senoidal determinístico para diferentes subdivisões de frame;
+- limites horizontais, direção inicial, rotação, reset e parada terminal;
+- preservação dos centros anterior e atual do alvo em coordenadas mundiais;
+- colisão contínua entre duas esferas móveis por movimento relativo;
+- cruzamento de um alvo rápido com um projétil quase parado;
+- interpolação e congelamento do alvo na fração do impacto fatal;
+- criação do burst no centro do projétil no primeiro contato;
+- expansão, opacidade, expiração, limite FIFO e descarte dos feedbacks;
+- ordem de atualização entre estilingue, alvo, feedback e projéteis;
+- integração de dano, consumo do projétil, feedback e ciclo da sessão;
+- metadados e diagnóstico da API atualizados para a Fase 7.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 7 concluída**, verifique a API e abra a cena 3D.
+3. Observe a patrulha suave do alvo entre os dois limites horizontais.
+4. Ative a mira, acompanhe o alvo e confirme um burst branco em cada acerto.
+5. Confirme no HUD a sequência `100 → 75 → 50 → 25 → 0`.
+6. No quarto impacto, confirme que o alvo para exatamente onde foi atingido.
+7. Erre um disparo e confirme que não há dano nem burst.
+8. Aguarde um efeito e confirme que ele desaparece rapidamente.
+9. Repita três ciclos de entrada e saída; cada sessão deve iniciar limpa.
+10. Confirme o Console sem erros e o diagnóstico com `phase: 7`.
+
+O roteiro completo está em
+[Fase 7 — Alvo móvel e feedback de impacto](phases/phase-07-alvo-movel-impacto.md).
+
 ## Estratégia futura
 
-- testes unitários para vida, dano, estados, pontuação e ondas;
-- testes de integração para colisões e partida completa;
+- testes unitários para vida e dano do jogador, estados, pontuação e ondas;
+- testes de integração para contato inimigo–jogador e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;
 - mocks WebXR apenas para lógica de entrada;

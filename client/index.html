@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 6 com visão 360°, estilingue, alvo, colisão contínua e dano no navegador desktop."
+      content="Shoot 'n' Smash — protótipo da Fase 7 com alvo móvel, colisão relativa e feedback 3D de impacto no navegador desktop."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,19 +19,19 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 6 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Alvo, colisão e dano</p>
+        <div class="phase-badge"><span></span> Fase 7 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Alvo móvel e impacto</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
-          Observe a arena em 360°, mire no alvo low-poly e use o estilingue sem
-          sair do centro. Cada acerto causa 25 de dano; quatro impactos destroem
-          o alvo de treinamento.
+          Acompanhe a patrulha horizontal do alvo low-poly e use o estilingue sem
+          sair do centro. Cada acerto causa 25 de dano e cria um breve burst 3D
+          no centro do projétil no primeiro contato.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Alvo e dano da Fase 6</small>
+            <small>Alvo móvel e impacto da Fase 7</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -78,7 +78,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Alvo · Colisão contínua · WebXR planejado</span>
+        <span>Patrulha · Impacto 3D · WebXR planejado</span>
       </footer>
     </main>
 
@@ -93,7 +93,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 6 · Alvo, colisão e dano</span>
+          <span class="scene-phase">Fase 7 · Alvo móvel e impacto</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -108,7 +108,7 @@
         aria-labelledby="target-health-label"
       >
         <div class="target-health-heading">
-          <strong id="target-health-label">Vida do alvo</strong>
+          <strong id="target-health-label">Vida do alvo móvel</strong>
           <span id="target-health-value" aria-hidden="true">100 / 100</span>
         </div>
         <div
@@ -131,7 +131,7 @@
           aria-live="polite"
           aria-atomic="true"
         >
-          Alvo ativo. Quatro acertos para destruir.
+          Alvo móvel ativo. Acompanhe a patrulha e acerte quatro vezes.
         </p>
       </section>
 
@@ -171,15 +171,15 @@
         <ol id="slingshot-instructions" class="slingshot-instructions">
           <li>Ative a mira.</li>
           <li>Segure o botão esquerdo para carregar.</li>
-          <li>Solte o botão para disparar.</li>
+          <li>Acompanhe o alvo e solte para disparar.</li>
         </ol>
       </section>
 
       <div class="scene-caption">
-        <strong>Alvo estático · 100 PV</strong>
+        <strong>Patrulha senoidal · 100 PV</strong>
         <span>
-          Cada impacto causa 25 de dano. Inimigos, ondas, pontuação e WebXR não
-          fazem parte deste incremento.
+          O alvo se move entre x -4,5 e 4,5; cada impacto cria um burst branco.
+          Ondas, pontuação e WebXR continuam fora deste incremento.
         </span>
       </div>
 

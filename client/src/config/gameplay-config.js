@@ -26,11 +26,25 @@ export const GAMEPLAY_CONFIG = freeze({
     radius: 1.25,
     maxHealth: 100,
     damagePerHit: 25,
+    movement: freeze({
+      minX: -4.5,
+      maxX: 4.5,
+      speed: 1.6,
+      initialDirection: -1,
+      rotationSpeed: 0.85,
+    }),
     colors: freeze({
       active: 0x79d9ff,
       damaged: 0xffb45f,
       destroyed: 0x4c6175,
       emissive: 0x0c4c66,
     }),
+  }),
+  impactFeedback: freeze({
+    lifetimeSeconds: 0.32,
+    maxActive: 12,
+    startScale: 0.18,
+    endScale: 0.72,
+    color: 0xffffff,
   }),
 });

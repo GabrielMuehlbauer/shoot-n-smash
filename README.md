@@ -4,9 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 6 — alvo, colisão e dano**. O jogador permanece no
-> centro da arena, usa o estilingue contra um alvo estático de 100 PV e causa
-> 25 de dano por impacto com colisão contínua.
+> Status atual: **Fase 7 — alvo móvel e feedback de impacto**. O alvo patrulha
+> horizontalmente, a colisão considera o movimento dos dois volumes e cada
+> acerto cria um burst 3D curto no centro do projétil no primeiro contato.
 
 ## Equipe
 
@@ -46,7 +46,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 6.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 7.
 
 ## Execução em desenvolvimento
 
@@ -68,8 +68,8 @@ e o servidor. Para testar o recorte jogável:
 1. pressione **Abrir cena 3D**;
 2. pressione **Ativar mira** e mova o mouse para apontar;
 3. mantenha o botão esquerdo pressionado para acumular tensão;
-4. mire no alvo azul e solte o botão esquerdo para disparar;
-5. confirme no HUD que quatro impactos reduzem a vida de 100 para 0.
+4. acompanhe o alvo azul em movimento e solte o botão esquerdo para disparar;
+5. confirme o burst branco no impacto e a vida `100 → 75 → 50 → 25 → 0`.
 
 O HUD mostra a tensão de 0% a 100%. A carga máxima é atingida em 1,2 segundo;
 segurar por mais tempo não ultrapassa esse limite. O primeiro `Esc` libera o
@@ -77,7 +77,7 @@ cursor e cancela uma carga em andamento. Um novo `Esc`, com o cursor livre,
 retorna ao menu. O botão **Voltar ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 6](docs/phases/phase-06-alvo-colisao-dano.md).
+[guia da Fase 7](docs/phases/phase-07-alvo-movel-impacto.md).
 
 ## Build e execução de produção
 
@@ -106,7 +106,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 6](docs/phases/phase-06-alvo-colisao-dano.md#como-testar).
+[guia de teste da Fase 7](docs/phases/phase-07-alvo-movel-impacto.md#como-testar).
 
 ## Scripts
 
@@ -145,17 +145,17 @@ nos diagnósticos públicos.
 
 Os projéteis caem pela gravidade e são removidos ao atingir o alvo, tocar o chão,
 completar 5 segundos, sair do raio útil da arena ou exceder o limite de segurança.
-O teste segmento–esfera usa a posição anterior e atual para impedir que uma bola
-rápida atravesse o alvo entre dois frames.
+O teste de volumes móveis usa as posições anterior e atual do projétil e do alvo.
+O movimento relativo impede tunneling mesmo quando ambos se cruzam entre frames.
 
 ## Gameplay planejado
 
-- alvo móvel e primeiro inimigo;
-- feedback visual de impacto;
-- vida, ondas, chefão, itens e pontuação;
+- primeiro inimigo hostil e aproximação ao jogador;
+- vida e dano do jogador;
+- ondas, chefão, itens e pontuação;
 - resultados, persistência MySQL e ranking.
 
-Nenhum desses sistemas faz parte da Fase 6.
+Nenhum desses sistemas faz parte da Fase 7.
 
 ### Realidade virtual
 
@@ -163,7 +163,7 @@ Nenhum desses sistemas faz parte da Fase 6.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 6.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 7.
 
 ## Modo VR
 
@@ -179,7 +179,7 @@ shoot-n-smash/
 │   └── src/
 │       ├── config/  # valores do renderer, arena e gameplay
 │       ├── core/    # GameApp, GameSession e RenderContext
-│       ├── gameplay/ # estilingue, projéteis, alvo, colisão e dano
+│       ├── gameplay/ # estilingue, projéteis, alvo móvel, colisão e impacto
 │       ├── input/   # adaptadores desktop de mira e disparo
 │       ├── utils/   # resize e cálculos testáveis
 │       └── world/   # composição visual do cenário de neve
@@ -201,7 +201,7 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
 - mira e disparo são exclusivos do navegador desktop e requerem Pointer Lock e mouse;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
-- existe somente um alvo estático; ainda não há inimigos, ondas ou pontuação;
+- existe somente um alvo móvel; ainda não há inimigos, ondas ou pontuação;
 - o alvo não ataca, não reaparece e não concede pontos;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
@@ -209,9 +209,9 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Próxima etapa
 
-Fase 7: transformar o alvo de treinamento em um primeiro alvo móvel e acrescentar
-feedback visual de impacto. Ondas, pontuação, ranking e WebXR continuam fora do
-próximo incremento.
+Fase 8: definir o primeiro inimigo hostil sobre os sistemas já validados,
+priorizando aproximação e contato com o jogador antes de introduzir ondas,
+pontuação, ranking ou WebXR.
 
 Consulte também:
 
@@ -225,3 +225,4 @@ Consulte também:
 - [Guia da Fase 4](docs/phases/phase-04-observacao-360.md)
 - [Guia da Fase 5](docs/phases/phase-05-disparo-convencional.md)
 - [Guia da Fase 6](docs/phases/phase-06-alvo-colisao-dano.md)
+- [Guia da Fase 7](docs/phases/phase-07-alvo-movel-impacto.md)

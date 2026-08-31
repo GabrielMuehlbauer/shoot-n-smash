@@ -1,7 +1,8 @@
 import { Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
-import { intersectSegmentSphere } from '../gameplay/CollisionSystem.js';
+import { intersectMovingSpheres } from '../gameplay/CollisionSystem.js';
+import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
 import { TargetSystem } from '../gameplay/TargetSystem.js';
@@ -16,6 +17,7 @@ export class GameSession {
     onTargetHealthChange = () => {},
     onTargetHit = () => {},
     config = GAMEPLAY_CONFIG,
+    impactFeedbackSystem = null,
     projectileSystem = null,
     slingshotSystem = null,
     targetSystem = null,
@@ -27,10 +29,13 @@ export class GameSession {
     const ownsProjectileSystem = !projectileSystem;
     const ownsSlingshotSystem = !slingshotSystem;
     const ownsTargetSystem = !targetSystem;
+    const ownsImpactFeedbackSystem = !impactFeedbackSystem;
 
     this.config = config;
     this.onTargetHit = onTargetHit;
+    this.targetPreviousCenter = new Vector3();
     this.targetCenter = new Vector3();
+    this.pendingObserverError = null;
     this.disposed = false;
 
     try {
@@ -54,7 +59,21 @@ export class GameSession {
           onDestroy: onTargetDestroy,
           onHealthChange: onTargetHealthChange,
         });
+      this.impactFeedbackSystem =
+        impactFeedbackSystem ??
+        new ImpactFeedbackSystem({
+          scene,
+          config: config.impactFeedback,
+        });
     } catch (error) {
+      if (ownsImpactFeedbackSystem) {
+        try {
+          this.impactFeedbackSystem?.dispose?.();
+        } catch {
+          // Preserva o erro original de construção.
+        }
+      }
+
       if (ownsTargetSystem) {
         try {
           this.targetSystem?.dispose?.();
@@ -97,6 +116,10 @@ export class GameSession {
     return this.targetSystem.state;
   }
 
+  get activeImpactFeedbackCount() {
+    return this.impactFeedbackSystem.activeCount;
+  }
+
   beginCharge() {
     this.assertNotDisposed();
     return this.slingshotSystem.beginCharge();
@@ -120,9 +143,33 @@ export class GameSession {
       return false;
     }
 
-    const delta = Math.max(0, Number(deltaSeconds) || 0);
-    this.slingshotSystem.update(delta);
-    this.projectileSystem.update(delta, this.handleProjectileStep);
+    const numericDelta = Number(deltaSeconds);
+    const delta = Number.isFinite(numericDelta)
+      ? Math.max(0, numericDelta)
+      : 0;
+    this.pendingObserverError = null;
+    let updateError = null;
+
+    try {
+      this.slingshotSystem.update(delta);
+      this.targetSystem.update(delta);
+      this.impactFeedbackSystem.update(delta);
+      this.projectileSystem.update(delta, this.handleProjectileStep);
+    } catch (error) {
+      updateError = error;
+    }
+
+    const observerError = this.pendingObserverError;
+    this.pendingObserverError = null;
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    if (observerError) {
+      throw observerError;
+    }
+
     return true;
   }
 
@@ -136,25 +183,59 @@ export class GameSession {
       return false;
     }
 
-    const collision = intersectSegmentSphere(
+    this.targetSystem.getPreviousCenter(this.targetPreviousCenter);
+    this.targetSystem.getCenter(this.targetCenter);
+    const collision = intersectMovingSpheres(
       previousPosition,
       currentPosition,
-      this.targetSystem.getCenter(this.targetCenter),
-      this.targetSystem.radius + radius,
+      radius,
+      this.targetPreviousCenter,
+      this.targetCenter,
+      this.targetSystem.radius,
     );
 
-    if (!collision.hit || !this.targetSystem.applyDamage()) {
+    if (!collision.hit) {
       return false;
     }
 
-    this.onTargetHit({
-      ...this.targetSystem.state,
-      damage: this.config.target.damagePerHit,
-      impactPoint: collision.point.clone(),
-      impactRatio: collision.t,
-      projectile: mesh,
-    });
+    const healthBeforeImpact = this.targetSystem.state.health;
+    let damageApplied = false;
+
+    try {
+      damageApplied = this.targetSystem.applyDamage();
+    } catch (error) {
+      this.queueObserverError(error);
+      damageApplied = this.targetSystem.state.health < healthBeforeImpact;
+    }
+
+    if (!damageApplied) {
+      return false;
+    }
+
+    if (!this.targetSystem.alive) {
+      this.targetSystem.pauseAtFrameRatio(collision.t);
+    }
+
+    this.impactFeedbackSystem.spawn(collision.projectileCenter);
+
+    try {
+      this.onTargetHit({
+        ...this.targetSystem.state,
+        damage: this.config.target.damagePerHit,
+        impactPoint: collision.projectileCenter.clone(),
+        impactRatio: collision.t,
+        projectile: mesh,
+      });
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+
     return true;
+  }
+
+  queueObserverError(error) {
+    this.pendingObserverError ??=
+      error ?? new Error('Um observador da partida falhou.');
   }
 
   assertNotDisposed() {
@@ -184,6 +265,12 @@ export class GameSession {
 
     try {
       this.targetSystem.dispose();
+    } catch (error) {
+      disposalError ??= error;
+    }
+
+    try {
+      this.impactFeedbackSystem.dispose();
     } catch (error) {
       disposalError ??= error;
     }

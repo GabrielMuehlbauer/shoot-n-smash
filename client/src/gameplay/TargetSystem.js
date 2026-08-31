@@ -34,6 +34,44 @@ function validateConfig(config) {
     }
   }
 
+  const movement = config.movement;
+
+  if (
+    !Number.isFinite(movement?.minX) ||
+    !Number.isFinite(movement?.maxX) ||
+    movement.minX >= movement.maxX
+  ) {
+    throw new RangeError('TargetSystem requer limites de movimento válidos.');
+  }
+
+  if (
+    config.position.x < movement.minX ||
+    config.position.x > movement.maxX
+  ) {
+    throw new RangeError(
+      'TargetSystem requer posição inicial dentro dos limites.',
+    );
+  }
+
+  if (!Number.isFinite(movement.speed) || movement.speed <= 0) {
+    throw new RangeError(
+      'TargetSystem requer velocidade de movimento positiva.',
+    );
+  }
+
+  if (![1, -1].includes(movement.initialDirection)) {
+    throw new RangeError(
+      'TargetSystem requer direção inicial igual a 1 ou -1.',
+    );
+  }
+
+  if (
+    !Number.isFinite(movement.rotationSpeed) ||
+    movement.rotationSpeed < 0
+  ) {
+    throw new RangeError('TargetSystem requer rotação não negativa.');
+  }
+
   for (const name of ['active', 'damaged', 'destroyed', 'emissive']) {
     if (!Number.isInteger(config.colors?.[name])) {
       throw new TypeError(`target.colors.${name} deve ser uma cor inteira.`);
@@ -66,11 +104,39 @@ export class TargetSystem extends Group {
     this.currentHealth = config.maxHealth;
     this.disposed = false;
 
-    this.position.set(
+    this.initialPosition = new Vector3(
       config.position.x,
       config.position.y,
       config.position.z,
     );
+    this.previousPosition = this.initialPosition.clone();
+    this.movementCenterX =
+      (config.movement.minX + config.movement.maxX) / 2;
+    this.movementAmplitude =
+      (config.movement.maxX - config.movement.minX) / 2;
+    this.movementAngularSpeed =
+      config.movement.speed / this.movementAmplitude;
+
+    const normalizedInitialX = Math.min(
+      1,
+      Math.max(
+        -1,
+        (config.position.x - this.movementCenterX) /
+          this.movementAmplitude,
+      ),
+    );
+    const ascendingPhase = Math.asin(normalizedInitialX);
+    this.initialMovementPhase =
+      config.movement.initialDirection === 1
+        ? ascendingPhase
+        : Math.PI - ascendingPhase;
+    this.movementPhase = this.initialMovementPhase;
+    this.elapsedMovementSeconds = 0;
+    this.previousElapsedMovementSeconds = 0;
+    this.movementDirection = config.movement.initialDirection;
+    this.rotationPhase = 0;
+
+    this.position.copy(this.initialPosition);
 
     this.geometry = new IcosahedronGeometry(config.radius, 1);
     this.material = new MeshStandardMaterial({
@@ -102,6 +168,10 @@ export class TargetSystem extends Group {
     return this.config.radius;
   }
 
+  get isMoving() {
+    return this.alive && !this.disposed;
+  }
+
   get state() {
     return {
       alive: this.alive,
@@ -120,12 +190,85 @@ export class TargetSystem extends Group {
     return target.setFromMatrixPosition(this.matrixWorld);
   }
 
+  getPreviousCenter(target = new Vector3()) {
+    if (!target?.copy || !target?.applyMatrix4) {
+      throw new TypeError(
+        'TargetSystem requer um Vector3 para o centro anterior.',
+      );
+    }
+
+    target.copy(this.previousPosition);
+
+    if (this.parent) {
+      this.parent.updateWorldMatrix(true, false);
+      target.applyMatrix4(this.parent.matrixWorld);
+    }
+
+    return target;
+  }
+
   update(deltaSeconds) {
     if (this.disposed) {
       return false;
     }
 
-    Math.max(0, Number(deltaSeconds) || 0);
+    this.previousPosition.copy(this.position);
+    this.previousElapsedMovementSeconds = this.elapsedMovementSeconds;
+    const numericDelta = Number(deltaSeconds);
+    const safeDelta = Number.isFinite(numericDelta)
+      ? Math.max(0, numericDelta)
+      : 0;
+
+    if (safeDelta === 0 || !this.alive) {
+      return true;
+    }
+
+    this.elapsedMovementSeconds += safeDelta;
+    this.movementPhase =
+      (this.initialMovementPhase +
+        this.movementAngularSpeed * this.elapsedMovementSeconds) %
+      (Math.PI * 2);
+    this.position.x =
+      this.movementCenterX +
+      this.movementAmplitude * Math.sin(this.movementPhase);
+    this.movementDirection = Math.cos(this.movementPhase) >= 0 ? 1 : -1;
+    this.rotationPhase =
+      (this.config.movement.rotationSpeed * this.elapsedMovementSeconds) %
+      (Math.PI * 2);
+    this.mesh.rotation.y = this.rotationPhase;
+    return true;
+  }
+
+  pauseAtFrameRatio(frameRatio) {
+    if (
+      this.disposed ||
+      !Number.isFinite(frameRatio) ||
+      frameRatio < 0 ||
+      frameRatio > 1
+    ) {
+      return false;
+    }
+
+    this.position.lerpVectors(
+      this.previousPosition,
+      this.position,
+      frameRatio,
+    );
+    this.elapsedMovementSeconds =
+      this.previousElapsedMovementSeconds +
+      (this.elapsedMovementSeconds - this.previousElapsedMovementSeconds) *
+        frameRatio;
+    this.movementPhase =
+      (this.initialMovementPhase +
+        this.movementAngularSpeed * this.elapsedMovementSeconds) %
+      (Math.PI * 2);
+    this.movementDirection = Math.cos(this.movementPhase) >= 0 ? 1 : -1;
+    this.rotationPhase =
+      (this.config.movement.rotationSpeed * this.elapsedMovementSeconds) %
+      (Math.PI * 2);
+    this.mesh.rotation.y = this.rotationPhase;
+    this.previousPosition.copy(this.position);
+    this.previousElapsedMovementSeconds = this.elapsedMovementSeconds;
     return true;
   }
 
@@ -186,11 +329,32 @@ export class TargetSystem extends Group {
   }
 
   reset() {
-    if (this.disposed || this.currentHealth === this.config.maxHealth) {
+    if (this.disposed) {
+      return false;
+    }
+
+    const alreadyInitial =
+      this.currentHealth === this.config.maxHealth &&
+      this.position.equals(this.initialPosition) &&
+      this.previousPosition.equals(this.initialPosition) &&
+      this.movementPhase === this.initialMovementPhase &&
+      this.elapsedMovementSeconds === 0 &&
+      this.previousElapsedMovementSeconds === 0 &&
+      this.rotationPhase === 0;
+
+    if (alreadyInitial) {
       return false;
     }
 
     this.currentHealth = this.config.maxHealth;
+    this.position.copy(this.initialPosition);
+    this.previousPosition.copy(this.initialPosition);
+    this.movementPhase = this.initialMovementPhase;
+    this.elapsedMovementSeconds = 0;
+    this.previousElapsedMovementSeconds = 0;
+    this.movementDirection = this.config.movement.initialDirection;
+    this.rotationPhase = 0;
+    this.mesh.rotation.y = 0;
     this.updateVisualState();
     return true;
   }

@@ -10,22 +10,19 @@ problema concreto do MVP.
 
 ```text
 DesktopLookController ──> câmera
-DesktopFireController ──> GameSession ──> SlingshotSystem ──> ProjectileSystem ─┐
-XRInput (futuro) ───────────────────────────────────────────┤
-                                                           v
-WaveSystem -> EnemySystem (futuros) <──────────── CollisionSystem
-                  │                                        │
-                  └─────> Player / Score / Item Systems ───┤
-                                                           v
-                                              StateMachine e HUD
-                                                ├─ DomHUD
-                                                └─ XRHud
-                                                           │
-                                                           v
-                                                  RankingClient
-                                                           │
-                                                           v
-                                              Express -> MySQL
+DesktopFireController ──> GameSession ──┬─> SlingshotSystem ──> ProjectileSystem ─┐
+XRInput (futuro) ───────────────────────┤                                      │
+                                        ├─> TargetSystem ─────> CollisionSystem ┤
+                                        ├─> ImpactFeedbackSystem <──────────────┤
+                                        └─> DomHUD <─────────────────────────────┘
+
+WaveSystem -> EnemySystem -> Player / Score / Item Systems (futuros)
+                                  │
+                                  v
+                         StateMachine e XRHud
+                                  │
+                                  v
+                         RankingClient -> Express -> MySQL
 ```
 
 ## Cliente
@@ -46,23 +43,28 @@ WaveSystem -> EnemySystem (futuros) <──────────── Collis
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 6, seu `update(deltaSeconds)` preserva a ordem
-  estilingue → projéteis → resolução do impacto; `dispose()` encerra todos os
-  sistemas de forma idempotente.
+  fachada da partida. Na Fase 7, seu `update(deltaSeconds)` preserva a ordem
+  estilingue → alvo → feedbacks existentes → projéteis e resolução do impacto;
+  `dispose()` encerra todos os sistemas de forma idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
   não conhece mouse, Pointer Lock nem elementos do DOM.
 - `ProjectileSystem` recebe origem, direção e carga, calcula a velocidade inicial
   entre 10 e 24 unidades por segundo e aplica gravidade de -9,8. Cada projétil é
-  uma esfera visual de raio 0,18, preserva a posição anterior para a futura
+  uma esfera visual de raio 0,18, preserva a posição anterior para a
   colisão por segmento e tem ciclo de vida limitado. `update()` e `dispose()`
   não dependem do DOM e são idempotentes.
 - `TargetSystem` é dono do único alvo de treinamento, de seu visual, collider,
-  vida e transição terminal. Ele publica snapshots de estado por callbacks e não
-  conhece elementos do DOM.
-- `CollisionSystem` contém matemática pura para segmento–esfera. O raio do
-  projétil é somado ao raio do alvo e o primeiro contato em `[0, 1]` impede
+  vida, patrulha senoidal e transição terminal. Ele preserva os centros anterior
+  e atual por frame, publica snapshots de estado por callbacks e não conhece
+  elementos do DOM.
+- `CollisionSystem` contém matemática pura para segmento–esfera estática e para
+  duas esferas móveis. O segundo teste subtrai o movimento do alvo do movimento
+  do projétil, soma os raios e encontra o primeiro contato em `[0, 1]`, evitando
   tunneling sem introduzir uma engine física.
+- `ImpactFeedbackSystem` mantém bursts 3D curtos no ponto de impacto. A geometria
+  é compartilhada, os materiais são descartados individualmente e o limite FIFO
+  impede o acúmulo de efeitos.
 - O HUD HTML observa `onChargeChange({ charging, ratio })` e o resultado do
   disparo por callbacks, convertendo `ratio * 100` para a apresentação. O núcleo
   de gameplay não consulta nem altera elementos do DOM. Cancelamentos informam
@@ -78,8 +80,8 @@ WaveSystem -> EnemySystem (futuros) <──────────── Collis
 - A interface convencional utilizará HTML/CSS; a interface imersiva será criada
   dentro da cena 3D.
 - Um único `renderer.setAnimationLoop()` atenderá navegador e WebXR.
-- A área central da arena permanece livre para o futuro estilingue e para o
-  jogador estacionário.
+- A área central da arena permanece livre para a futura representação visual do
+  estilingue e para o jogador estacionário.
 
 ## Recorte executável da Fase 5
 
@@ -131,9 +133,37 @@ O alvo estático tem raio 1,25 e ocupa `(4, 2,15, -11)`. Quando a vida chega a
 zero, o collider deixa de aceitar dano e o visual assume estado destruído. Não
 há respawn, pontuação, ataque ao jogador ou progressão de onda nesta fase.
 
+## Recorte executável da Fase 7
+
+```text
+alvo anterior ────────────────> alvo atual (patrulha senoidal)
+       ▲                              ▲
+       │                              │
+projétil anterior ───────────> projétil atual
+                    │
+                    v
+        CollisionSystem: movimento relativo
+                    │ primeiro contato em t
+                    v
+      dano + burst branco + consumo do projétil
+                    │ impacto fatal
+                    v
+        alvo congelado na posição interpolada em t
+```
+
+O alvo percorre horizontalmente `-4,5 ≤ x ≤ 4,5` com velocidade linear de
+referência 1,6 e rotação visual de 0,85 rad/s. A posição vem do tempo total da
+sessão, portanto não acumula erro pela subdivisão dos frames. O teste de colisão
+interpola os dois centros no mesmo instante normalizado; no quarto impacto, o
+alvo é reposicionado nessa fração antes de permanecer destruído.
+
+Cada impacto cria um icosaedro wireframe branco no centro do projétil. O efeito
+expande, gira e desaparece em 0,32 segundo. No máximo 12 bursts coexistem, com
+remoção do mais antigo e descarte do respectivo material.
+
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
-MVP. Colisões iniciais utilizarão volumes simples e teste de segmento para os
-projéteis rápidos.
+MVP. As colisões atuais usam volumes simples e testes de segmento estático ou de
+movimento relativo para os projéteis rápidos.
 
 ## Servidor
 

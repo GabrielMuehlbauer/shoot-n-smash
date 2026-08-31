@@ -98,3 +98,22 @@ consome o projétil no primeiro impacto.
 A posição final isolada permitiria que projéteis rápidos atravessassem um alvo
 entre frames. A solução analítica é determinística, pequena e testável, sem
 adicionar engine física, ECS ou `Raycaster` acoplado à aparência do objeto.
+
+## ADR-010 — Patrulha senoidal e colisão por movimento relativo
+
+**Status:** aceita em 31 de agosto de 2026.
+
+O alvo de treinamento da Fase 7 calcula a patrulha horizontal a partir do tempo
+total da sessão. A senoide mantém a trajetória entre `x = -4,5` e `x = 4,5`,
+inverte a direção sem quina e produz o mesmo estado para diferentes subdivisões
+do mesmo intervalo de tempo.
+
+Para detectar o contato entre dois volumes móveis, o deslocamento do alvo é
+subtraído do deslocamento do projétil e o teste segmento–esfera existente é
+aplicado ao movimento relativo. O parâmetro `t` resultante interpola ambos os
+centros no mesmo instante e congela o alvo nesse ponto quando o dano é fatal.
+
+O feedback de acerto permanece um sistema separado: bursts 3D brancos duram
+0,32 segundo, compartilham geometria e descartam seus materiais ao expirar. O
+limite FIFO de 12 efeitos mantém o custo previsível sem acoplar apresentação à
+matemática da colisão.

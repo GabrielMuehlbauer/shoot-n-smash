@@ -12,7 +12,7 @@ function createTarget(options = {}) {
   return { scene, target };
 }
 
-test('cria um único alvo low-poly estático com esfera de colisão exposta', () => {
+test('cria um único alvo low-poly móvel com esfera de colisão exposta', () => {
   const { scene, target } = createTarget();
 
   assert.deepEqual(GAMEPLAY_CONFIG.target.position, {
@@ -22,9 +22,17 @@ test('cria um único alvo low-poly estático com esfera de colisão exposta', ()
   });
   assert.equal(GAMEPLAY_CONFIG.target.radius, 1.25);
   assert.equal(GAMEPLAY_CONFIG.target.damagePerHit, 25);
+  assert.deepEqual(GAMEPLAY_CONFIG.target.movement, {
+    minX: -4.5,
+    maxX: 4.5,
+    speed: 1.6,
+    initialDirection: -1,
+    rotationSpeed: 0.85,
+  });
   assert.equal(target.parent, scene);
   assert.equal(target.children.length, 1);
   assert.equal(target.mesh.name, 'practice-target-core');
+  assert.equal(target.isMoving, true);
   assert.deepEqual(target.getCenter().toArray(), [4, 2.15, -11]);
   assert.deepEqual(target.state, {
     alive: true,
@@ -35,14 +43,56 @@ test('cria um único alvo low-poly estático com esfera de colisão exposta', ()
   target.dispose();
 });
 
-test('permanece estático durante a Fase 6 e saneia deltas', () => {
-  const { target } = createTarget();
-  const initialPosition = target.position.clone();
+test('move em patrulha senoidal independente da subdivisão dos frames', () => {
+  const { target: singleStep } = createTarget();
+  const { target: subdivided } = createTarget();
 
-  assert.equal(target.update(1), true);
-  assert.equal(target.update(-10), true);
-  assert.equal(target.update(Number.NaN), true);
-  assert.equal(target.position.equals(initialPosition), true);
+  assert.equal(singleStep.update(1), true);
+  for (let frame = 0; frame < 4; frame += 1) {
+    subdivided.update(0.25);
+  }
+
+  assert.ok(singleStep.position.x < 4);
+  assert.ok(singleStep.position.x >= GAMEPLAY_CONFIG.target.movement.minX);
+  assert.ok(singleStep.position.x <= GAMEPLAY_CONFIG.target.movement.maxX);
+  assert.ok(singleStep.position.distanceTo(subdivided.position) < 1e-12);
+  assert.ok(
+    Math.abs(singleStep.mesh.rotation.y - subdivided.mesh.rotation.y) < 1e-12,
+  );
+  assert.deepEqual(singleStep.getPreviousCenter().toArray(), [4, 2.15, -11]);
+  assert.equal(singleStep.movementDirection, -1);
+
+  singleStep.update(30);
+  assert.ok(singleStep.position.x >= GAMEPLAY_CONFIG.target.movement.minX);
+  assert.ok(singleStep.position.x <= GAMEPLAY_CONFIG.target.movement.maxX);
+  const sampledPosition = singleStep.position.clone();
+  singleStep.update(-10);
+  singleStep.update(Number.NaN);
+  singleStep.update(Number.POSITIVE_INFINITY);
+  assert.equal(singleStep.position.equals(sampledPosition), true);
+  singleStep.dispose();
+  subdivided.dispose();
+});
+
+test('pode congelar o movimento na fração exata do frame', () => {
+  const { target } = createTarget();
+  const start = target.position.clone();
+  target.update(1);
+  const end = target.position.clone();
+  const expected = start.clone().lerp(end, 0.25);
+
+  assert.equal(target.pauseAtFrameRatio(0.25), true);
+  assert.ok(target.position.distanceTo(expected) < 1e-12);
+  assert.ok(target.getPreviousCenter().distanceTo(expected) < 1e-12);
+  assert.ok(Math.abs(target.elapsedMovementSeconds - 0.25) < 1e-12);
+  assert.ok(
+    Math.abs(
+      target.mesh.rotation.y -
+        GAMEPLAY_CONFIG.target.movement.rotationSpeed * 0.25,
+    ) < 1e-12,
+  );
+  assert.equal(target.pauseAtFrameRatio(-1), false);
+  assert.equal(target.pauseAtFrameRatio(Number.NaN), false);
   target.dispose();
 });
 
@@ -76,6 +126,10 @@ test('aplica quatro danos, limita a vida a zero e destrói uma única vez', () =
     target.material.color.getHex(),
     GAMEPLAY_CONFIG.target.colors.destroyed,
   );
+  const destroyedPosition = target.position.clone();
+  target.update(3);
+  assert.equal(target.position.equals(destroyedPosition), true);
+  assert.equal(target.isMoving, false);
   target.dispose();
 });
 
@@ -86,11 +140,16 @@ test('reset restaura a vida e o visual sem emitir evento de dano', () => {
   });
 
   assert.equal(target.reset(), false);
+  target.update(0.5);
   target.applyDamage(40);
   assert.equal(target.reset(), true);
   assert.equal(target.health, 100);
   assert.equal(target.alive, true);
   assert.equal(target.mesh.scale.equals(new Vector3(1, 1, 1)), true);
+  assert.equal(target.position.equals(target.initialPosition), true);
+  assert.equal(target.previousPosition.equals(target.initialPosition), true);
+  assert.equal(target.elapsedMovementSeconds, 0);
+  assert.equal(target.movementDirection, -1);
   assert.equal(
     target.material.color.getHex(),
     GAMEPLAY_CONFIG.target.colors.active,
@@ -111,6 +170,39 @@ test('valida configuração, callbacks, dano e vetor de saída', () => {
         config: { ...baseConfig, radius: 0 },
       }),
     /target\.radius.*maior que zero/,
+  );
+  assert.throws(
+    () =>
+      new TargetSystem({
+        scene,
+        config: {
+          ...baseConfig,
+          movement: { ...baseConfig.movement, minX: 5 },
+        },
+      }),
+    /limites de movimento válidos/,
+  );
+  assert.throws(
+    () =>
+      new TargetSystem({
+        scene,
+        config: {
+          ...baseConfig,
+          movement: { ...baseConfig.movement, speed: 0 },
+        },
+      }),
+    /velocidade de movimento positiva/,
+  );
+  assert.throws(
+    () =>
+      new TargetSystem({
+        scene,
+        config: {
+          ...baseConfig,
+          movement: { ...baseConfig.movement, initialDirection: 0 },
+        },
+      }),
+    /direção inicial/,
   );
   assert.throws(
     () => new TargetSystem({ scene, onHealthChange: null }),
@@ -164,4 +256,6 @@ test('dispose remove o alvo e os recursos uma única vez', () => {
   assert.equal(materialDisposals, 1);
   assert.equal(target.update(1), false);
   assert.equal(target.reset(), false);
+  assert.equal(target.pauseAtFrameRatio(0.5), false);
+  assert.equal(target.isMoving, false);
 });

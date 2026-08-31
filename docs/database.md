@@ -2,9 +2,10 @@
 
 ## Estado atual
 
-MySQL foi aprovado como banco do projeto. A Fase 1 prepara conexão e diagnóstico,
-mas ainda não cria schema ou migration. Isso evita antecipar tabelas antes do
-contrato definitivo da pontuação e das ondas.
+MySQL foi aprovado como banco do projeto. A conexão opcional e o diagnóstico
+foram preparados na Fase 1; até a Fase 7 ainda não existe schema nem migration.
+Isso evita antecipar tabelas antes do contrato definitivo da pontuação e das
+ondas.
 
 ## Configuração local
 
