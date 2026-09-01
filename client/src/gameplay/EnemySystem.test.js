@@ -15,6 +15,10 @@ function createConfig(overrides = {}) {
   return {
     ...base,
     ...overrides,
+    types:
+      'types' in overrides
+        ? overrides.types
+        : base.types.map((type) => ({ ...type })),
     playerPosition:
       'playerPosition' in overrides
         ? overrides.playerPosition
@@ -40,6 +44,7 @@ function createEnemy(options = {}) {
   const enemy = new EnemySystem({
     scene,
     random: createSequenceRandom(0, 0),
+    typeRandom: () => 0,
     ...options,
   });
 
@@ -131,7 +136,17 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
   });
 
   assert.equal(GAMEPLAY_CONFIG.enemy.radius, 1.05);
-  assert.equal(GAMEPLAY_CONFIG.enemy.maxResistance, 1);
+  assert.deepEqual(
+    GAMEPLAY_CONFIG.enemy.types.map(({ id, maxResistance }) => ({
+      id,
+      maxResistance,
+    })),
+    [
+      { id: 'weak', maxResistance: 1 },
+      { id: 'medium', maxResistance: 2 },
+      { id: 'resistant', maxResistance: 3 },
+    ],
+  );
   assert.equal(GAMEPLAY_CONFIG.enemy.moveSpeed, 1.25);
   assert.equal(GAMEPLAY_CONFIG.enemy.playerContactRadius, 1.5);
   assert.deepEqual(GAMEPLAY_CONFIG.enemy.spawn, {
@@ -161,10 +176,51 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
     resistance: 1,
     maxResistance: 1,
     ratio: 1,
+    type: { id: 'weak', label: 'Fraco' },
     distanceToPlayer: enemy.distanceToPlayer,
   });
 
   enemy.dispose();
+});
+
+test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
+  const cases = [
+    [0, 'weak', 'Fraco', 1],
+    [1 / 3, 'medium', 'Médio', 2],
+    [2 / 3, 'resistant', 'Resistente', 3],
+  ];
+
+  for (const [typeRatio, id, label, maxResistance] of cases) {
+    let spawnSamples = 0;
+    let typeSamples = 0;
+    const { enemy } = createEnemy({
+      random: () => {
+        spawnSamples += 1;
+        return 0;
+      },
+      typeRandom: () => {
+        typeSamples += 1;
+        return typeRatio;
+      },
+    });
+
+    assertVectorAlmostEqual(enemy.position, new Vector3(17, 1.05, 0));
+    assert.equal(spawnSamples, 2);
+    assert.equal(typeSamples, 1);
+    assert.equal(enemy.maxResistance, maxResistance);
+    assert.equal(enemy.resistance, maxResistance);
+    assert.deepEqual(enemy.state.type, { id, label });
+    assert.equal(
+      enemy.iceMaterial.color.getHex(),
+      enemy.enemyType.color,
+    );
+
+    enemy.reset();
+    assert.equal(typeSamples, 1);
+    assert.equal(spawnSamples, 4);
+    assert.deepEqual(enemy.state.type, { id, label });
+    enemy.dispose();
+  }
 });
 
 test('aproxima-se do jogador sem depender da subdivisão dos frames', () => {
@@ -251,7 +307,9 @@ test('mantém o contato pendente até uma resolução única', () => {
 test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () => {
   const resistanceChanges = [];
   const eliminations = [];
-  const config = createConfig({ maxResistance: 3 });
+  const config = createConfig({
+    types: [{ ...GAMEPLAY_CONFIG.enemy.types[2] }],
+  });
   const { enemy, scene } = createEnemy({
     config,
     onEliminate: (state) => eliminations.push(state),
@@ -273,6 +331,10 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
     [2, 0],
   );
   assert.equal(eliminations.length, 1);
+  assert.deepEqual(eliminations[0].type, {
+    id: 'resistant',
+    label: 'Resistente',
+  });
   assert.equal(enemy.resistance, 0);
   assert.equal(enemy.outcome, 'eliminated');
   assert.equal(enemy.active, false);
@@ -292,11 +354,42 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
   enemy.dispose();
 });
 
+test('exige exatamente 1, 2 e 3 acertos nos tipos fraco, médio e resistente', () => {
+  for (const type of GAMEPLAY_CONFIG.enemy.types) {
+    const eliminations = [];
+    const { enemy, scene } = createEnemy({
+      config: createConfig({ types: [{ ...type }] }),
+      onEliminate: (state) => eliminations.push(state),
+    });
+
+    for (let hit = 1; hit <= type.maxResistance; hit += 1) {
+      assert.equal(enemy.applyHit(), true);
+      assert.equal(
+        enemy.resistance,
+        type.maxResistance - hit,
+      );
+
+      if (hit < type.maxResistance) {
+        assert.equal(enemy.active, true);
+        assert.equal(enemy.parent, scene);
+        assert.equal(eliminations.length, 0);
+      }
+    }
+
+    assert.equal(enemy.active, false);
+    assert.equal(enemy.outcome, 'eliminated');
+    assert.equal(enemy.parent, null);
+    assert.equal(eliminations.length, 1);
+    assert.equal(eliminations[0].type.id, type.id);
+    enemy.dispose();
+  }
+});
+
 test('reset restaura estado, visual e um novo spawn sem emitir callbacks', () => {
   const resistanceChanges = [];
   const eliminations = [];
   const config = createConfig({
-    maxResistance: 2,
+    types: [{ ...GAMEPLAY_CONFIG.enemy.types[1] }],
     playerContactRadius: 1,
     spawn: { minRadius: 5, maxRadius: 9, height: 1 },
   });
@@ -318,6 +411,7 @@ test('reset restaura estado, visual e um novo spawn sem emitir callbacks', () =>
   assert.equal(enemy.active, true);
   assert.equal(enemy.outcome, null);
   assert.equal(enemy.resistance, 2);
+  assert.deepEqual(enemy.state.type, { id: 'medium', label: 'Médio' });
   assert.equal(enemy.pendingPlayerContact, false);
   assert.equal(enemy.playerContactFrameRatio, null);
   assert.equal(enemy.elapsedMovementSeconds, 0);
@@ -329,7 +423,7 @@ test('reset restaura estado, visual e um novo spawn sem emitir callbacks', () =>
   assertAlmostEqual(enemy.visual.position.y, 0);
   assertAlmostEqual(enemy.leftArm.rotation.x, 0);
   assertAlmostEqual(enemy.rightArm.rotation.x, 0);
-  assert.equal(enemy.iceMaterial.color.getHex(), config.colors.active);
+  assert.equal(enemy.iceMaterial.color.getHex(), config.types[0].color);
   assert.equal(enemy.iceMaterial.emissive.getHex(), config.colors.emissive);
   assert.equal(enemy.iceMaterial.emissiveIntensity, 0.28);
   assert.equal(resistanceChanges.length, 1);
@@ -342,7 +436,7 @@ test('preserva transições quando callbacks de resistência ou eliminação fal
   const resistanceFailure = new Error('falha em onResistanceChange');
   const eliminationsAfterFailure = [];
   const { enemy: resistanceEnemy } = createEnemy({
-    config: createConfig({ maxResistance: 1 }),
+    config: createConfig(),
     onResistanceChange: () => {
       throw resistanceFailure;
     },
@@ -369,6 +463,29 @@ test('preserva transições quando callbacks de resistência ou eliminação fal
   assert.equal(eliminationEnemy.active, false);
   assert.equal(eliminationEnemy.parent, null);
   eliminationEnemy.dispose();
+});
+
+test('snapshots imutáveis impedem observadores de corromper a eliminação', () => {
+  const eliminations = [];
+  const snapshots = [];
+  const { enemy } = createEnemy({
+    onEliminate: (state) => eliminations.push(state),
+    onResistanceChange: (state) => {
+      snapshots.push(state);
+      assert.equal(Reflect.set(state, 'outcome', null), false);
+      assert.equal(Reflect.set(state.type, 'id', 'altered'), false);
+    },
+  });
+
+  assert.equal(enemy.applyHit(), true);
+  assert.equal(Object.isFrozen(snapshots[0]), true);
+  assert.equal(Object.isFrozen(snapshots[0].type), true);
+  assert.equal(enemy.outcome, 'eliminated');
+  assert.equal(enemy.parent, null);
+  assert.equal(eliminations.length, 1);
+  assert.equal(eliminations[0].outcome, 'eliminated');
+  assert.equal(eliminations[0].type.id, 'weak');
+  enemy.dispose();
 });
 
 test('preserva contato terminal e remoção quando seu callback falha', () => {
@@ -404,7 +521,6 @@ test('valida configuração, callbacks, acertos e vetores de saída', () => {
 
   for (const name of [
     'radius',
-    'maxResistance',
     'moveSpeed',
     'playerContactRadius',
   ]) {
@@ -415,12 +531,23 @@ test('valida configuração, callbacks, acertos e vetores de saída', () => {
   }
 
   assert.throws(
+    () => new EnemySystem({ scene, config: createConfig({ types: [] }) }),
+    /types.*lista não vazia/,
+  );
+  assert.throws(
     () =>
       new EnemySystem({
         scene,
-        config: createConfig({ maxResistance: 1.5 }),
+        config: createConfig({
+          types: [
+            {
+              ...GAMEPLAY_CONFIG.enemy.types[0],
+              maxResistance: 1.5,
+            },
+          ],
+        }),
       }),
-    /maxResistance deve ser um inteiro/,
+    /maxResistance.*inteiro positivo/,
   );
   assert.throws(
     () =>
@@ -473,6 +600,7 @@ test('valida configuração, callbacks, acertos e vetores de saída', () => {
 
   for (const callback of [
     'random',
+    'typeRandom',
     'onEliminate',
     'onPlayerContact',
     'onResistanceChange',
@@ -482,6 +610,11 @@ test('valida configuração, callbacks, acertos e vetores de saída', () => {
       new RegExp(`${callback} como função`),
     );
   }
+
+  assert.throws(
+    () => new EnemySystem({ scene, typeRandom: () => 1 }),
+    /typeRandom.*entre 0 e 1/,
+  );
 
   const { enemy } = createEnemy();
   assert.throws(() => enemy.applyHit(0), /inteiro positivo/);

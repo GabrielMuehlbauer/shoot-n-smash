@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 8 com um inimigo hostil que surge ao redor da arena e avança contra o jogador."
+      content="Shoot 'n' Smash — protótipo da Fase 9 com inimigos fraco, médio e resistente, sorteados a cada nova sessão."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,19 +19,20 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 8 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Primeiro inimigo hostil</p>
+        <div class="phase-badge"><span></span> Fase 9 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Três tipos de inimigo</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
-          Encontre o monstro de gelo que surge em qualquer direção da arena e
-          use o estilingue antes que ele alcance o centro. Um impacto válido
-          elimina o inimigo; o contato encerra o encontro sem reduzir vida nesta fase.
+          Encontre o monstro de gelo sorteado em qualquer direção da arena e
+          use o estilingue antes que ele alcance o centro. O tipo fraco resiste
+          a um impacto, o médio a dois e o resistente a três; o contato ainda
+          encerra o encontro sem reduzir vida.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Inimigo hostil e aproximação da Fase 8</small>
+            <small>Tipos e resistências da Fase 9</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -78,7 +79,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Spawn 360° · Inimigo hostil · WebXR planejado</span>
+        <span>Spawn 360° · Três tipos normais · WebXR planejado</span>
       </footer>
     </main>
 
@@ -93,7 +94,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 8 · Primeiro inimigo hostil</span>
+          <span class="scene-phase">Fase 9 · Tipos de inimigo</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -105,10 +106,11 @@
         id="enemy-hud"
         class="enemy-hud"
         data-enemy-state="active"
+        data-enemy-type="weak"
         aria-labelledby="enemy-resistance-label"
       >
         <div class="enemy-resistance-heading">
-          <strong id="enemy-resistance-label">Resistência do inimigo</strong>
+          <strong id="enemy-resistance-label">Inimigo fraco</strong>
           <span id="enemy-resistance-value" aria-hidden="true">1 / 1</span>
         </div>
         <div
@@ -120,18 +122,15 @@
           aria-valuemin="0"
           aria-valuemax="1"
           aria-valuenow="1"
-          aria-valuetext="Inimigo com 1 de 1 pontos de resistência"
+          aria-valuetext="Inimigo fraco com 1 de 1 pontos de resistência"
         >
           <span class="enemy-resistance-fill" aria-hidden="true"></span>
         </div>
         <p
           id="enemy-status"
           class="enemy-status"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
         >
-          Monstro de gelo se aproximando. Localize-o em 360° e acerte antes do contato.
+          Inimigo fraco se aproximando. Localize-o em 360° e acerte antes do contato.
         </p>
       </section>
 
@@ -176,10 +175,11 @@
       </section>
 
       <div class="scene-caption">
-        <strong>Spawn em 360° · 1 ponto de resistência</strong>
+        <strong>Spawn em 360° · Resistência entre 1 e 3</strong>
         <span>
-          O inimigo surge entre os raios 17 e 20 e avança até o centro. Contato
-          ainda não reduz vida; ondas, pontuação e WebXR permanecem fora deste incremento.
+          Um tipo fraco, médio ou resistente surge entre os raios 17 e 20 e
+          avança até o centro. Contato ainda não reduz vida; ondas, pontuação
+          e WebXR permanecem fora deste incremento.
         </span>
       </div>
 

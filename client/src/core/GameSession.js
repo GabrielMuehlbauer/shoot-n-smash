@@ -20,6 +20,7 @@ export class GameSession {
     config = GAMEPLAY_CONFIG,
     encounterActive = true,
     enemyRandom = Math.random,
+    enemyTypeRandom = Math.random,
     enemySystem = null,
     impactFeedbackSystem = null,
     projectileSystem = null,
@@ -44,6 +45,7 @@ export class GameSession {
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
+    this.pendingEnemyImpacts = [];
     this.pendingObserverError = null;
     this.disposed = false;
 
@@ -66,6 +68,7 @@ export class GameSession {
           scene,
           config: config.enemy,
           random: enemyRandom,
+          typeRandom: enemyTypeRandom,
           onEliminate: onEnemyEliminate,
           onPlayerContact: onEnemyPlayerContact,
           onResistanceChange: onEnemyResistanceChange,
@@ -184,7 +187,9 @@ export class GameSession {
       this.slingshotSystem.update(delta);
       this.enemySystem.update(this.encounterActive ? delta : 0);
       this.impactFeedbackSystem.update(delta);
+      this.pendingEnemyImpacts.length = 0;
       this.projectileSystem.update(delta, this.handleProjectileStep);
+      this.resolveEnemyImpacts();
 
       try {
         this.enemySystem.resolvePlayerContact();
@@ -213,6 +218,7 @@ export class GameSession {
     currentPosition,
     mesh,
     previousPosition,
+    projectile,
     radius,
   }) {
     if (!this.enemySystem.active) {
@@ -241,47 +247,77 @@ export class GameSession {
       return false;
     }
 
-    const resistanceBeforeImpact = this.enemySystem.state.resistance;
-    let hitApplied = false;
+    this.pendingEnemyImpacts.push({
+      collision,
+      impactRatio:
+        contactRatio === null ? collision.t : collision.t * contactRatio,
+      mesh,
+      projectile,
+    });
 
-    try {
-      hitApplied = this.enemySystem.applyHit(
-        this.config.projectile.hitStrength,
-      );
-    } catch (error) {
-      this.queueObserverError(error);
-      hitApplied =
-        this.enemySystem.state.resistance < resistanceBeforeImpact;
+    return false;
+  }
+
+  resolveEnemyImpacts() {
+    this.pendingEnemyImpacts.sort(
+      (left, right) => left.impactRatio - right.impactRatio,
+    );
+
+    for (const {
+      collision,
+      impactRatio,
+      mesh,
+      projectile,
+    } of this.pendingEnemyImpacts) {
+      if (!this.enemySystem.active) {
+        break;
+      }
+
+      const resistanceBeforeImpact = this.enemySystem.state.resistance;
+      const lethalImpact =
+        resistanceBeforeImpact <= this.config.projectile.hitStrength;
+      let hitApplied = false;
+
+      if (lethalImpact) {
+        this.enemySystem.pauseAtFrameRatio(collision.t);
+      }
+
+      try {
+        hitApplied = this.enemySystem.applyHit(
+          this.config.projectile.hitStrength,
+        );
+      } catch (error) {
+        this.queueObserverError(error);
+        hitApplied =
+          this.enemySystem.state.resistance < resistanceBeforeImpact;
+      }
+
+      if (!hitApplied) {
+        continue;
+      }
+
+      this.projectileSystem.removeProjectile(projectile);
+
+      try {
+        this.impactFeedbackSystem.spawn(collision.projectileCenter);
+      } catch (error) {
+        this.queueObserverError(error);
+      }
+
+      try {
+        this.onEnemyHit({
+          ...this.enemySystem.state,
+          hitStrength: this.config.projectile.hitStrength,
+          impactPoint: collision.projectileCenter.clone(),
+          impactRatio,
+          projectile: mesh,
+        });
+      } catch (error) {
+        this.queueObserverError(error);
+      }
     }
 
-    if (!hitApplied) {
-      return false;
-    }
-
-    if (!this.enemySystem.active) {
-      this.enemySystem.pauseAtFrameRatio(collision.t);
-    }
-
-    try {
-      this.impactFeedbackSystem.spawn(collision.projectileCenter);
-    } catch (error) {
-      this.queueObserverError(error);
-    }
-
-    try {
-      this.onEnemyHit({
-        ...this.enemySystem.state,
-        hitStrength: this.config.projectile.hitStrength,
-        impactPoint: collision.projectileCenter.clone(),
-        impactRatio:
-          contactRatio === null ? collision.t : collision.t * contactRatio,
-        projectile: mesh,
-      });
-    } catch (error) {
-      this.queueObserverError(error);
-    }
-
-    return true;
+    this.pendingEnemyImpacts.length = 0;
   }
 
   queueObserverError(error) {

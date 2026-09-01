@@ -4,9 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 8 — primeiro inimigo hostil**. Um monstro de gelo surge
-> em qualquer direção no anel de raio 17 a 20, aproxima-se do jogador e é
-> removido após um impacto válido ou ao alcançar o raio de contato.
+> Status atual: **Fase 9 — tipos normais de inimigo**. Cada sessão sorteia um
+> monstro de gelo Fraco, Médio ou Resistente, com resistência de 1, 2 ou 3
+> acertos. Spawn, aproximação e desfechos do encontro mínimo foram preservados.
 
 ## Equipe
 
@@ -46,7 +46,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 8.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 9.
 
 ## Execução em desenvolvimento
 
@@ -66,22 +66,24 @@ Na tela inicial, use **Verificar API** para validar a comunicação entre o clie
 e o servidor. Para testar o recorte jogável:
 
 1. pressione **Abrir cena 3D**;
-2. observe a arena em 360° até localizar o único monstro de gelo;
+2. observe no HUD qual tipo foi sorteado e localize o único monstro de gelo;
 3. pressione **Ativar mira** e mova o mouse para apontar;
 4. mantenha o botão esquerdo pressionado para acumular tensão e solte para
    disparar;
-5. confirme que um impacto válido cria um burst branco, consome o projétil e
-   elimina o inimigo com um acerto;
+5. confirme que cada impacto válido cria um burst branco, consome o projétil e
+   reduz a resistência em um acerto; o tipo Fraco exige 1, o Médio 2 e o
+   Resistente 3 impactos;
 6. em uma nova sessão, não dispare e confirme o contato após cerca de 12,4 a
    14,8 segundos. O inimigo é removido, mas a vida do jogador não é reduzida.
 
-O HUD mostra a tensão de 0% a 100%. A carga máxima é atingida em 1,2 segundo;
-segurar por mais tempo não ultrapassa esse limite. O primeiro `Esc` libera o
-cursor e cancela uma carga em andamento. Um novo `Esc`, com o cursor livre,
-retorna ao menu. O botão **Voltar ao menu** continua disponível.
+O HUD identifica o tipo sorteado, sua resistência atual e a tensão de 0% a 100%.
+A carga máxima é atingida em 1,2 segundo; segurar por mais tempo não ultrapassa
+esse limite. O primeiro `Esc` libera o cursor e cancela uma carga em andamento.
+Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar ao menu**
+continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 8](docs/phases/phase-08-inimigo-hostil.md).
+[guia da Fase 9](docs/phases/phase-09-tipos-inimigo.md).
 
 ## Build e execução de produção
 
@@ -110,7 +112,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 8](docs/phases/phase-08-inimigo-hostil.md#como-testar-manualmente).
+[guia de teste da Fase 9](docs/phases/phase-09-tipos-inimigo.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -155,12 +157,11 @@ entre frames.
 
 ## Gameplay planejado
 
-- tipos de inimigo com resistências diferentes;
-- vida e dano do jogador;
+- vida e dano do jogador por tipo de inimigo;
 - ondas, chefão, itens e pontuação;
 - resultados, persistência MySQL e ranking.
 
-Nenhum desses sistemas adicionais faz parte da Fase 8. O contato atual apenas
+Nenhum desses sistemas adicionais faz parte da Fase 9. O contato atual apenas
 encerra o encontro e remove o inimigo; ele ainda não reduz a vida do jogador.
 
 ### Realidade virtual
@@ -169,7 +170,7 @@ encerra o encontro e remove o inimigo; ele ainda não reduz a vida do jogador.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 8.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 9.
 
 ## Modo VR
 
@@ -207,7 +208,8 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
 - mira e disparo são exclusivos do navegador desktop e requerem Pointer Lock e mouse;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
-- existe somente um inimigo hostil por sessão, sem respawn, ondas ou pontuação;
+- existe somente um inimigo hostil sorteado por sessão, sem respawn, ondas ou
+  pontuação;
 - o contato remove o inimigo, mas ainda não reduz a vida do jogador;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
@@ -215,9 +217,9 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Próxima etapa
 
-Fase 9: introduzir os tipos normais de inimigo com resistências de 1, 2 e 3
-acertos, preservando spawn, aproximação, colisão e desempate temporal. Vida do
-jogador, ondas, pontuação, ranking e WebXR continuam em incrementos posteriores.
+Fase 10: introduzir a vida do jogador e fazer o contato aplicar o dano definido
+para cada tipo normal. Ondas, respawn, pontuação, chefão, persistência, ranking e
+WebXR continuam em incrementos posteriores.
 
 Consulte também:
 
@@ -233,3 +235,4 @@ Consulte também:
 - [Guia da Fase 6](docs/phases/phase-06-alvo-colisao-dano.md)
 - [Guia da Fase 7](docs/phases/phase-07-alvo-movel-impacto.md)
 - [Guia da Fase 8](docs/phases/phase-08-inimigo-hostil.md)
+- [Guia da Fase 9](docs/phases/phase-09-tipos-inimigo.md)

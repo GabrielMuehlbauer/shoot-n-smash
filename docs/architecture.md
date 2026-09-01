@@ -11,12 +11,13 @@ problema concreto do MVP.
 ```text
 DesktopLookController ──> câmera
 DesktopFireController ──> GameSession ──┬─> SlingshotSystem ──> ProjectileSystem ─┐
-XRInput (futuro) ───────────────────────┤                                      │
-                                        ├─> EnemySystem ──────> CollisionSystem ┤
-                                        ├─> ImpactFeedbackSystem <──────────────┤
-                                        └─> DomHUD <─────────────────────────────┘
+XRInput (futuro) ───────────────────────┤                                        │
+                                        ├─> EnemySystem ──> EnemyTypes            │
+                                        ├─> CollisionSystem <─────────────────────┤
+                                        ├─> ImpactFeedbackSystem <────────────────┤
+                                        └─> DomHUD <───────────────────────────────┘
 
-WaveSystem -> tipos de inimigo / Player / Score / Item Systems (futuros)
+WaveSystem -> Player / Score / Item Systems (futuros)
                                          │
                                          v
                                 StateMachine e XRHud
@@ -43,7 +44,7 @@ WaveSystem -> tipos de inimigo / Player / Score / Item Systems (futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 8, seu `update(deltaSeconds)` preserva a ordem
+  fachada da partida. Na Fase 9, seu `update(deltaSeconds)` preserva a ordem
   estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
   `dispose()` encerra todos os sistemas de forma idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
@@ -54,10 +55,14 @@ WaveSystem -> tipos de inimigo / Player / Score / Item Systems (futuros)
   uma esfera visual de raio 0,18, preserva a posição anterior para a
   colisão por segmento e tem ciclo de vida limitado. `update()` e `dispose()`
   não dependem do DOM e são idempotentes.
-- `EnemySystem` é dono do único monstro de gelo, de seu visual low-poly, collider,
-  resistência, spawn, aproximação e transições terminais. Ele preserva os centros
-  anterior e atual por frame, calcula a fração de um possível contato com o
-  jogador, publica snapshots por callbacks e não conhece elementos do DOM.
+- `EnemyTypes` valida o catálogo dos tipos normais e seleciona uniformemente um
+  descritor imutável por sessão. O gerador aleatório dessa seleção é injetável e
+  separado daquele usado para o ângulo e a distância de spawn.
+- `EnemySystem` é dono do único monstro de gelo, de seu tipo, visual low-poly,
+  collider, resistência, spawn, aproximação e transições terminais. Ele preserva
+  os centros anterior e atual por frame, calcula a fração de um possível contato
+  com o jogador, publica snapshots com a identidade do tipo por callbacks e não
+  conhece elementos do DOM. `reset()` conserva o tipo sorteado na construção.
 - `CollisionSystem` contém matemática pura para segmento–esfera estática e para
   duas esferas móveis. O segundo teste subtrai o movimento de um volume do outro,
   soma os raios e encontra o primeiro contato em `[0, 1]`, evitando tunneling sem
@@ -65,10 +70,10 @@ WaveSystem -> tipos de inimigo / Player / Score / Item Systems (futuros)
 - `ImpactFeedbackSystem` mantém bursts 3D curtos no ponto de impacto. A geometria
   é compartilhada, os materiais são descartados individualmente e o limite FIFO
   impede o acúmulo de efeitos.
-- O HUD HTML observa `onChargeChange({ charging, ratio })`, disparos, resistência,
-  impactos, eliminação e contato por callbacks. O núcleo de gameplay não consulta
-  nem altera elementos do DOM. Cancelamentos e desfechos informam motivos
-  semânticos, sem transformar mensagens de interface em regra de jogo.
+- O HUD HTML observa `onChargeChange({ charging, ratio })`, disparos, tipo,
+  resistência, impactos, eliminação e contato por callbacks. O núcleo de gameplay
+  não consulta nem altera elementos do DOM. Cancelamentos e desfechos informam
+  motivos semânticos, sem transformar mensagens de interface em regra de jogo.
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
   gravidade, dimensões e limites do recorte para evitar números mágicos.
 - `GameSession` já coordena a ordem do encontro mínimo e incorporará vida, ondas
@@ -192,6 +197,41 @@ A configuração padrão usa resistência `1` e força de acerto `1`, portanto u
 impacto válido elimina a entidade. O outro desfecho é `player-contact`: ele remove
 o inimigo, mas ainda não reduz vida. Não há respawn, segunda entidade, ondas ou
 pontuação na Fase 8.
+
+## Recorte executável da Fase 9
+
+```text
+início da sessão
+       │
+       v
+EnemyTypes sorteia uniformemente 1 de 3 descritores
+       │
+       ├── weak      → Fraco       → resistência 1
+       ├── medium    → Médio       → resistência 2
+       └── resistant → Resistente  → resistência 3
+       │
+       v
+EnemySystem cria uma entidade com tipo e cor definidos
+       │
+       ├── estado + callbacks + HUD expõem o tipo
+       └── reset conserva o descritor sorteado
+```
+
+O tipo é escolhido exatamente uma vez durante a construção do inimigo. A
+seleção usa intervalos de mesmo tamanho sobre a lista ordenada de descritores e
+aceita um gerador aleatório injetável para testes. Outro gerador atende ao spawn;
+assim, testar ou controlar o tipo não altera o ângulo nem a distância sorteados.
+
+Os três descritores imutáveis usam os IDs técnicos `weak`, `medium` e
+`resistant`, os rótulos visíveis Fraco, Médio e Resistente e resistências `1`,
+`2` e `3`. Cada tipo também define uma cor base distinta, sem mudar collider,
+velocidade, raio de spawn, regra de contato ou força do projétil.
+
+Continua existindo somente um inimigo por sessão. Impactos reduzem um ponto de
+resistência e preservam a colisão por movimento relativo e o desempate temporal
+da Fase 8. O contato ainda produz somente `player-contact`, remove a entidade e
+não reduz vida. Respawn, ondas, pontuação e dano ao jogador não fazem parte deste
+recorte.
 
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
 MVP. As colisões atuais usam volumes simples e testes de segmento estático ou de

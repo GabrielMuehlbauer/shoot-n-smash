@@ -11,6 +11,7 @@ import {
 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
+import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
 
 const FULL_CIRCLE = Math.PI * 2;
 
@@ -34,7 +35,6 @@ function assertFinitePosition(name, position) {
 function validateConfig(config) {
   for (const [name, value] of [
     ['radius', config?.radius],
-    ['maxResistance', config?.maxResistance],
     ['moveSpeed', config?.moveSpeed],
     ['playerContactRadius', config?.playerContactRadius],
   ]) {
@@ -43,9 +43,7 @@ function validateConfig(config) {
     }
   }
 
-  if (!Number.isInteger(config.maxResistance)) {
-    throw new TypeError('enemy.maxResistance deve ser um inteiro.');
-  }
+  validateEnemyTypes(config.types);
 
   assertFinitePosition('enemy.playerPosition', config.playerPosition);
 
@@ -75,7 +73,6 @@ function validateConfig(config) {
   }
 
   for (const name of [
-    'active',
     'damaged',
     'destroyed',
     'emissive',
@@ -128,6 +125,7 @@ export class EnemySystem extends Group {
     scene,
     config = GAMEPLAY_CONFIG.enemy,
     random = Math.random,
+    typeRandom = Math.random,
     onEliminate = () => {},
     onPlayerContact = () => {},
     onResistanceChange = () => {},
@@ -140,6 +138,7 @@ export class EnemySystem extends Group {
 
     validateConfig(config);
     assertCallback('random', random);
+    assertCallback('typeRandom', typeRandom);
     assertCallback('onEliminate', onEliminate);
     assertCallback('onPlayerContact', onPlayerContact);
     assertCallback('onResistanceChange', onResistanceChange);
@@ -148,10 +147,18 @@ export class EnemySystem extends Group {
     this.scene = scene;
     this.config = config;
     this.random = random;
+    this.enemyType = selectEnemyType({
+      types: config.types,
+      random: typeRandom,
+    });
+    this.typeState = Object.freeze({
+      id: this.enemyType.id,
+      label: this.enemyType.label,
+    });
     this.onEliminate = onEliminate;
     this.onPlayerContact = onPlayerContact;
     this.onResistanceChange = onResistanceChange;
-    this.currentResistance = config.maxResistance;
+    this.currentResistance = this.enemyType.maxResistance;
     this.outcome = null;
     this.pendingPlayerContact = false;
     this.pendingContactFrameRatio = null;
@@ -186,7 +193,7 @@ export class EnemySystem extends Group {
     this.visual.name = 'ice-enemy-visual';
 
     this.iceMaterial = this.createMaterial({
-      color: this.config.colors.active,
+      color: this.enemyType.color,
       emissive: this.config.colors.emissive,
       emissiveIntensity: 0.28,
       metalness: 0.1,
@@ -287,7 +294,7 @@ export class EnemySystem extends Group {
   }
 
   get maxResistance() {
-    return this.config.maxResistance;
+    return this.enemyType.maxResistance;
   }
 
   get radius() {
@@ -311,14 +318,15 @@ export class EnemySystem extends Group {
   }
 
   get state() {
-    return {
+    return Object.freeze({
       active: this.active,
       outcome: this.outcome,
       resistance: this.currentResistance,
-      maxResistance: this.config.maxResistance,
-      ratio: this.currentResistance / this.config.maxResistance,
+      maxResistance: this.maxResistance,
+      ratio: this.currentResistance / this.maxResistance,
+      type: this.typeState,
       distanceToPlayer: this.distanceToPlayer,
-    };
+    });
   }
 
   placeAtSpawn() {
@@ -480,7 +488,7 @@ export class EnemySystem extends Group {
       callbackError = error;
     }
 
-    if (state.outcome === 'eliminated') {
+    if (this.outcome === 'eliminated') {
       this.scene.remove(this);
 
       try {
@@ -522,9 +530,9 @@ export class EnemySystem extends Group {
     }
 
     const damaged =
-      this.currentResistance < this.config.maxResistance;
+      this.currentResistance < this.maxResistance;
     this.iceMaterial.color.setHex(
-      damaged ? this.config.colors.damaged : this.config.colors.active,
+      damaged ? this.config.colors.damaged : this.enemyType.color,
     );
     this.iceMaterial.emissive.setHex(this.config.colors.emissive);
     this.iceMaterial.emissiveIntensity = damaged ? 0.16 : 0.28;
@@ -537,7 +545,7 @@ export class EnemySystem extends Group {
       return false;
     }
 
-    this.currentResistance = this.config.maxResistance;
+    this.currentResistance = this.maxResistance;
     this.outcome = null;
     this.pendingPlayerContact = false;
     this.pendingContactFrameRatio = null;

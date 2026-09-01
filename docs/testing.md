@@ -278,10 +278,56 @@ O roteiro completo está em
 O roteiro completo e a checklist ainda pendente de validação manual estão em
 [Fase 8 — Primeiro inimigo hostil](phases/phase-08-inimigo-hostil.md).
 
+## Fase 9
+
+### Cobertura automatizada adicionada
+
+- catálogo imutável com IDs, rótulos, cores e resistências canônicas dos três
+  tipos normais;
+- seleção uniforme de `weak`, `medium` e `resistant`, incluindo as fronteiras
+  dos três intervalos;
+- rejeição de catálogos vazios, descritores inválidos, IDs duplicados, cores
+  fora do intervalo e valores aleatórios fora de `[0, 1)`;
+- snapshot imutável do tipo, independente do catálogo usado na seleção;
+- gerador do tipo separado das duas amostras que definem ângulo e raio do spawn;
+- escolha do tipo uma única vez por sessão e preservação durante `reset()`;
+- resistências `1`, `2` e `3` consumidas pela mesma força de impacto `1`;
+- identidade do tipo preservada nos estados ativos, danificados e terminais;
+- snapshots congelados para impedir que observadores corrompam transições;
+- múltiplos impactos no mesmo frame ordenados por `impactRatio` global;
+- empate não letal reduzindo resistência antes da resolução do contato;
+- HUD acessível com rótulo, resistência e mensagens específicas do tipo;
+- eventos do inimigo visíveis sem duplicar o anúncio no live region de disparo;
+- integração dos três tipos com `EnemySystem` e `GameSession`, sem alterar
+  movimento, colisão, contato ou desempate temporal;
+- metadados e diagnóstico da API atualizados para a Fase 9.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 9 concluída**, use **Verificar API** e confira `phase: 9`.
+3. Abra a cena e confira no HUD o tipo sorteado: Fraco, Médio ou Resistente.
+4. Localize o único monstro e confirme que sua cor corresponde ao tipo exibido.
+5. Acerte o inimigo e confirme que cada impacto reduz exatamente um ponto de
+   resistência, elimina em `1`, `2` ou `3` acertos e atualiza HUD e mensagem.
+6. Repita sessões até observar os três tipos, sempre com somente uma entidade e
+   com novas posições de spawn independentes do tipo.
+7. Em uma nova sessão, não dispare e confirme que o contato ainda remove o
+   inimigo sem reduzir vida do jogador.
+8. Repita o caso de disputa entre impacto e contato e confirme somente um
+   desfecho, preservando o critério do menor `t` e a precedência do impacto na
+   igualdade.
+9. Entre e saia da cena três vezes e confirme ausência de canvas, inimigos,
+   efeitos ou listeners residuais.
+10. Confirme que não há respawn, ondas, pontuação ou erros não tratados no
+    Console.
+
+O roteiro completo está em
+[Fase 9 — Tipos normais de inimigo](phases/phase-09-tipos-inimigo.md).
+
 ## Estratégia futura
 
-- testes unitários para tipos de inimigo, vida e dano do jogador, estados,
-  pontuação e ondas;
+- testes unitários para vida e dano do jogador, estados, pontuação e ondas;
 - testes de integração para contato aplicando dano ao jogador e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;

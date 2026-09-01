@@ -29,6 +29,9 @@ const slingshotTensionValue = document.querySelector(
 const shotStatus = document.querySelector('#shot-status');
 const enemyHud = document.querySelector('#enemy-hud');
 const enemyResistance = document.querySelector('#enemy-resistance');
+const enemyResistanceLabel = document.querySelector(
+  '#enemy-resistance-label',
+);
 const enemyResistanceValue = document.querySelector(
   '#enemy-resistance-value',
 );
@@ -68,11 +71,13 @@ function updateEnemyState(state) {
   const description = describeEnemyState(state);
 
   enemyHud.dataset.enemyState = description.hudState;
+  enemyHud.dataset.enemyType = description.typeId;
   enemyHud.style.setProperty(
     '--enemy-resistance',
     String(description.percent),
   );
   enemyResistanceValue.textContent = description.valueText;
+  enemyResistanceLabel.textContent = description.labelText;
   enemyResistance.setAttribute(
     'aria-valuemax',
     String(state.maxResistance),
@@ -83,11 +88,14 @@ function updateEnemyState(state) {
 }
 
 function resetEnemyHud() {
+  const defaultType = GAMEPLAY_CONFIG.enemy.types[0];
+
   updateEnemyState({
     active: true,
-    maxResistance: GAMEPLAY_CONFIG.enemy.maxResistance,
+    maxResistance: defaultType.maxResistance,
     outcome: null,
-    resistance: GAMEPLAY_CONFIG.enemy.maxResistance,
+    resistance: defaultType.maxResistance,
+    type: defaultType,
   });
 }
 
@@ -177,14 +185,14 @@ function handleEnemyPlayerContact(state) {
   showEncounterOutcome(state.outcome);
 }
 
-function handleEnemyHit({ maxResistance, outcome, resistance }) {
-  if (showEncounterOutcome(outcome)) {
+function handleEnemyHit({ maxResistance, outcome, resistance, type }) {
+  if (outcome !== null) {
     return;
   }
 
   setShotStatus(
     'ready',
-    `Impacto confirmado. Restam ${resistance} de ${maxResistance} pontos de resistência.`,
+    `Impacto no inimigo ${type.label.toLocaleLowerCase('pt-BR')}. Restam ${resistance} de ${maxResistance} pontos de resistência.`,
   );
 }
 
@@ -292,6 +300,7 @@ function enterPrototype() {
       onEnemyResistanceChange: handleEnemyResistanceChange,
       onShot: handleShot,
     });
+    updateEnemyState(gameSession.enemyState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
       onChargeStart: () => gameSession.beginCharge(),

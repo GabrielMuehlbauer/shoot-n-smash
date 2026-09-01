@@ -56,6 +56,10 @@ function createGameplayConfig({ enemy = {}, projectile = {} } = {}) {
     enemy: {
       ...GAMEPLAY_CONFIG.enemy,
       ...enemy,
+      types:
+        'types' in enemy
+          ? enemy.types
+          : [{ ...GAMEPLAY_CONFIG.enemy.types[0] }],
       playerPosition: {
         ...GAMEPLAY_CONFIG.enemy.playerPosition,
         ...enemy.playerPosition,
@@ -237,6 +241,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
       resistance: 0,
       maxResistance: 1,
       ratio: 0,
+      type: { id: 'weak', label: 'Fraco' },
       distanceToPlayer: 8,
     },
     dispose: () => calls.push(['enemy.dispose']),
@@ -276,6 +281,7 @@ test('anexa inimigo ao cenário e expõe resistência inicial', () => {
     camera: createCamera(),
     scene,
     enemyRandom: () => 0,
+    enemyTypeRandom: () => 0,
   });
 
   assert.equal(session.enemySystem.parent, scene);
@@ -287,10 +293,49 @@ test('anexa inimigo ao cenário e expõe resistência inicial', () => {
     resistance: 1,
     maxResistance: 1,
     ratio: 1,
+    type: { id: 'weak', label: 'Fraco' },
     distanceToPlayer: 17,
   });
   session.dispose();
   assert.equal(session.enemySystem.parent, null);
+});
+
+test('seleciona cada tipo com RNG independente sem deslocar o spawn', () => {
+  const config = createGameplayConfig({
+    enemy: { types: GAMEPLAY_CONFIG.enemy.types },
+  });
+  const cases = [
+    [0, 'weak', 1],
+    [1 / 3, 'medium', 2],
+    [2 / 3, 'resistant', 3],
+  ];
+
+  for (const [typeRatio, expectedId, expectedResistance] of cases) {
+    let spawnSamples = 0;
+    let typeSamples = 0;
+    const session = new GameSession({
+      camera: createCamera(),
+      scene: new Scene(),
+      config,
+      enemyRandom: () => {
+        spawnSamples += 1;
+        return 0;
+      },
+      enemyTypeRandom: () => {
+        typeSamples += 1;
+        return typeRatio;
+      },
+    });
+
+    assert.equal(session.enemySystem.position.x, 10);
+    assert.equal(session.enemySystem.position.z, 0);
+    assert.equal(spawnSamples, 2);
+    assert.equal(typeSamples, 1);
+    assert.equal(session.enemyState.type.id, expectedId);
+    assert.equal(session.enemyState.maxResistance, expectedResistance);
+    assert.equal(session.enemyState.resistance, expectedResistance);
+    session.dispose();
+  }
 });
 
 test('colisão móvel aplica resistência, feedback e consumo uma vez por projétil', () => {
@@ -298,7 +343,10 @@ test('colisão móvel aplica resistência, feedback e consumo uma vez por projé
   const hits = [];
   const eliminations = [];
   const config = createGameplayConfig({
-    enemy: { maxResistance: 3, moveSpeed: 1 },
+    enemy: {
+      moveSpeed: 1,
+      types: [{ ...GAMEPLAY_CONFIG.enemy.types[2] }],
+    },
   });
   const session = new GameSession({
     camera: createCamera(),
@@ -325,7 +373,12 @@ test('colisão móvel aplica resistência, feedback e consumo uma vez por projé
     [2, 1, 0],
   );
   assert.equal(hits.every(({ hitStrength }) => hitStrength === 1), true);
+  assert.equal(hits.every(({ type }) => type.id === 'resistant'), true);
   assert.equal(eliminations.length, 1);
+  assert.deepEqual(eliminations[0].type, {
+    id: 'resistant',
+    label: 'Resistente',
+  });
   assert.equal(session.enemyState.outcome, 'eliminated');
   assert.equal(session.enemyState.resistance, 0);
   assert.equal(session.enemySystem.parent, null);
@@ -335,6 +388,39 @@ test('colisão móvel aplica resistência, feedback e consumo uma vez por projé
   session.update(0.5);
   assert.equal(resistanceChanges.length, 3);
   assert.equal(hits.length, 3);
+  session.dispose();
+});
+
+test('ordena impactos simultâneos pela fração temporal global', () => {
+  const hits = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: Number.EPSILON,
+      types: [{ ...GAMEPLAY_CONFIG.enemy.types[2] }],
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyHit: (hit) => hits.push(hit),
+  });
+  const fasterProjectile = spawnShotAlongPositiveX(session, { speed: 20 });
+  const slowerProjectile = spawnShotAlongPositiveX(session, { speed: 10 });
+
+  session.update(1);
+
+  assert.equal(hits.length, 2);
+  assert.equal(hits[0].projectile, fasterProjectile);
+  assert.equal(hits[1].projectile, slowerProjectile);
+  assert.ok(hits[0].impactRatio < hits[1].impactRatio);
+  assert.deepEqual(
+    hits.map(({ resistance }) => resistance),
+    [2, 1],
+  );
+  assert.equal(session.enemyState.outcome, null);
+  assert.equal(session.activeProjectileCount, 0);
   session.dispose();
 });
 
@@ -450,8 +536,46 @@ test('impacto na mesma fração temporal do contato tem precedência', () => {
   session.dispose();
 });
 
+test('impacto não letal no empate reduz resistência antes de resolver contato', () => {
+  const contacts = [];
+  const eliminations = [];
+  const hits = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      spawn: { minRadius: 3, maxRadius: 3 },
+      types: [{ ...GAMEPLAY_CONFIG.enemy.types[1] }],
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyEliminate: (state) => eliminations.push(state),
+    onEnemyHit: (state) => hits.push(state),
+    onEnemyPlayerContact: (state) => contacts.push(state),
+  });
+
+  spawnShotAlongPositiveX(session, { speed: 0.36 });
+  session.update(1);
+
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].outcome, null);
+  assert.equal(hits[0].resistance, 1);
+  assert.equal(hits[0].type.id, 'medium');
+  assert.equal(eliminations.length, 0);
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].resistance, 1);
+  assert.equal(contacts[0].type.id, 'medium');
+  assert.equal(session.enemyState.outcome, 'player-contact');
+  assert.equal(session.activeProjectileCount, 0);
+  session.dispose();
+});
+
 test('mantém o tempo global ao testar impacto no trecho anterior ao contato', () => {
   const contacts = [];
+  const eliminations = [];
   const config = createGameplayConfig({
     enemy: {
       moveSpeed: 4,
@@ -463,6 +587,7 @@ test('mantém o tempo global ao testar impacto no trecho anterior ao contato', (
     scene: new Scene(),
     config,
     enemyRandom: () => 0,
+    onEnemyEliminate: (state) => eliminations.push(state),
     onEnemyPlayerContact: (state) => contacts.push(state),
   });
 
@@ -470,6 +595,11 @@ test('mantém o tempo global ao testar impacto no trecho anterior ao contato', (
   session.update(1);
 
   assert.equal(session.enemyState.outcome, 'eliminated');
+  assert.equal(eliminations.length, 1);
+  assertAlmostEqual(
+    eliminations[0].distanceToPlayer,
+    session.enemyState.distanceToPlayer,
+  );
   assert.equal(contacts.length, 0);
   assert.equal(session.activeProjectileCount, 0);
   session.dispose();

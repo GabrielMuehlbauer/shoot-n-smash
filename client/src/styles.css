@@ -428,6 +428,18 @@ footer {
   transition: width 160ms ease, background 160ms ease;
 }
 
+.enemy-hud[data-enemy-type='medium'][data-enemy-state='active']
+  .enemy-resistance-fill {
+  background: linear-gradient(90deg, #6f8cff, #bfcaff);
+  box-shadow: 0 0 0.85rem rgba(111, 140, 255, 0.52);
+}
+
+.enemy-hud[data-enemy-type='resistant'][data-enemy-state='active']
+  .enemy-resistance-fill {
+  background: linear-gradient(90deg, #9e6fff, #d7c2ff);
+  box-shadow: 0 0 0.85rem rgba(158, 111, 255, 0.52);
+}
+
 .enemy-status {
   margin: 0;
   color: #b8d5e2;

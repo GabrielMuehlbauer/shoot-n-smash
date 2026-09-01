@@ -1,6 +1,12 @@
 const ENEMY_OUTCOMES = new Set([null, 'eliminated', 'player-contact']);
 
-function validateEnemyState({ active, maxResistance, outcome, resistance } = {}) {
+function validateEnemyState({
+  active,
+  maxResistance,
+  outcome,
+  resistance,
+  type,
+} = {}) {
   if (typeof active !== 'boolean') {
     throw new TypeError('O estado do inimigo requer active booleano.');
   }
@@ -24,55 +30,71 @@ function validateEnemyState({ active, maxResistance, outcome, resistance } = {})
   if (!ENEMY_OUTCOMES.has(outcome)) {
     throw new RangeError('O estado do inimigo possui um desfecho inválido.');
   }
+
+  if (
+    !type ||
+    typeof type.id !== 'string' ||
+    type.id.trim() === '' ||
+    type.id !== type.id.trim() ||
+    typeof type.label !== 'string' ||
+    type.label.trim() === '' ||
+    type.label !== type.label.trim()
+  ) {
+    throw new TypeError('O estado do inimigo requer um tipo com id e label.');
+  }
 }
 
 export function describeEnemyState(state) {
   validateEnemyState(state);
 
-  const { active, maxResistance, outcome, resistance } = state;
+  const { active, maxResistance, outcome, resistance, type } = state;
   const percent = Math.round((resistance / maxResistance) * 100);
   const valueText = `${resistance} / ${maxResistance}`;
+  const typeLabel = type.label.trim();
+  const typeName = typeLabel.toLocaleLowerCase('pt-BR');
+  const sharedDescription = {
+    labelText: `Inimigo ${typeName}`,
+    percent,
+    typeId: type.id,
+    typeLabel,
+    valueText,
+  };
 
   if (outcome === 'eliminated') {
     return Object.freeze({
-      ariaText: 'Inimigo eliminado, sem resistência',
+      ...sharedDescription,
+      ariaText: `Inimigo ${typeName} eliminado, sem resistência`,
       hudState: 'eliminated',
-      message: 'Inimigo eliminado. Abra uma nova sessão para gerar outro spawn.',
-      percent,
-      valueText,
+      message: `Inimigo ${typeName} eliminado. Abra uma nova sessão para gerar outro spawn.`,
     });
   }
 
   if (outcome === 'player-contact') {
     return Object.freeze({
-      ariaText: `Inimigo alcançou o jogador com ${resistance} de ${maxResistance} pontos de resistência`,
+      ...sharedDescription,
+      ariaText: `Inimigo ${typeName} alcançou o jogador com ${resistance} de ${maxResistance} pontos de resistência`,
       hudState: 'player-contact',
-      message:
-        'O inimigo alcançou o jogador. Nesta fase, o contato encerra o encontro sem reduzir vida.',
-      percent,
-      valueText,
+      message: `O inimigo ${typeName} alcançou o jogador. Nesta fase, o contato encerra o encontro sem reduzir vida.`,
     });
   }
 
   if (!active) {
     return Object.freeze({
-      ariaText: `Inimigo inativo com ${resistance} de ${maxResistance} pontos de resistência`,
+      ...sharedDescription,
+      ariaText: `Inimigo ${typeName} inativo com ${resistance} de ${maxResistance} pontos de resistência`,
       hudState: 'inactive',
-      message: 'O encontro com o inimigo está encerrado.',
-      percent,
-      valueText,
+      message: `O encontro com o inimigo ${typeName} está encerrado.`,
     });
   }
 
   const damaged = resistance < maxResistance;
 
   return Object.freeze({
-    ariaText: `Inimigo com ${resistance} de ${maxResistance} pontos de resistência`,
+    ...sharedDescription,
+    ariaText: `Inimigo ${typeName} com ${resistance} de ${maxResistance} pontos de resistência`,
     hudState: damaged ? 'damaged' : 'active',
     message: damaged
-      ? `Impacto confirmado. Restam ${resistance} de ${maxResistance} pontos de resistência.`
-      : 'Monstro de gelo se aproximando. Localize-o em 360° e acerte antes do contato.',
-    percent,
-    valueText,
+      ? `Impacto no inimigo ${typeName}. Restam ${resistance} de ${maxResistance} pontos de resistência.`
+      : `Inimigo ${typeName} se aproximando. Localize-o em 360° e acerte antes do contato.`,
   });
 }

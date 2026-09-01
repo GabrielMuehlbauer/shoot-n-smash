@@ -3,7 +3,7 @@
 ## Estado atual
 
 MySQL foi aprovado como banco do projeto. A conexão opcional e o diagnóstico
-foram preparados na Fase 1; até a Fase 8 ainda não existe schema nem migration.
+foram preparados na Fase 1; até a Fase 9 ainda não existe schema nem migration.
 Isso evita antecipar tabelas antes do contrato definitivo da pontuação e das
 ondas.
 

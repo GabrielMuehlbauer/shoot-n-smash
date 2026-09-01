@@ -141,3 +141,25 @@ valor; na igualdade, o impacto vence. Assim, somente um desfecho terminal —
 Esse incremento valida spawn, aproximação, colisão e ordem causal sem antecipar
 sistemas dependentes. O contato ainda não reduz vida, e não há respawn, segunda
 entidade, ondas ou pontuação na Fase 8.
+
+## ADR-012 — Tipos normais como descritores selecionados por sessão
+
+**Status:** aceita em 1º de setembro de 2026.
+
+A Fase 9 representa os três tipos normais por descritores de configuração
+imutáveis. `weak`, `medium` e `resistant` correspondem aos rótulos Fraco, Médio e
+Resistente, às resistências `1`, `2` e `3` e a cores base distintas. Collider,
+velocidade, spawn, contato e força do projétil continuam compartilhados.
+
+Uma sessão seleciona uniformemente exatamente um descritor antes de criar o
+inimigo. O gerador aleatório usado nessa escolha é injetável e independente do
+gerador de spawn, evitando que a quantidade ou a ordem de amostras de uma regra
+altere a outra. Estado, callbacks e HUD transportam o descritor escolhido, e um
+`reset()` da mesma entidade preserva o tipo original.
+
+Essa modelagem introduz diferenciação sem criar subclasses, uma fábrica de
+entidades ou um sistema de ondas antes de haver necessidade. A sessão continua
+com um único inimigo, e os desfechos e o desempate temporal da Fase 8 permanecem
+inalterados. Vida do jogador e dano de contato por tipo ficam explicitamente para
+a Fase 10; respawn, ondas, pontuação, chefão, persistência e XR seguem fora deste
+incremento.
