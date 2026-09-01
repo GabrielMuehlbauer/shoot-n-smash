@@ -1,8 +1,8 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
-  "description": "Protótipo 3D no navegador com arena de neve, disparo convencional, alvo móvel e feedback de impacto.",
+  "description": "Protótipo 3D no navegador com arena de neve, disparo convencional e primeiro inimigo hostil que se aproxima do jogador.",
   "type": "module",
   "workspaces": [
     "client",

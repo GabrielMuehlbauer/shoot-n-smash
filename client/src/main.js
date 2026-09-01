@@ -1,7 +1,9 @@
 import { describeApiHealth } from './api-health.js';
+import { GAMEPLAY_CONFIG } from './config/gameplay-config.js';
 import { GameApp } from './core/GameApp.js';
 import { GameSession } from './core/GameSession.js';
 import { RenderContext } from './core/RenderContext.js';
+import { describeEnemyState } from './enemy-hud.js';
 import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
 import { PROJECT_INFO } from './project-info.js';
@@ -25,10 +27,12 @@ const slingshotTensionValue = document.querySelector(
   '#slingshot-tension-value',
 );
 const shotStatus = document.querySelector('#shot-status');
-const targetHud = document.querySelector('#target-hud');
-const targetHealth = document.querySelector('#target-health');
-const targetHealthValue = document.querySelector('#target-health-value');
-const targetStatus = document.querySelector('#target-status');
+const enemyHud = document.querySelector('#enemy-hud');
+const enemyResistance = document.querySelector('#enemy-resistance');
+const enemyResistanceValue = document.querySelector(
+  '#enemy-resistance-value',
+);
+const enemyStatus = document.querySelector('#enemy-status');
 
 let gameApp = null;
 let lookController = null;
@@ -60,36 +64,51 @@ function resetSlingshotHud(state = 'ready') {
   announcedChargeStage = -1;
 }
 
-function resetTargetHud() {
-  targetHud.dataset.targetState = 'active';
-  targetHud.style.setProperty('--target-health', '100');
-  targetHealthValue.textContent = '100 / 100';
-  targetHealth.setAttribute('aria-valuemax', '100');
-  targetHealth.setAttribute('aria-valuenow', '100');
-  targetHealth.setAttribute(
-    'aria-valuetext',
-    'Alvo com 100 de 100 pontos de vida',
+function updateEnemyState(state) {
+  const description = describeEnemyState(state);
+
+  enemyHud.dataset.enemyState = description.hudState;
+  enemyHud.style.setProperty(
+    '--enemy-resistance',
+    String(description.percent),
   );
-  targetStatus.textContent =
-    'Alvo móvel ativo. Acompanhe a patrulha e acerte quatro vezes.';
+  enemyResistanceValue.textContent = description.valueText;
+  enemyResistance.setAttribute(
+    'aria-valuemax',
+    String(state.maxResistance),
+  );
+  enemyResistance.setAttribute('aria-valuenow', String(state.resistance));
+  enemyResistance.setAttribute('aria-valuetext', description.ariaText);
+  enemyStatus.textContent = description.message;
 }
 
-function updateTargetState({ alive, health, maxHealth }) {
-  const percent = Math.round((health / maxHealth) * 100);
-  targetHud.dataset.targetState = alive ? 'damaged' : 'destroyed';
-  targetHud.style.setProperty('--target-health', String(percent));
-  targetHealthValue.textContent = `${health} / ${maxHealth}`;
-  targetHealth.setAttribute('aria-valuemax', String(maxHealth));
-  targetHealth.setAttribute('aria-valuenow', String(health));
-  targetHealth.setAttribute(
-    'aria-valuetext',
-    alive
-      ? `Alvo com ${health} de ${maxHealth} pontos de vida`
-      : 'Alvo destruído, sem pontos de vida',
-  );
-  targetStatus.textContent = alive
-    ? `Impacto confirmado. Restam ${health} pontos de vida.`
-    : 'Alvo destruído no ponto do quarto impacto.';
+function resetEnemyHud() {
+  updateEnemyState({
+    active: true,
+    maxResistance: GAMEPLAY_CONFIG.enemy.maxResistance,
+    outcome: null,
+    resistance: GAMEPLAY_CONFIG.enemy.maxResistance,
+  });
+}
+
+function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
+  if (outcome === 'eliminated') {
+    setShotStatus(
+      'ready',
+      'Inimigo eliminado. Volte ao menu para iniciar uma nova sessão.',
+    );
+    return true;
+  }
+
+  if (outcome === 'player-contact') {
+    setShotStatus(
+      'idle',
+      'Contato registrado sem dano nesta fase. Volte ao menu para tentar novamente.',
+    );
+    return true;
+  }
+
+  return false;
 }
 
 function updateChargeState({ charging, ratio }) {
@@ -106,6 +125,11 @@ function updateChargeState({ charging, ratio }) {
 
   if (!charging) {
     resetSlingshotHud(pointerLocked ? 'ready' : 'idle');
+    showEncounterOutcome();
+    return;
+  }
+
+  if (showEncounterOutcome()) {
     return;
   }
 
@@ -129,9 +153,38 @@ function handleShot(shot) {
       ? '1 projétil ativo'
       : `${shot.activeProjectileCount} projéteis ativos`;
 
+  if (showEncounterOutcome()) {
+    return;
+  }
+
   setShotStatus(
     'ready',
     `Disparo de ${percent}% lançado · ${projectileLabel}.`,
+  );
+}
+
+function handleEnemyResistanceChange(state) {
+  updateEnemyState(state);
+}
+
+function handleEnemyEliminate(state) {
+  updateEnemyState(state);
+  showEncounterOutcome(state.outcome);
+}
+
+function handleEnemyPlayerContact(state) {
+  updateEnemyState(state);
+  showEncounterOutcome(state.outcome);
+}
+
+function handleEnemyHit({ maxResistance, outcome, resistance }) {
+  if (showEncounterOutcome(outcome)) {
+    return;
+  }
+
+  setShotStatus(
+    'ready',
+    `Impacto confirmado. Restam ${resistance} de ${maxResistance} pontos de resistência.`,
   );
 }
 
@@ -145,7 +198,9 @@ function handleChargeCancel({ reason = 'manual' } = {}) {
     'window-blur': 'Carga cancelada porque a janela perdeu o foco.',
   };
 
-  setShotStatus('idle', messages[reason] ?? 'Carga cancelada com segurança.');
+  if (!showEncounterOutcome()) {
+    setShotStatus('idle', messages[reason] ?? 'Carga cancelada com segurança.');
+  }
 }
 
 function updateLookState({ locked, supported }) {
@@ -166,19 +221,23 @@ function updateLookState({ locked, supported }) {
 
   if (locked) {
     resetSlingshotHud('ready');
-    setShotStatus(
-      'ready',
-      'Mira ativa. Segure o botão esquerdo para carregar.',
-    );
+    if (!showEncounterOutcome()) {
+      setShotStatus(
+        'ready',
+        'Mira ativa. Segure o botão esquerdo para carregar.',
+      );
+    }
   } else {
     gameSession?.cancelCharge();
     resetSlingshotHud('idle');
-    setShotStatus(
-      'idle',
-      supported
-        ? 'Ative a mira para preparar o estilingue.'
-        : 'Disparo indisponível sem suporte a Pointer Lock.',
-    );
+    if (!showEncounterOutcome()) {
+      setShotStatus(
+        'idle',
+        supported
+          ? 'Ative a mira para preparar o estilingue.'
+          : 'Disparo indisponível sem suporte a Pointer Lock.',
+      );
+    }
   }
 
   if (!locked && supported && !prototypeView.hidden) {
@@ -213,7 +272,7 @@ function enterPrototype() {
   prototypeView.hidden = false;
   sceneError.hidden = true;
   document.body.classList.add('scene-active');
-  resetTargetHud();
+  resetEnemyHud();
 
   try {
     renderContext = new RenderContext(sceneContainer);
@@ -227,8 +286,11 @@ function enterPrototype() {
       camera: renderContext.camera,
       scene: renderContext.scene,
       onChargeChange: updateChargeState,
+      onEnemyEliminate: handleEnemyEliminate,
+      onEnemyHit: handleEnemyHit,
+      onEnemyPlayerContact: handleEnemyPlayerContact,
+      onEnemyResistanceChange: handleEnemyResistanceChange,
       onShot: handleShot,
-      onTargetHealthChange: updateTargetState,
     });
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
@@ -278,7 +340,7 @@ function exitPrototype() {
   lookController = null;
   pointerLocked = false;
   resetSlingshotHud('idle');
-  resetTargetHud();
+  resetEnemyHud();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

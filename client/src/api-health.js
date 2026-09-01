@@ -1,4 +1,8 @@
 export function describeApiHealth(httpStatus, payload) {
+  const phaseMessage = Number.isInteger(payload?.phase)
+    ? ` Fase ${payload.phase}.`
+    : '';
+
   if (
     httpStatus === 503 &&
     payload?.status === 'degraded' &&
@@ -6,7 +10,7 @@ export function describeApiHealth(httpStatus, payload) {
   ) {
     return {
       state: 'warning',
-      message: 'API online, mas o MySQL está indisponível. Verifique a configuração do banco.',
+      message: `API online.${phaseMessage} O MySQL está indisponível. Verifique a configuração do banco.`,
     };
   }
 
@@ -18,7 +22,7 @@ export function describeApiHealth(httpStatus, payload) {
 
     return {
       state: 'success',
-      message: `API online. ${databaseMessage}`,
+      message: `API online.${phaseMessage} ${databaseMessage}`,
     };
   }
 

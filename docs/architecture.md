@@ -12,17 +12,17 @@ problema concreto do MVP.
 DesktopLookController ──> câmera
 DesktopFireController ──> GameSession ──┬─> SlingshotSystem ──> ProjectileSystem ─┐
 XRInput (futuro) ───────────────────────┤                                      │
-                                        ├─> TargetSystem ─────> CollisionSystem ┤
+                                        ├─> EnemySystem ──────> CollisionSystem ┤
                                         ├─> ImpactFeedbackSystem <──────────────┤
                                         └─> DomHUD <─────────────────────────────┘
 
-WaveSystem -> EnemySystem -> Player / Score / Item Systems (futuros)
-                                  │
-                                  v
-                         StateMachine e XRHud
-                                  │
-                                  v
-                         RankingClient -> Express -> MySQL
+WaveSystem -> tipos de inimigo / Player / Score / Item Systems (futuros)
+                                         │
+                                         v
+                                StateMachine e XRHud
+                                         │
+                                         v
+                                RankingClient -> Express -> MySQL
 ```
 
 ## Cliente
@@ -43,8 +43,8 @@ WaveSystem -> EnemySystem -> Player / Score / Item Systems (futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 7, seu `update(deltaSeconds)` preserva a ordem
-  estilingue → alvo → feedbacks existentes → projéteis e resolução do impacto;
+  fachada da partida. Na Fase 8, seu `update(deltaSeconds)` preserva a ordem
+  estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
   `dispose()` encerra todos os sistemas de forma idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
@@ -54,25 +54,25 @@ WaveSystem -> EnemySystem -> Player / Score / Item Systems (futuros)
   uma esfera visual de raio 0,18, preserva a posição anterior para a
   colisão por segmento e tem ciclo de vida limitado. `update()` e `dispose()`
   não dependem do DOM e são idempotentes.
-- `TargetSystem` é dono do único alvo de treinamento, de seu visual, collider,
-  vida, patrulha senoidal e transição terminal. Ele preserva os centros anterior
-  e atual por frame, publica snapshots de estado por callbacks e não conhece
-  elementos do DOM.
+- `EnemySystem` é dono do único monstro de gelo, de seu visual low-poly, collider,
+  resistência, spawn, aproximação e transições terminais. Ele preserva os centros
+  anterior e atual por frame, calcula a fração de um possível contato com o
+  jogador, publica snapshots por callbacks e não conhece elementos do DOM.
 - `CollisionSystem` contém matemática pura para segmento–esfera estática e para
-  duas esferas móveis. O segundo teste subtrai o movimento do alvo do movimento
-  do projétil, soma os raios e encontra o primeiro contato em `[0, 1]`, evitando
-  tunneling sem introduzir uma engine física.
+  duas esferas móveis. O segundo teste subtrai o movimento de um volume do outro,
+  soma os raios e encontra o primeiro contato em `[0, 1]`, evitando tunneling sem
+  introduzir uma engine física.
 - `ImpactFeedbackSystem` mantém bursts 3D curtos no ponto de impacto. A geometria
   é compartilhada, os materiais são descartados individualmente e o limite FIFO
   impede o acúmulo de efeitos.
-- O HUD HTML observa `onChargeChange({ charging, ratio })` e o resultado do
-  disparo por callbacks, convertendo `ratio * 100` para a apresentação. O núcleo
-  de gameplay não consulta nem altera elementos do DOM. Cancelamentos informam
-  um motivo semântico, sem transformar mensagens de interface em regra de jogo.
+- O HUD HTML observa `onChargeChange({ charging, ratio })`, disparos, resistência,
+  impactos, eliminação e contato por callbacks. O núcleo de gameplay não consulta
+  nem altera elementos do DOM. Cancelamentos e desfechos informam motivos
+  semânticos, sem transformar mensagens de interface em regra de jogo.
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
   gravidade, dimensões e limites do recorte para evitar números mágicos.
-- `GameSession` coordenará também a ordem dos demais sistemas quando uma partida
-  completa for introduzida.
+- `GameSession` já coordena a ordem do encontro mínimo e incorporará vida, ondas
+  e pontuação quando uma partida completa for introduzida.
 - Sistemas de gameplay não dependerão diretamente do mouse ou dos controles XR.
 - Os controles de câmera e de disparo são os adaptadores de entrada desktop já
   concretos. Um futuro `XRInput` produzirá as mesmas intenções de tensionar e
@@ -80,8 +80,8 @@ WaveSystem -> EnemySystem -> Player / Score / Item Systems (futuros)
 - A interface convencional utilizará HTML/CSS; a interface imersiva será criada
   dentro da cena 3D.
 - Um único `renderer.setAnimationLoop()` atenderá navegador e WebXR.
-- A área central da arena permanece livre para a futura representação visual do
-  estilingue e para o jogador estacionário.
+- A área central da arena permanece livre. O jogador estacionário usa o centro
+  lógico `(0, 1,05, 0)`, ainda sem corpo ou collider visual próprios.
 
 ## Recorte executável da Fase 5
 
@@ -160,6 +160,38 @@ alvo é reposicionado nessa fração antes de permanecer destruído.
 Cada impacto cria um icosaedro wireframe branco no centro do projétil. O efeito
 expande, gira e desaparece em 0,32 segundo. No máximo 12 bursts coexistem, com
 remoção do mais antigo e descarte do respectivo material.
+
+## Recorte executável da Fase 8
+
+```text
+spawn 360° no raio 17..20
+             │
+             v
+EnemySystem aproxima a 1,25 unidade/s ──> contato pendente em t (raio 1,5)
+             ▲                                           │
+             │                                           │
+projétil anterior ──> projétil atual ──> impacto em t ────┤
+                                                         v
+                                           menor t define o desfecho
+                                                │                 │
+                                                v                 v
+                                         eliminated        player-contact
+                                                └──────┬──────────┘
+                                                       v
+                                            remove o inimigo uma vez
+```
+
+Existe exatamente um inimigo. O spawn usa um ângulo em 360° e uma distância no
+anel de raio 17 a 20. Ele avança radialmente em direção ao centro lógico do
+jogador e para no raio de contato `1,5`. O sistema registra a fração normalizada
+do frame em que esse contato ocorreria e adia o desfecho até avaliar os projéteis.
+
+`GameSession` reutiliza `intersectMovingSpheres()` e compara o primeiro impacto
+com o contato pendente. O menor `t` vence; em igualdade, o impacto tem precedência.
+A configuração padrão usa resistência `1` e força de acerto `1`, portanto um
+impacto válido elimina a entidade. O outro desfecho é `player-contact`: ele remove
+o inimigo, mas ainda não reduz vida. Não há respawn, segunda entidade, ondas ou
+pontuação na Fase 8.
 
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
 MVP. As colisões atuais usam volumes simples e testes de segmento estático ou de

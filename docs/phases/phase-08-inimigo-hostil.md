@@ -226,6 +226,7 @@ A cobertura desta fase deve incluir:
   valores de `t`;
 - ausência de dano ou consumo quando o disparo erra;
 - consistência de estado quando um observador falha;
+- estados acessíveis do HUD para aproximação, dano, eliminação e contato;
 - reset, construção parcial e descarte idempotente dos recursos;
 - integração e ordem de atualização coordenadas por `GameSession`.
 

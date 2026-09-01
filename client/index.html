@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 7 com alvo móvel, colisão relativa e feedback 3D de impacto no navegador desktop."
+      content="Shoot 'n' Smash — protótipo da Fase 8 com um inimigo hostil que surge ao redor da arena e avança contra o jogador."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,19 +19,19 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 7 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Alvo móvel e impacto</p>
+        <div class="phase-badge"><span></span> Fase 8 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Primeiro inimigo hostil</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
-          Acompanhe a patrulha horizontal do alvo low-poly e use o estilingue sem
-          sair do centro. Cada acerto causa 25 de dano e cria um breve burst 3D
-          no centro do projétil no primeiro contato.
+          Encontre o monstro de gelo que surge em qualquer direção da arena e
+          use o estilingue antes que ele alcance o centro. Um impacto válido
+          elimina o inimigo; o contato encerra o encontro sem reduzir vida nesta fase.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Alvo móvel e impacto da Fase 7</small>
+            <small>Inimigo hostil e aproximação da Fase 8</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -78,7 +78,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Patrulha · Impacto 3D · WebXR planejado</span>
+        <span>Spawn 360° · Inimigo hostil · WebXR planejado</span>
       </footer>
     </main>
 
@@ -93,7 +93,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 7 · Alvo móvel e impacto</span>
+          <span class="scene-phase">Fase 8 · Primeiro inimigo hostil</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -102,36 +102,36 @@
       </div>
 
       <section
-        id="target-hud"
-        class="target-hud"
-        data-target-state="active"
-        aria-labelledby="target-health-label"
+        id="enemy-hud"
+        class="enemy-hud"
+        data-enemy-state="active"
+        aria-labelledby="enemy-resistance-label"
       >
-        <div class="target-health-heading">
-          <strong id="target-health-label">Vida do alvo móvel</strong>
-          <span id="target-health-value" aria-hidden="true">100 / 100</span>
+        <div class="enemy-resistance-heading">
+          <strong id="enemy-resistance-label">Resistência do inimigo</strong>
+          <span id="enemy-resistance-value" aria-hidden="true">1 / 1</span>
         </div>
         <div
-          id="target-health"
-          class="target-health"
+          id="enemy-resistance"
+          class="enemy-resistance"
           role="progressbar"
-          aria-labelledby="target-health-label"
-          aria-describedby="target-status"
+          aria-labelledby="enemy-resistance-label"
+          aria-describedby="enemy-status"
           aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="100"
-          aria-valuetext="Alvo com 100 de 100 pontos de vida"
+          aria-valuemax="1"
+          aria-valuenow="1"
+          aria-valuetext="Inimigo com 1 de 1 pontos de resistência"
         >
-          <span class="target-health-fill" aria-hidden="true"></span>
+          <span class="enemy-resistance-fill" aria-hidden="true"></span>
         </div>
         <p
-          id="target-status"
-          class="target-status"
+          id="enemy-status"
+          class="enemy-status"
           role="status"
           aria-live="polite"
           aria-atomic="true"
         >
-          Alvo móvel ativo. Acompanhe a patrulha e acerte quatro vezes.
+          Monstro de gelo se aproximando. Localize-o em 360° e acerte antes do contato.
         </p>
       </section>
 
@@ -171,15 +171,15 @@
         <ol id="slingshot-instructions" class="slingshot-instructions">
           <li>Ative a mira.</li>
           <li>Segure o botão esquerdo para carregar.</li>
-          <li>Acompanhe o alvo e solte para disparar.</li>
+          <li>Localize o inimigo e solte para disparar.</li>
         </ol>
       </section>
 
       <div class="scene-caption">
-        <strong>Patrulha senoidal · 100 PV</strong>
+        <strong>Spawn em 360° · 1 ponto de resistência</strong>
         <span>
-          O alvo se move entre x -4,5 e 4,5; cada impacto cria um burst branco.
-          Ondas, pontuação e WebXR continuam fora deste incremento.
+          O inimigo surge entre os raios 17 e 20 e avança até o centro. Contato
+          ainda não reduz vida; ondas, pontuação e WebXR permanecem fora deste incremento.
         </span>
       </div>
 

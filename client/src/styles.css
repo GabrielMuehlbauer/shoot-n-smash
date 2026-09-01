@@ -368,7 +368,7 @@ footer {
 
 .scene-heading,
 .exit-scene-button,
-.target-hud,
+.enemy-hud,
 .slingshot-hud,
 .scene-caption,
 .scene-error {
@@ -378,8 +378,8 @@ footer {
   backdrop-filter: blur(12px);
 }
 
-.target-hud {
-  --target-health: 100;
+.enemy-hud {
+  --enemy-resistance: 100;
   position: absolute;
   top: 1.25rem;
   left: 50%;
@@ -393,7 +393,7 @@ footer {
   pointer-events: none;
 }
 
-.target-health-heading {
+.enemy-resistance-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -402,13 +402,13 @@ footer {
   font-size: 0.75rem;
 }
 
-#target-health-value {
+#enemy-resistance-value {
   color: #91e9ff;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
 
-.target-health {
+.enemy-resistance {
   position: relative;
   height: 0.62rem;
   overflow: hidden;
@@ -417,10 +417,10 @@ footer {
   border-radius: 999px;
 }
 
-.target-health-fill {
+.enemy-resistance-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  width: calc(var(--target-health) * 1%);
+  width: calc(var(--enemy-resistance) * 1%);
   height: 100%;
   background: linear-gradient(90deg, #54e0ff, #baf5ff);
   border-radius: inherit;
@@ -428,23 +428,45 @@ footer {
   transition: width 160ms ease, background 160ms ease;
 }
 
-.target-status {
+.enemy-status {
   margin: 0;
   color: #b8d5e2;
   font-size: 0.66rem;
   line-height: 1.35;
 }
 
-.target-hud[data-target-state='damaged'] .target-health-fill {
+.enemy-hud[data-enemy-state='damaged'] .enemy-resistance-fill {
   background: linear-gradient(90deg, #ffad5b, #ffe6ae);
 }
 
-.target-hud[data-target-state='destroyed'] {
+.enemy-hud[data-enemy-state='eliminated'] {
+  border-color: rgba(112, 241, 182, 0.46);
+}
+
+.enemy-hud[data-enemy-state='eliminated'] #enemy-resistance-value,
+.enemy-hud[data-enemy-state='eliminated'] .enemy-status {
+  color: #94f5c7;
+}
+
+.enemy-hud[data-enemy-state='player-contact'] {
+  border-color: rgba(255, 144, 144, 0.46);
+}
+
+.enemy-hud[data-enemy-state='player-contact'] .enemy-resistance-fill {
+  background: linear-gradient(90deg, #ff7d7d, #ffc0a8);
+}
+
+.enemy-hud[data-enemy-state='player-contact'] #enemy-resistance-value,
+.enemy-hud[data-enemy-state='player-contact'] .enemy-status {
+  color: #ffd1d1;
+}
+
+.enemy-hud[data-enemy-state='inactive'] {
   border-color: rgba(155, 178, 192, 0.36);
 }
 
-.target-hud[data-target-state='destroyed'] #target-health-value,
-.target-hud[data-target-state='destroyed'] .target-status {
+.enemy-hud[data-enemy-state='inactive'] #enemy-resistance-value,
+.enemy-hud[data-enemy-state='inactive'] .enemy-status {
   color: #bdcad2;
 }
 
@@ -740,7 +762,7 @@ kbd {
 }
 
 @media (min-width: 761px) and (max-width: 1200px) {
-  .target-hud {
+  .enemy-hud {
     top: 5.4rem;
     left: 1.25rem;
     width: min(17rem, calc(50% - 1.875rem));
@@ -803,7 +825,7 @@ kbd {
     max-width: none;
   }
 
-  .target-hud {
+  .enemy-hud {
     top: 5.2rem;
     right: 0.75rem;
     left: 0.75rem;

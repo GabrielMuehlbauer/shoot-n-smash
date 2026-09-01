@@ -420,6 +420,36 @@ test('impacto anterior ao contato vence no mesmo frame', () => {
   session.dispose();
 });
 
+test('impacto na mesma fração temporal do contato tem precedência', () => {
+  const contacts = [];
+  const eliminations = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      spawn: { minRadius: 3, maxRadius: 3 },
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyEliminate: (state) => eliminations.push(state),
+    onEnemyPlayerContact: (state) => contacts.push(state),
+  });
+
+  // Em t = 0,75, o inimigo chega a x = 1,5 e o projétil a x = 0,27.
+  // A separação 1,23 é exatamente a soma dos raios 1,05 e 0,18.
+  spawnShotAlongPositiveX(session, { speed: 0.36 });
+  session.update(1);
+
+  assert.equal(eliminations.length, 1);
+  assert.equal(contacts.length, 0);
+  assert.equal(session.enemyState.outcome, 'eliminated');
+  assert.equal(session.activeProjectileCount, 0);
+  session.dispose();
+});
+
 test('mantém o tempo global ao testar impacto no trecho anterior ao contato', () => {
   const contacts = [];
   const config = createGameplayConfig({

@@ -230,10 +230,59 @@ O roteiro completo está em
 O roteiro completo está em
 [Fase 7 — Alvo móvel e feedback de impacto](phases/phase-07-alvo-movel-impacto.md).
 
+## Fase 8
+
+### Cobertura automatizada adicionada
+
+- parâmetros canônicos do inimigo e rejeição de configurações inválidas;
+- spawn determinístico nos limites do anel de raio 17 a 20 e em diferentes
+  quadrantes, por meio de um gerador aleatório injetável;
+- criação de uma única entidade low-poly com collider e resistência explícitos;
+- aproximação radial a 1,25 unidade por segundo, independente da subdivisão dos
+  frames;
+- preservação dos centros anterior e atual, parada no raio `1,5` e cálculo da
+  fração normalizada do contato;
+- resistência genérica, força inteira de acerto e limite da resistência em zero;
+- publicação e remoção únicas nos desfechos `eliminated` e `player-contact`;
+- colisão contínua entre projétil e inimigo em movimento;
+- consumo do projétil e criação do burst somente após impacto válido;
+- desempate entre impacto e contato pelo menor `t`, com precedência do impacto
+  em caso de igualdade;
+- disparo que erra sem alterar resistência, consumir o projétil ou criar burst;
+- consistência do estado quando um callback observador falha;
+- apresentação acessível do HUD para aproximação, dano, eliminação e contato;
+- reset, rollback de construção parcial e descarte idempotente dos recursos;
+- integração e ordem de atualização coordenadas por `GameSession`;
+- metadados e diagnóstico da API atualizados para a Fase 8.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 8 concluída**, use **Verificar API** e confira `phase: 8`.
+3. Abra a cena e observe em 360° até encontrar um único monstro de gelo.
+4. Confirme que ele nasceu longe do centro e se aproxima diretamente do jogador.
+5. Ative a mira e acerte o inimigo; confirme um burst, o consumo da bola de neve
+   e a eliminação em um único impacto.
+6. Abra outra sessão, não dispare e aguarde cerca de 12,4 a 14,8 segundos.
+7. Confirme que o contato remove o inimigo e informa o desfecho, sem reduzir a
+   vida do jogador.
+8. Teste um disparo pouco antes do contato e confirme somente um desfecho, de
+   acordo com o primeiro evento.
+9. Erre um disparo e confirme que o inimigo continua se aproximando.
+10. Repita novas sessões para observar direções de spawn variadas e faça três
+    ciclos de entrada e saída, sem canvas, inimigos, efeitos ou listeners
+    residuais.
+11. Confirme que não há respawn, segunda entidade, onda ou pontuação e verifique
+    o Console sem erros não tratados.
+
+O roteiro completo e a checklist ainda pendente de validação manual estão em
+[Fase 8 — Primeiro inimigo hostil](phases/phase-08-inimigo-hostil.md).
+
 ## Estratégia futura
 
-- testes unitários para vida e dano do jogador, estados, pontuação e ondas;
-- testes de integração para contato inimigo–jogador e partida completa;
+- testes unitários para tipos de inimigo, vida e dano do jogador, estados,
+  pontuação e ondas;
+- testes de integração para contato aplicando dano ao jogador e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;
 - mocks WebXR apenas para lógica de entrada;

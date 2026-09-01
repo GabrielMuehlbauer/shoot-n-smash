@@ -16,7 +16,7 @@ Resposta sem banco configurado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 7,
+  "phase": 8,
   "database": {
     "status": "not-configured"
   }
@@ -29,7 +29,7 @@ Resposta com banco conectado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 7,
+  "phase": 8,
   "database": {
     "status": "connected"
   }
@@ -43,7 +43,7 @@ Resposta quando existe configuração, mas o banco está indisponível —
 {
   "status": "degraded",
   "service": "shoot-n-smash-api",
-  "phase": 7,
+  "phase": 8,
   "database": {
     "status": "unavailable"
   }
@@ -63,7 +63,8 @@ O endpoint nunca retorna a URL, usuário ou senha do MySQL.
 
 ## Endpoints planejados
 
-Estes endpoints ainda não existem na Fase 7:
+O encontro da Fase 8 continua inteiramente no cliente e não adiciona endpoints.
+Estes contratos de persistência ainda não existem:
 
 - `POST /api/partidas`: registrar uma partida concluída de maneira idempotente;
 - `GET /api/ranking?cenario=neve`: consultar o melhor resultado por jogador no
