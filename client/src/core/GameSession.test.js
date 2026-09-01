@@ -44,19 +44,53 @@ function createProjectileSystem() {
   };
 }
 
+function createGameplayConfig({ enemy = {}, projectile = {} } = {}) {
+  return {
+    ...GAMEPLAY_CONFIG,
+    projectile: {
+      ...GAMEPLAY_CONFIG.projectile,
+      gravity: 0,
+      groundY: -100,
+      ...projectile,
+    },
+    enemy: {
+      ...GAMEPLAY_CONFIG.enemy,
+      ...enemy,
+      playerPosition: {
+        ...GAMEPLAY_CONFIG.enemy.playerPosition,
+        ...enemy.playerPosition,
+      },
+      spawn: {
+        ...GAMEPLAY_CONFIG.enemy.spawn,
+        minRadius: 10,
+        maxRadius: 10,
+        ...enemy.spawn,
+      },
+      animation: {
+        ...GAMEPLAY_CONFIG.enemy.animation,
+        ...enemy.animation,
+      },
+      colors: {
+        ...GAMEPLAY_CONFIG.enemy.colors,
+        ...enemy.colors,
+      },
+    },
+  };
+}
+
+function spawnShotAlongPositiveX(session, { originX = 0, speed = 24 } = {}) {
+  return session.projectileSystem.spawn({
+    origin: new Vector3(originX, session.enemySystem.position.y, 0),
+    direction: new Vector3(1, 0, 0),
+    speed,
+  });
+}
+
 function assertAlmostEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(
     Math.abs(actual - expected) <= tolerance,
     `esperado ${expected}, recebido ${actual}`,
   );
-}
-
-function spawnShotAtTarget(session) {
-  return session.projectileSystem.spawn({
-    origin: new Vector3(session.targetSystem.position.x, 2.15, 0),
-    direction: new Vector3(0, 0, -1),
-    speed: 24,
-  });
 }
 
 test('carrega de 0 a 1 e dispara na direção mundial da câmera', () => {
@@ -66,6 +100,7 @@ test('carrega de 0 a 1 e dispara na direção mundial da câmera', () => {
   const session = new GameSession({
     camera: createCamera(),
     scene: new Scene(),
+    enemyRandom: () => 0,
     projectileSystem,
     onChargeChange: (state) => chargeStates.push(state),
     onShot: (shot) => shots.push(shot),
@@ -110,56 +145,39 @@ test('carrega de 0 a 1 e dispara na direção mundial da câmera', () => {
   session.dispose();
 });
 
-test('um clique rápido usa a velocidade mínima', () => {
-  const projectileSystem = createProjectileSystem();
-  const session = new GameSession({
-    camera: createCamera(),
-    scene: new Scene(),
-    projectileSystem,
-  });
-
-  session.beginCharge();
-  const shot = session.releaseShot();
-
-  assert.equal(shot.charge, 0);
-  assert.equal(shot.speed, GAMEPLAY_CONFIG.projectile.minSpeed);
-  assert.equal(projectileSystem.spawnCalls.length, 1);
-  session.dispose();
-});
-
-test('cancelamento zera a carga sem criar projétil', () => {
+test('clique rápido usa velocidade mínima e cancelamento não dispara', () => {
   const chargeStates = [];
   const projectileSystem = createProjectileSystem();
   const session = new GameSession({
     camera: createCamera(),
     scene: new Scene(),
+    enemyRandom: () => 0,
     projectileSystem,
     onChargeChange: (state) => chargeStates.push(state),
   });
 
-  assert.equal(session.releaseShot(), false);
-  assert.equal(session.cancelCharge(), false);
+  session.beginCharge();
+  const shot = session.releaseShot();
+  assert.equal(shot.speed, GAMEPLAY_CONFIG.projectile.minSpeed);
+  assert.equal(projectileSystem.spawnCalls.length, 1);
+
   session.beginCharge();
   session.update(0.3);
   assert.equal(session.cancelCharge(), true);
-
-  assert.equal(session.isCharging, false);
-  assert.equal(projectileSystem.spawnCalls.length, 0);
+  assert.equal(projectileSystem.spawnCalls.length, 1);
   assert.deepEqual(chargeStates.at(-1), { charging: false, ratio: 0 });
   session.dispose();
 });
 
 test('update saneia deltas e dispose é idempotente', () => {
-  const chargeStates = [];
   const projectileSystem = createProjectileSystem();
   const session = new GameSession({
     camera: createCamera(),
     scene: new Scene(),
+    enemyRandom: () => 0,
     projectileSystem,
-    onChargeChange: (state) => chargeStates.push(state),
   });
 
-  session.beginCharge();
   session.update(-2);
   session.update(Number.NaN);
   session.update(Number.POSITIVE_INFINITY);
@@ -168,14 +186,33 @@ test('update saneia deltas e dispose é idempotente', () => {
   assert.equal(session.dispose(), true);
   assert.equal(session.dispose(), false);
   assert.equal(projectileSystem.disposeCalls, 1);
-  assert.equal(session.activeProjectileCount, 0);
-  assert.deepEqual(chargeStates.at(-1), { charging: false, ratio: 0 });
   assert.equal(session.update(0.1), false);
   assert.throws(() => session.beginCharge(), /GameSession descartada/);
   assert.throws(() => session.releaseShot(), /GameSession descartada/);
 });
 
-test('coordena o estilingue antes dos projéteis e delega intenções', () => {
+test('pausa a aproximação enquanto o encontro está inativo', () => {
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config: createGameplayConfig(),
+    encounterActive: false,
+    enemyRandom: () => 0,
+  });
+  const initialPosition = session.enemySystem.position.clone();
+
+  session.update(1);
+  assert.equal(session.enemySystem.position.equals(initialPosition), true);
+  assert.equal(session.setEncounterActive(false), false);
+  assert.equal(session.setEncounterActive(true), true);
+  session.update(1);
+  assert.ok(session.enemySystem.position.x < initialPosition.x);
+  assert.throws(() => session.setEncounterActive('sim'), /booleano/);
+  session.dispose();
+  assert.throws(() => session.setEncounterActive(true), /descartada/);
+});
+
+test('coordena sistemas e resolve contato depois das colisões', () => {
   const calls = [];
   const projectileSystem = {
     activeProjectileCount: 3,
@@ -184,26 +221,25 @@ test('coordena o estilingue antes dos projéteis e delega intenções', () => {
   };
   const slingshotSystem = {
     isCharging: false,
-    beginCharge: () => {
-      calls.push(['charge.begin']);
-      return true;
-    },
-    releaseShot: () => {
-      calls.push(['charge.release']);
-      return { ratio: 0.5 };
-    },
-    cancelCharge: () => {
-      calls.push(['charge.cancel']);
-      return true;
-    },
+    beginCharge: () => true,
+    releaseShot: () => ({ ratio: 0.5 }),
+    cancelCharge: () => true,
     update: (delta) => calls.push(['slingshot.update', delta]),
     dispose: () => calls.push(['slingshot.dispose']),
   };
-  const targetSystem = {
-    alive: false,
-    update: (delta) => calls.push(['target.update', delta]),
-    state: { alive: false, health: 0, maxHealth: 100, ratio: 0 },
-    dispose: () => calls.push(['target.dispose']),
+  const enemySystem = {
+    active: false,
+    update: (delta) => calls.push(['enemy.update', delta]),
+    resolvePlayerContact: () => calls.push(['enemy.resolveContact']),
+    state: {
+      active: false,
+      outcome: 'eliminated',
+      resistance: 0,
+      maxResistance: 1,
+      ratio: 0,
+      distanceToPlayer: 8,
+    },
+    dispose: () => calls.push(['enemy.dispose']),
   };
   const impactFeedbackSystem = {
     activeCount: 0,
@@ -211,249 +247,284 @@ test('coordena o estilingue antes dos projéteis e delega intenções', () => {
     dispose: () => calls.push(['feedback.dispose']),
   };
   const session = new GameSession({
+    enemySystem,
     impactFeedbackSystem,
     projectileSystem,
     slingshotSystem,
-    targetSystem,
   });
 
-  assert.equal(session.beginCharge(), true);
-  assert.deepEqual(session.releaseShot(), { ratio: 0.5 });
-  assert.equal(session.cancelCharge(), true);
   session.update(0.016);
   assert.equal(session.activeProjectileCount, 3);
   assert.equal(session.dispose(), true);
-  assert.equal(session.dispose(), false);
 
   assert.deepEqual(calls, [
-    ['charge.begin'],
-    ['charge.release'],
-    ['charge.cancel'],
     ['slingshot.update', 0.016],
-    ['target.update', 0.016],
+    ['enemy.update', 0.016],
     ['feedback.update', 0.016],
     ['projectiles.update', 0.016],
+    ['enemy.resolveContact'],
     ['slingshot.dispose'],
     ['projectiles.dispose'],
-    ['target.dispose'],
+    ['enemy.dispose'],
     ['feedback.dispose'],
   ]);
 });
 
-test('anexa alvo e feedback à cena e expõe o estado inicial de leitura', () => {
+test('anexa inimigo ao cenário e expõe resistência inicial', () => {
   const scene = new Scene();
-  const session = new GameSession({ camera: createCamera(), scene });
-
-  assert.equal(session.targetSystem.parent, scene);
-  assert.equal(session.impactFeedbackSystem.parent, scene);
-  assert.equal(session.activeImpactFeedbackCount, 0);
-  assert.deepEqual(session.targetState, {
-    alive: true,
-    health: 100,
-    maxHealth: 100,
-    ratio: 1,
-  });
-  session.dispose();
-  assert.equal(session.targetSystem.parent, null);
-});
-
-test('colisão móvel aplica quatro danos, cria feedback e consome o projétil', () => {
-  const healthChanges = [];
-  const hits = [];
-  const destructions = [];
-  const scene = new Scene();
-  const config = {
-    ...GAMEPLAY_CONFIG,
-    projectile: {
-      ...GAMEPLAY_CONFIG.projectile,
-      gravity: 0,
-      groundY: -100,
-    },
-  };
   const session = new GameSession({
     camera: createCamera(),
     scene,
-    config,
-    onTargetDestroy: (state) => destructions.push(state),
-    onTargetHealthChange: (state) => healthChanges.push(state),
-    onTargetHit: (hit) => hits.push(hit),
+    enemyRandom: () => 0,
   });
 
-  let expectedFatalPosition = null;
+  assert.equal(session.enemySystem.parent, scene);
+  assert.equal(session.impactFeedbackSystem.parent, scene);
+  assert.equal(session.activeImpactFeedbackCount, 0);
+  assert.deepEqual(session.enemyState, {
+    active: true,
+    outcome: null,
+    resistance: 1,
+    maxResistance: 1,
+    ratio: 1,
+    distanceToPlayer: 17,
+  });
+  session.dispose();
+  assert.equal(session.enemySystem.parent, null);
+});
 
-  for (let hit = 0; hit < 4; hit += 1) {
-    const target = session.targetSystem;
-    const frameStart = target.position.clone();
-    const frameEnd = frameStart.clone();
-    const elapsedAtFrameEnd = target.elapsedMovementSeconds + 0.5;
-    const phaseAtFrameEnd =
-      target.initialMovementPhase +
-      target.movementAngularSpeed * elapsedAtFrameEnd;
-    frameEnd.x =
-      target.movementCenterX +
-      target.movementAmplitude * Math.sin(phaseAtFrameEnd);
+test('colisão móvel aplica resistência, feedback e consumo uma vez por projétil', () => {
+  const resistanceChanges = [];
+  const hits = [];
+  const eliminations = [];
+  const config = createGameplayConfig({
+    enemy: { maxResistance: 3, moveSpeed: 1 },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyEliminate: (state) => eliminations.push(state),
+    onEnemyHit: (hit) => hits.push(hit),
+    onEnemyResistanceChange: (state) => resistanceChanges.push(state),
+  });
 
-    spawnShotAtTarget(session);
+  for (let hit = 0; hit < 3; hit += 1) {
+    spawnShotAlongPositiveX(session);
     session.update(0.5);
     assert.equal(session.activeProjectileCount, 0);
-    assert.equal(session.activeImpactFeedbackCount, 1);
-
-    if (hit === 3) {
-      expectedFatalPosition = frameStart.lerp(
-        frameEnd,
-        hits.at(-1).impactRatio,
-      );
-    }
   }
 
   assert.deepEqual(
-    healthChanges.map(({ health }) => health),
-    [75, 50, 25, 0],
+    resistanceChanges.map(({ resistance }) => resistance),
+    [2, 1, 0],
   );
   assert.deepEqual(
-    hits.map(({ health }) => health),
-    [75, 50, 25, 0],
+    hits.map(({ resistance }) => resistance),
+    [2, 1, 0],
   );
-  assert.equal(destructions.length, 1);
-  assert.deepEqual(session.targetState, {
-    alive: false,
-    health: 0,
-    maxHealth: 100,
-    ratio: 0,
-  });
-  assert.equal(hits[0].damage, 25);
-  assert.ok(hits[0].impactPoint.z < -9);
-  assert.ok(hits[0].impactRatio > 0 && hits[0].impactRatio < 1);
-  assert.notEqual(hits[0].impactPoint, hits[1].impactPoint);
-  assert.ok(
-    session.targetSystem.position.distanceTo(expectedFatalPosition) < 1e-12,
-  );
+  assert.equal(hits.every(({ hitStrength }) => hitStrength === 1), true);
+  assert.equal(eliminations.length, 1);
+  assert.equal(session.enemyState.outcome, 'eliminated');
+  assert.equal(session.enemyState.resistance, 0);
+  assert.equal(session.enemySystem.parent, null);
+  assert.equal(session.activeImpactFeedbackCount, 1);
 
-  const destroyedPosition = session.targetSystem.position.clone();
-
-  session.projectileSystem.spawn({
-    origin: new Vector3(destroyedPosition.x, 2.15, 0),
-    direction: new Vector3(0, 0, -1),
-    speed: 24,
-  });
+  spawnShotAlongPositiveX(session);
   session.update(0.5);
-  assert.equal(session.targetState.health, 0);
-  assert.equal(session.targetSystem.position.equals(destroyedPosition), true);
-  assert.equal(healthChanges.length, 4);
-  assert.equal(hits.length, 4);
+  assert.equal(resistanceChanges.length, 3);
+  assert.equal(hits.length, 3);
   session.dispose();
 });
 
-test('consome o projétil antes de propagar falhas dos observadores', () => {
-  const scenarios = [
-    { callback: 'onTargetHealthChange', previousHits: 0 },
-    { callback: 'onTargetHit', previousHits: 0 },
-    { callback: 'onTargetDestroy', previousHits: 3 },
-  ];
+test('disparo fora do volume não reduz resistência nem é consumido', () => {
+  const config = createGameplayConfig();
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+  });
 
-  for (const { callback, previousHits } of scenarios) {
+  session.projectileSystem.spawn({
+    origin: new Vector3(0, config.enemy.spawn.height, 5),
+    direction: new Vector3(1, 0, 0),
+    speed: 24,
+  });
+  session.update(0.25);
+
+  assert.equal(session.enemyState.resistance, 1);
+  assert.equal(session.enemyState.outcome, null);
+  assert.equal(session.activeProjectileCount, 1);
+  assert.equal(session.activeImpactFeedbackCount, 0);
+  session.dispose();
+});
+
+test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
+  const contacts = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      spawn: { minRadius: 3, maxRadius: 3 },
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyPlayerContact: (state) => contacts.push(state),
+  });
+
+  session.update(1);
+  session.update(1);
+
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].outcome, 'player-contact');
+  assert.equal(session.enemyState.active, false);
+  assert.equal(session.enemyState.outcome, 'player-contact');
+  assertAlmostEqual(
+    session.enemyState.distanceToPlayer,
+    config.enemy.playerContactRadius,
+  );
+  assert.equal(session.enemySystem.parent, null);
+  session.dispose();
+});
+
+test('impacto anterior ao contato vence no mesmo frame', () => {
+  const contacts = [];
+  const eliminations = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      spawn: { minRadius: 3, maxRadius: 3 },
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyEliminate: (state) => eliminations.push(state),
+    onEnemyPlayerContact: (state) => contacts.push(state),
+  });
+
+  spawnShotAlongPositiveX(session, { speed: 4 });
+  session.update(1);
+
+  assert.equal(eliminations.length, 1);
+  assert.equal(contacts.length, 0);
+  assert.equal(session.enemyState.outcome, 'eliminated');
+  assert.equal(session.activeProjectileCount, 0);
+  session.dispose();
+});
+
+test('mantém o tempo global ao testar impacto no trecho anterior ao contato', () => {
+  const contacts = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 4,
+      spawn: { minRadius: 3, maxRadius: 3 },
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyPlayerContact: (state) => contacts.push(state),
+  });
+
+  spawnShotAlongPositiveX(session, { speed: 1 });
+  session.update(1);
+
+  assert.equal(session.enemyState.outcome, 'eliminated');
+  assert.equal(contacts.length, 0);
+  assert.equal(session.activeProjectileCount, 0);
+  session.dispose();
+});
+
+test('contato anterior ao impacto vence no mesmo frame', () => {
+  const contacts = [];
+  const hits = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      spawn: { minRadius: 3, maxRadius: 3 },
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyHit: (hit) => hits.push(hit),
+    onEnemyPlayerContact: (state) => contacts.push(state),
+  });
+
+  spawnShotAlongPositiveX(session, { originX: -5, speed: 6 });
+  session.update(1);
+
+  assert.equal(contacts.length, 1);
+  assert.equal(hits.length, 0);
+  assert.equal(session.enemyState.outcome, 'player-contact');
+  assert.equal(session.activeProjectileCount, 1);
+  session.dispose();
+});
+
+test('consome projétil antes de propagar falha de observador', () => {
+  for (const callback of [
+    'onEnemyResistanceChange',
+    'onEnemyHit',
+    'onEnemyEliminate',
+  ]) {
     const failure = new Error(`falha em ${callback}`);
-    const config = {
-      ...GAMEPLAY_CONFIG,
-      projectile: {
-        ...GAMEPLAY_CONFIG.projectile,
-        gravity: 0,
-        groundY: -100,
-      },
-    };
     const session = new GameSession({
       camera: createCamera(),
       scene: new Scene(),
-      config,
+      config: createGameplayConfig(),
+      enemyRandom: () => 0,
       [callback]: () => {
         throw failure;
       },
     });
 
-    for (let hit = 0; hit < previousHits; hit += 1) {
-      spawnShotAtTarget(session);
-      session.update(0.5);
-    }
-
-    spawnShotAtTarget(session);
+    spawnShotAlongPositiveX(session);
     assert.throws(() => session.update(0.5), failure);
-
-    const healthAfterFailure =
-      config.target.maxHealth -
-      config.target.damagePerHit * (previousHits + 1);
-    assert.equal(session.targetState.health, healthAfterFailure);
+    assert.equal(session.enemyState.outcome, 'eliminated');
     assert.equal(session.activeProjectileCount, 0);
     assert.equal(session.activeImpactFeedbackCount, 1);
-
     session.update(0.01);
-    assert.equal(session.targetState.health, healthAfterFailure);
-    assert.equal(session.activeProjectileCount, 0);
     session.dispose();
   }
 });
 
-test('detecta o alvo cruzando um projétil quase parado entre dois frames', () => {
-  const config = {
-    ...GAMEPLAY_CONFIG,
-    projectile: {
-      ...GAMEPLAY_CONFIG.projectile,
-      gravity: 0,
-      groundY: -100,
-    },
-    target: {
-      ...GAMEPLAY_CONFIG.target,
-      movement: {
-        ...GAMEPLAY_CONFIG.target.movement,
-        speed: 8,
-      },
-    },
-  };
+test('mantém contato terminal antes de propagar falha do observador', () => {
+  const failure = new Error('falha no contato');
   const session = new GameSession({
     camera: createCamera(),
     scene: new Scene(),
-    config,
-  });
-  session.projectileSystem.spawn({
-    origin: new Vector3(0, 2.15, -11),
-    direction: new Vector3(0, 0, -1),
-    speed: 0.001,
-  });
-
-  session.update(1);
-
-  assert.equal(session.targetState.health, 75);
-  assert.equal(session.activeProjectileCount, 0);
-  assert.equal(session.activeImpactFeedbackCount, 1);
-  session.update(GAMEPLAY_CONFIG.impactFeedback.lifetimeSeconds);
-  assert.equal(session.activeImpactFeedbackCount, 0);
-  session.dispose();
-});
-
-test('um disparo fora do volume não causa dano nem é consumido', () => {
-  const scene = new Scene();
-  const config = {
-    ...GAMEPLAY_CONFIG,
-    projectile: {
-      ...GAMEPLAY_CONFIG.projectile,
-      gravity: 0,
-      groundY: -100,
+    config: createGameplayConfig({
+      enemy: {
+        moveSpeed: 2,
+        spawn: { minRadius: 3, maxRadius: 3 },
+      },
+    }),
+    enemyRandom: () => 0,
+    onEnemyPlayerContact: () => {
+      throw failure;
     },
-  };
-  const session = new GameSession({ camera: createCamera(), scene, config });
-
-  session.projectileSystem.spawn({
-    origin: new Vector3(-4, 2.15, 0),
-    direction: new Vector3(0, 0, -1),
-    speed: 24,
   });
-  session.update(0.5);
 
-  assert.equal(session.targetState.health, 100);
-  assert.equal(session.activeProjectileCount, 1);
+  assert.throws(() => session.update(1), failure);
+  assert.equal(session.enemyState.outcome, 'player-contact');
+  assert.equal(session.enemySystem.parent, null);
+  session.update(0.01);
   session.dispose();
 });
 
-test('valida o callback de impacto antes de criar recursos', () => {
+test('valida callback de impacto antes de criar recursos', () => {
   const scene = new Scene();
 
   assert.throws(
@@ -461,19 +532,33 @@ test('valida o callback de impacto antes de criar recursos', () => {
       new GameSession({
         camera: createCamera(),
         scene,
-        onTargetHit: null,
+        onEnemyHit: null,
       }),
-    /onTargetHit como função/,
+    /onEnemyHit como função/,
   );
   assert.equal(scene.children.length, 0);
 });
 
-test('remove recursos criados quando a construção do estilingue falha', () => {
+test('remove recursos criados quando construção intermediária falha', () => {
   const scene = new Scene();
 
   assert.throws(
     () => new GameSession({ camera: null, scene }),
     /SlingshotSystem requer uma câmera/,
+  );
+  assert.equal(scene.getObjectByName('snowball-projectiles'), undefined);
+
+  const invalidConfig = createGameplayConfig({
+    enemy: { moveSpeed: 0 },
+  });
+  assert.throws(
+    () =>
+      new GameSession({
+        camera: createCamera(),
+        scene,
+        config: invalidConfig,
+      }),
+    /enemy\.moveSpeed.*maior que zero/,
   );
   assert.equal(scene.getObjectByName('snowball-projectiles'), undefined);
 });

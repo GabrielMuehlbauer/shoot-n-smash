@@ -2,39 +2,48 @@ import { Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { intersectMovingSpheres } from '../gameplay/CollisionSystem.js';
+import { EnemySystem } from '../gameplay/EnemySystem.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
-import { TargetSystem } from '../gameplay/TargetSystem.js';
 
 export class GameSession {
   constructor({
     camera,
     scene,
     onChargeChange = () => {},
+    onEnemyEliminate = () => {},
+    onEnemyHit = () => {},
+    onEnemyPlayerContact = () => {},
+    onEnemyResistanceChange = () => {},
     onShot = () => {},
-    onTargetDestroy = () => {},
-    onTargetHealthChange = () => {},
-    onTargetHit = () => {},
     config = GAMEPLAY_CONFIG,
+    encounterActive = true,
+    enemyRandom = Math.random,
+    enemySystem = null,
     impactFeedbackSystem = null,
     projectileSystem = null,
     slingshotSystem = null,
-    targetSystem = null,
   } = {}) {
-    if (typeof onTargetHit !== 'function') {
-      throw new TypeError('GameSession requer onTargetHit como função.');
+    if (typeof onEnemyHit !== 'function') {
+      throw new TypeError('GameSession requer onEnemyHit como função.');
+    }
+
+    if (typeof encounterActive !== 'boolean') {
+      throw new TypeError('GameSession requer encounterActive booleano.');
     }
 
     const ownsProjectileSystem = !projectileSystem;
     const ownsSlingshotSystem = !slingshotSystem;
-    const ownsTargetSystem = !targetSystem;
+    const ownsEnemySystem = !enemySystem;
     const ownsImpactFeedbackSystem = !impactFeedbackSystem;
 
     this.config = config;
-    this.onTargetHit = onTargetHit;
-    this.targetPreviousCenter = new Vector3();
-    this.targetCenter = new Vector3();
+    this.encounterActive = encounterActive;
+    this.onEnemyHit = onEnemyHit;
+    this.enemyPreviousCenter = new Vector3();
+    this.enemyCenter = new Vector3();
+    this.projectileContactCenter = new Vector3();
     this.pendingObserverError = null;
     this.disposed = false;
 
@@ -51,13 +60,15 @@ export class GameSession {
           onChargeChange,
           onShot,
         });
-      this.targetSystem =
-        targetSystem ??
-        new TargetSystem({
+      this.enemySystem =
+        enemySystem ??
+        new EnemySystem({
           scene,
-          config: config.target,
-          onDestroy: onTargetDestroy,
-          onHealthChange: onTargetHealthChange,
+          config: config.enemy,
+          random: enemyRandom,
+          onEliminate: onEnemyEliminate,
+          onPlayerContact: onEnemyPlayerContact,
+          onResistanceChange: onEnemyResistanceChange,
         });
       this.impactFeedbackSystem =
         impactFeedbackSystem ??
@@ -74,9 +85,9 @@ export class GameSession {
         }
       }
 
-      if (ownsTargetSystem) {
+      if (ownsEnemySystem) {
         try {
-          this.targetSystem?.dispose?.();
+          this.enemySystem?.dispose?.();
         } catch {
           // Preserva o erro original de construção.
         }
@@ -112,8 +123,12 @@ export class GameSession {
     return this.slingshotSystem.isCharging;
   }
 
-  get targetState() {
-    return this.targetSystem.state;
+  get isEncounterActive() {
+    return this.encounterActive;
+  }
+
+  get enemyState() {
+    return this.enemySystem.state;
   }
 
   get activeImpactFeedbackCount() {
@@ -138,6 +153,21 @@ export class GameSession {
     return this.slingshotSystem.cancelCharge();
   }
 
+  setEncounterActive(active) {
+    this.assertNotDisposed();
+
+    if (typeof active !== 'boolean') {
+      throw new TypeError('O estado do encontro deve ser booleano.');
+    }
+
+    if (this.encounterActive === active) {
+      return false;
+    }
+
+    this.encounterActive = active;
+    return true;
+  }
+
   update(deltaSeconds) {
     if (this.disposed) {
       return false;
@@ -152,9 +182,15 @@ export class GameSession {
 
     try {
       this.slingshotSystem.update(delta);
-      this.targetSystem.update(delta);
+      this.enemySystem.update(this.encounterActive ? delta : 0);
       this.impactFeedbackSystem.update(delta);
       this.projectileSystem.update(delta, this.handleProjectileStep);
+
+      try {
+        this.enemySystem.resolvePlayerContact();
+      } catch (error) {
+        this.queueObserverError(error);
+      }
     } catch (error) {
       updateError = error;
     }
@@ -179,51 +215,66 @@ export class GameSession {
     previousPosition,
     radius,
   }) {
-    if (!this.targetSystem.alive) {
+    if (!this.enemySystem.active) {
       return false;
     }
 
-    this.targetSystem.getPreviousCenter(this.targetPreviousCenter);
-    this.targetSystem.getCenter(this.targetCenter);
+    this.enemySystem.getPreviousCenter(this.enemyPreviousCenter);
+    this.enemySystem.getCenter(this.enemyCenter);
+    const contactRatio = this.enemySystem.playerContactFrameRatio;
+    const projectileEnd =
+      contactRatio === null
+        ? currentPosition
+        : this.projectileContactCenter
+            .copy(previousPosition)
+            .lerp(currentPosition, contactRatio);
     const collision = intersectMovingSpheres(
       previousPosition,
-      currentPosition,
+      projectileEnd,
       radius,
-      this.targetPreviousCenter,
-      this.targetCenter,
-      this.targetSystem.radius,
+      this.enemyPreviousCenter,
+      this.enemyCenter,
+      this.enemySystem.radius,
     );
 
     if (!collision.hit) {
       return false;
     }
 
-    const healthBeforeImpact = this.targetSystem.state.health;
-    let damageApplied = false;
+    const resistanceBeforeImpact = this.enemySystem.state.resistance;
+    let hitApplied = false;
 
     try {
-      damageApplied = this.targetSystem.applyDamage();
+      hitApplied = this.enemySystem.applyHit(
+        this.config.projectile.hitStrength,
+      );
     } catch (error) {
       this.queueObserverError(error);
-      damageApplied = this.targetSystem.state.health < healthBeforeImpact;
+      hitApplied =
+        this.enemySystem.state.resistance < resistanceBeforeImpact;
     }
 
-    if (!damageApplied) {
+    if (!hitApplied) {
       return false;
     }
 
-    if (!this.targetSystem.alive) {
-      this.targetSystem.pauseAtFrameRatio(collision.t);
+    if (!this.enemySystem.active) {
+      this.enemySystem.pauseAtFrameRatio(collision.t);
     }
 
-    this.impactFeedbackSystem.spawn(collision.projectileCenter);
+    try {
+      this.impactFeedbackSystem.spawn(collision.projectileCenter);
+    } catch (error) {
+      this.queueObserverError(error);
+    }
 
     try {
-      this.onTargetHit({
-        ...this.targetSystem.state,
-        damage: this.config.target.damagePerHit,
+      this.onEnemyHit({
+        ...this.enemySystem.state,
+        hitStrength: this.config.projectile.hitStrength,
         impactPoint: collision.projectileCenter.clone(),
-        impactRatio: collision.t,
+        impactRatio:
+          contactRatio === null ? collision.t : collision.t * contactRatio,
         projectile: mesh,
       });
     } catch (error) {
@@ -264,7 +315,7 @@ export class GameSession {
     }
 
     try {
-      this.targetSystem.dispose();
+      this.enemySystem.dispose();
     } catch (error) {
       disposalError ??= error;
     }
@@ -275,7 +326,7 @@ export class GameSession {
       disposalError ??= error;
     }
 
-    this.onTargetHit = () => {};
+    this.onEnemyHit = () => {};
     this.disposed = true;
 
     if (disposalError) {
