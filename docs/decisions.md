@@ -117,3 +117,49 @@ O feedback de acerto permanece um sistema separado: bursts 3D brancos duram
 0,32 segundo, compartilham geometria e descartam seus materiais ao expirar. O
 limite FIFO de 12 efeitos mantém o custo previsível sem acoplar apresentação à
 matemática da colisão.
+
+## ADR-011 — Encontro hostil mínimo e desempate temporal
+
+**Status:** aceita em 1º de setembro de 2026.
+
+A Fase 8 substitui o alvo de treinamento por exatamente um inimigo hostil. Ele
+surge em um ângulo aleatório de 360°, dentro do anel de raio 17 a 20, e avança
+radialmente a 1,25 unidade por segundo em direção ao centro lógico fixo do
+jogador, `(0, 1,05, 0)`. O contato ocorre no raio horizontal `1,5`.
+
+A durabilidade passa a ser expressa como resistência em quantidade de acertos,
+sem reutilizar a escala de 100 pontos do alvo. O contrato permanece genérico,
+mas a configuração deste recorte usa resistência `1` e força de projétil `1`,
+portanto um impacto válido elimina o inimigo.
+
+O contato com o jogador fica pendente até a avaliação dos projéteis do mesmo
+frame. `GameSession` compara a fração `t` do primeiro impacto, obtida por colisão
+contínua entre esferas móveis, com a fração `t` do contato. Prevalece o menor
+valor; na igualdade, o impacto vence. Assim, somente um desfecho terminal —
+`eliminated` ou `player-contact` — é publicado e a entidade é removida uma vez.
+
+Esse incremento valida spawn, aproximação, colisão e ordem causal sem antecipar
+sistemas dependentes. O contato ainda não reduz vida, e não há respawn, segunda
+entidade, ondas ou pontuação na Fase 8.
+
+## ADR-012 — Tipos normais como descritores selecionados por sessão
+
+**Status:** aceita em 1º de setembro de 2026.
+
+A Fase 9 representa os três tipos normais por descritores de configuração
+imutáveis. `weak`, `medium` e `resistant` correspondem aos rótulos Fraco, Médio e
+Resistente, às resistências `1`, `2` e `3` e a cores base distintas. Collider,
+velocidade, spawn, contato e força do projétil continuam compartilhados.
+
+Uma sessão seleciona uniformemente exatamente um descritor antes de criar o
+inimigo. O gerador aleatório usado nessa escolha é injetável e independente do
+gerador de spawn, evitando que a quantidade ou a ordem de amostras de uma regra
+altere a outra. Estado, callbacks e HUD transportam o descritor escolhido, e um
+`reset()` da mesma entidade preserva o tipo original.
+
+Essa modelagem introduz diferenciação sem criar subclasses, uma fábrica de
+entidades ou um sistema de ondas antes de haver necessidade. A sessão continua
+com um único inimigo, e os desfechos e o desempate temporal da Fase 8 permanecem
+inalterados. Vida do jogador e dano de contato por tipo ficam explicitamente para
+a Fase 10; respawn, ondas, pontuação, chefão, persistência e XR seguem fora deste
+incremento.

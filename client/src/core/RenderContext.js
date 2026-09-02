@@ -99,7 +99,7 @@ export class RenderContext {
     renderer.domElement.setAttribute('role', 'img');
     renderer.domElement.setAttribute(
       'aria-label',
-      'Arena 3D de neve com mira, disparos, alvo móvel e feedback de impacto.',
+      'Arena 3D de neve com mira, disparos e um inimigo hostil que avança até o jogador.',
     );
 
     return renderer;

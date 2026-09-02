@@ -27,12 +27,17 @@ function validateConfig(config) {
     ['lifetimeSeconds', config.lifetimeSeconds],
     ['horizontalLimit', config.horizontalLimit],
     ['maxActive', config.maxActive],
+    ['hitStrength', config.hitStrength],
   ];
 
   for (const [name, value] of positiveValues) {
     if (!Number.isFinite(value) || value <= 0) {
       throw new RangeError(`projectile.${name} deve ser maior que zero.`);
     }
+  }
+
+  if (!Number.isInteger(config.hitStrength)) {
+    throw new TypeError('projectile.hitStrength deve ser um inteiro.');
   }
 
   if (!Number.isFinite(config.gravity)) {

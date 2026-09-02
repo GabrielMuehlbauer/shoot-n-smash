@@ -1,5 +1,26 @@
 const freeze = (value) => Object.freeze(value);
 
+const ENEMY_TYPES = freeze([
+  freeze({
+    id: 'weak',
+    label: 'Fraco',
+    maxResistance: 1,
+    color: 0x6edcff,
+  }),
+  freeze({
+    id: 'medium',
+    label: 'Médio',
+    maxResistance: 2,
+    color: 0x6f8cff,
+  }),
+  freeze({
+    id: 'resistant',
+    label: 'Resistente',
+    maxResistance: 3,
+    color: 0x9e6fff,
+  }),
+]);
+
 export const GAMEPLAY_CONFIG = freeze({
   charge: freeze({
     durationSeconds: 1.2,
@@ -20,24 +41,30 @@ export const GAMEPLAY_CONFIG = freeze({
     lifetimeSeconds: 5,
     horizontalLimit: 40,
     maxActive: 24,
+    hitStrength: 1,
   }),
-  target: freeze({
-    position: freeze({ x: 4, y: 2.15, z: -11 }),
-    radius: 1.25,
-    maxHealth: 100,
-    damagePerHit: 25,
-    movement: freeze({
-      minX: -4.5,
-      maxX: 4.5,
-      speed: 1.6,
-      initialDirection: -1,
-      rotationSpeed: 0.85,
+  enemy: freeze({
+    radius: 1.05,
+    types: ENEMY_TYPES,
+    moveSpeed: 1.25,
+    playerContactRadius: 1.5,
+    playerPosition: freeze({ x: 0, y: 1.05, z: 0 }),
+    spawn: freeze({
+      minRadius: 17,
+      maxRadius: 20,
+      height: 1.05,
+    }),
+    animation: freeze({
+      bobAmplitude: 0.07,
+      bobAngularSpeed: 5.2,
+      limbSwingAmplitude: 0.32,
     }),
     colors: freeze({
-      active: 0x79d9ff,
       damaged: 0xffb45f,
       destroyed: 0x4c6175,
       emissive: 0x0c4c66,
+      eyes: 0x08283a,
+      horns: 0xd9f7ff,
     }),
   }),
   impactFeedback: freeze({

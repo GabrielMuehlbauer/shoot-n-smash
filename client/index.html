@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 7 com alvo móvel, colisão relativa e feedback 3D de impacto no navegador desktop."
+      content="Shoot 'n' Smash — protótipo da Fase 9 com inimigos fraco, médio e resistente, sorteados a cada nova sessão."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,19 +19,20 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 7 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Alvo móvel e impacto</p>
+        <div class="phase-badge"><span></span> Fase 9 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Três tipos de inimigo</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
-          Acompanhe a patrulha horizontal do alvo low-poly e use o estilingue sem
-          sair do centro. Cada acerto causa 25 de dano e cria um breve burst 3D
-          no centro do projétil no primeiro contato.
+          Encontre o monstro de gelo sorteado em qualquer direção da arena e
+          use o estilingue antes que ele alcance o centro. O tipo fraco resiste
+          a um impacto, o médio a dois e o resistente a três; o contato ainda
+          encerra o encontro sem reduzir vida.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Alvo móvel e impacto da Fase 7</small>
+            <small>Tipos e resistências da Fase 9</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -78,7 +79,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Patrulha · Impacto 3D · WebXR planejado</span>
+        <span>Spawn 360° · Três tipos normais · WebXR planejado</span>
       </footer>
     </main>
 
@@ -93,7 +94,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 7 · Alvo móvel e impacto</span>
+          <span class="scene-phase">Fase 9 · Tipos de inimigo</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -102,36 +103,34 @@
       </div>
 
       <section
-        id="target-hud"
-        class="target-hud"
-        data-target-state="active"
-        aria-labelledby="target-health-label"
+        id="enemy-hud"
+        class="enemy-hud"
+        data-enemy-state="active"
+        data-enemy-type="weak"
+        aria-labelledby="enemy-resistance-label"
       >
-        <div class="target-health-heading">
-          <strong id="target-health-label">Vida do alvo móvel</strong>
-          <span id="target-health-value" aria-hidden="true">100 / 100</span>
+        <div class="enemy-resistance-heading">
+          <strong id="enemy-resistance-label">Inimigo fraco</strong>
+          <span id="enemy-resistance-value" aria-hidden="true">1 / 1</span>
         </div>
         <div
-          id="target-health"
-          class="target-health"
+          id="enemy-resistance"
+          class="enemy-resistance"
           role="progressbar"
-          aria-labelledby="target-health-label"
-          aria-describedby="target-status"
+          aria-labelledby="enemy-resistance-label"
+          aria-describedby="enemy-status"
           aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="100"
-          aria-valuetext="Alvo com 100 de 100 pontos de vida"
+          aria-valuemax="1"
+          aria-valuenow="1"
+          aria-valuetext="Inimigo fraco com 1 de 1 pontos de resistência"
         >
-          <span class="target-health-fill" aria-hidden="true"></span>
+          <span class="enemy-resistance-fill" aria-hidden="true"></span>
         </div>
         <p
-          id="target-status"
-          class="target-status"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
+          id="enemy-status"
+          class="enemy-status"
         >
-          Alvo móvel ativo. Acompanhe a patrulha e acerte quatro vezes.
+          Inimigo fraco se aproximando. Localize-o em 360° e acerte antes do contato.
         </p>
       </section>
 
@@ -171,15 +170,16 @@
         <ol id="slingshot-instructions" class="slingshot-instructions">
           <li>Ative a mira.</li>
           <li>Segure o botão esquerdo para carregar.</li>
-          <li>Acompanhe o alvo e solte para disparar.</li>
+          <li>Localize o inimigo e solte para disparar.</li>
         </ol>
       </section>
 
       <div class="scene-caption">
-        <strong>Patrulha senoidal · 100 PV</strong>
+        <strong>Spawn em 360° · Resistência entre 1 e 3</strong>
         <span>
-          O alvo se move entre x -4,5 e 4,5; cada impacto cria um burst branco.
-          Ondas, pontuação e WebXR continuam fora deste incremento.
+          Um tipo fraco, médio ou resistente surge entre os raios 17 e 20 e
+          avança até o centro. Contato ainda não reduz vida; ondas, pontuação
+          e WebXR permanecem fora deste incremento.
         </span>
       </div>
 
