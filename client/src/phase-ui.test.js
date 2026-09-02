@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const indexHtml = await readFile(
-  new URL('../index.html', import.meta.url),
-  'utf8',
-);
+const [indexHtml, mainSource, stylesCss] = await Promise.all([
+  readFile(new URL('../index.html', import.meta.url), 'utf8'),
+  readFile(new URL('./main.js', import.meta.url), 'utf8'),
+  readFile(new URL('./styles.css', import.meta.url), 'utf8'),
+]);
 
 test('marca a interface estática como Fase 10 e prepara os HUDs', () => {
   assert.match(indexHtml, /Fase 10 concluída/);
@@ -49,4 +50,24 @@ test('associa a barra de vida ao rótulo e ao feedback visual', () => {
     playerHealthTag.groups.attributes,
     /aria-describedby="player-status"/,
   );
+});
+
+test('conecta mudanças de vida aos estados visuais do HUD', () => {
+  assert.match(
+    mainSource,
+    /playerHud\.dataset\.playerState = description\.hudState/,
+  );
+  assert.match(
+    mainSource,
+    /onPlayerHealthChange:\s*updatePlayerState/,
+  );
+  assert.match(
+    stylesCss,
+    /\.player-hud\[data-player-state='damaged'\]/,
+  );
+  assert.match(
+    stylesCss,
+    /\.player-hud\[data-player-state='depleted'\]/,
+  );
+  assert.match(stylesCss, /@keyframes player-damage-pulse/);
 });

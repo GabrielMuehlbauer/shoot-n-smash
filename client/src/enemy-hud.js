@@ -38,9 +38,13 @@ function validateEnemyState({
     type.id !== type.id.trim() ||
     typeof type.label !== 'string' ||
     type.label.trim() === '' ||
-    type.label !== type.label.trim()
+    type.label !== type.label.trim() ||
+    !Number.isInteger(type.damage) ||
+    type.damage <= 0
   ) {
-    throw new TypeError('O estado do inimigo requer um tipo com id e label.');
+    throw new TypeError(
+      'O estado do inimigo requer um tipo com id, label e damage.',
+    );
   }
 }
 
@@ -72,9 +76,9 @@ export function describeEnemyState(state) {
   if (outcome === 'player-contact') {
     return Object.freeze({
       ...sharedDescription,
-      ariaText: `Inimigo ${typeName} alcançou o jogador com ${resistance} de ${maxResistance} pontos de resistência`,
+      ariaText: `Inimigo ${typeName} alcançou o jogador e causou ${type.damage} de dano`,
       hudState: 'player-contact',
-      message: `O inimigo ${typeName} alcançou o jogador. Nesta fase, o contato encerra o encontro sem reduzir vida.`,
+      message: `O inimigo ${typeName} alcançou o jogador e causou ${type.damage} de dano.`,
     });
   }
 

@@ -107,6 +107,7 @@ function resetEnemyHud() {
 function updatePlayerState(state) {
   const description = describePlayerHealth(state);
 
+  playerHud.dataset.playerState = description.hudState;
   playerHud.style.setProperty('--player-health', String(description.percent));
   playerHealthValue.textContent = description.valueText;
   playerHealth.setAttribute('aria-valuemax', String(state.maxHealth));
@@ -132,10 +133,18 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   }
 
   if (outcome === 'player-contact') {
-    setShotStatus(
-      'idle',
-      'Contato registrado sem dano nesta fase. Volte ao menu para tentar novamente.',
-    );
+    const enemyState = gameSession?.enemyState;
+    const playerState = gameSession?.playerState;
+    const contactMessage =
+      enemyState && playerState
+        ? [
+            `O inimigo ${enemyState.type.label.toLocaleLowerCase('pt-BR')} causou ${enemyState.type.damage} de dano.`,
+            `Vida: ${playerState.health} / ${playerState.maxHealth}.`,
+            'Volte ao menu para tentar novamente.',
+          ].join(' ')
+        : 'O inimigo alcançou o jogador e causou dano. Volte ao menu para tentar novamente.';
+
+    setShotStatus('idle', contactMessage);
     return true;
   }
 
@@ -322,6 +331,7 @@ function enterPrototype() {
       onEnemyHit: handleEnemyHit,
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,
+      onPlayerHealthChange: updatePlayerState,
       onShot: handleShot,
     });
     updateEnemyState(gameSession.enemyState);

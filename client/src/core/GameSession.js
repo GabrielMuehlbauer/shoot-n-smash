@@ -17,6 +17,7 @@ export class GameSession {
     onEnemyHit = () => {},
     onEnemyPlayerContact = () => {},
     onEnemyResistanceChange = () => {},
+    onPlayerHealthChange = () => {},
     onShot = () => {},
     config = GAMEPLAY_CONFIG,
     encounterActive = true,
@@ -28,8 +29,14 @@ export class GameSession {
     projectileSystem = null,
     slingshotSystem = null,
   } = {}) {
-    if (typeof onEnemyHit !== 'function') {
-      throw new TypeError('GameSession requer onEnemyHit como função.');
+    for (const [name, callback] of [
+      ['onEnemyHit', onEnemyHit],
+      ['onEnemyPlayerContact', onEnemyPlayerContact],
+      ['onPlayerHealthChange', onPlayerHealthChange],
+    ]) {
+      if (typeof callback !== 'function') {
+        throw new TypeError(`GameSession requer ${name} como função.`);
+      }
     }
 
     if (typeof encounterActive !== 'boolean') {
@@ -45,6 +52,7 @@ export class GameSession {
     this.config = config;
     this.encounterActive = encounterActive;
     this.onEnemyHit = onEnemyHit;
+    this.onEnemyPlayerContact = onEnemyPlayerContact;
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
@@ -69,6 +77,7 @@ export class GameSession {
         playerHealthSystem ??
         new PlayerHealthSystem({
           config: config.player,
+          onHealthChange: onPlayerHealthChange,
         });
       this.enemySystem =
         enemySystem ??
@@ -78,7 +87,7 @@ export class GameSession {
           random: enemyRandom,
           typeRandom: enemyTypeRandom,
           onEliminate: onEnemyEliminate,
-          onPlayerContact: onEnemyPlayerContact,
+          onPlayerContact: (state) => this.handleEnemyPlayerContact(state),
           onResistanceChange: onEnemyResistanceChange,
         });
       this.impactFeedbackSystem =
@@ -340,6 +349,26 @@ export class GameSession {
     this.pendingEnemyImpacts.length = 0;
   }
 
+  handleEnemyPlayerContact(enemyState) {
+    let observerError = null;
+
+    try {
+      this.playerHealthSystem.applyDamage(enemyState.type.damage);
+    } catch (error) {
+      observerError = error;
+    }
+
+    try {
+      this.onEnemyPlayerContact(enemyState);
+    } catch (error) {
+      observerError ??= error;
+    }
+
+    if (observerError) {
+      throw observerError;
+    }
+  }
+
   queueObserverError(error) {
     this.pendingObserverError ??=
       error ?? new Error('Um observador da partida falhou.');
@@ -389,6 +418,7 @@ export class GameSession {
     }
 
     this.onEnemyHit = () => {};
+    this.onEnemyPlayerContact = () => {};
     this.disposed = true;
 
     if (disposalError) {

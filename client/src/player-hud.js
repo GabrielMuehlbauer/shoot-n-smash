@@ -19,9 +19,30 @@ export function describePlayerHealth(state) {
   const percent = Math.round((health / maxHealth) * 100);
   const valueText = `${health} / ${maxHealth}`;
 
+  if (health === maxHealth) {
+    return Object.freeze({
+      ariaText: `Vida do jogador completa: ${health} de ${maxHealth}`,
+      hudState: 'healthy',
+      message: `Vida completa. ${health} de ${maxHealth} pontos.`,
+      percent,
+      valueText,
+    });
+  }
+
+  if (health === 0) {
+    return Object.freeze({
+      ariaText: `Vida do jogador esgotada: 0 de ${maxHealth}`,
+      hudState: 'depleted',
+      message: `Vida esgotada. 0 de ${maxHealth} pontos.`,
+      percent,
+      valueText,
+    });
+  }
+
   return Object.freeze({
     ariaText: `Vida do jogador: ${health} de ${maxHealth}`,
-    message: `Vida do jogador: ${health} de ${maxHealth} pontos.`,
+    hudState: 'damaged',
+    message: `Jogador ferido. Restam ${health} de ${maxHealth} pontos.`,
     percent,
     valueText,
   });

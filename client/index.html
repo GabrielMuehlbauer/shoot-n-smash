@@ -26,8 +26,8 @@
           Encontre o monstro de gelo sorteado em qualquer direção da arena e
           use o estilingue antes que ele alcance o centro. O tipo fraco resiste
           a um impacto, o médio a dois e o resistente a três. A nova barra
-          apresenta a vida inicial de 100; o contato ainda encerra o encontro
-          sem aplicar dano.
+          apresenta a vida inicial de 100, e cada tipo causa 1, 2 ou 3 de dano
+          ao alcançar o jogador.
         </p>
 
         <div class="hero-actions">
@@ -80,7 +80,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Vida 100 / 100 · Ataques na Fase 11 · WebXR planejado</span>
+        <span>Vida 100 / 100 · Dano por contato · WebXR planejado</span>
       </footer>
     </main>
 
@@ -106,6 +106,7 @@
       <section
         id="player-hud"
         class="player-hud"
+        data-player-state="healthy"
         aria-labelledby="player-health-label"
       >
         <div class="player-health-heading">
@@ -121,12 +122,12 @@
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow="100"
-          aria-valuetext="Vida do jogador: 100 de 100"
+          aria-valuetext="Vida do jogador completa: 100 de 100"
         >
           <span class="player-health-fill" aria-hidden="true"></span>
         </div>
         <p id="player-status" class="player-status">
-          Vida do jogador: 100 de 100 pontos.
+          Vida completa. 100 de 100 pontos.
         </p>
       </section>
 
@@ -206,7 +207,7 @@
         <strong>Vida inicial 100 / 100 · Barra horizontal</strong>
         <span>
           Um tipo fraco, médio ou resistente surge entre os raios 17 e 20 e
-          avança até o centro. O contato ainda não reduz vida; ataques, ondas,
+          avança até o centro. O contato causa 1, 2 ou 3 de dano; ondas,
           pontuação e WebXR permanecem fora deste incremento.
         </span>
       </div>

@@ -486,7 +486,7 @@ test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
 
   assert.equal(contacts.length, 1);
   assert.equal(contacts[0].outcome, 'player-contact');
-  assert.equal(session.playerState.health, 100);
+  assert.equal(session.playerState.health, 99);
   assert.equal(session.enemyState.active, false);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assertAlmostEqual(
@@ -495,6 +495,49 @@ test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
   );
   assert.equal(session.enemySystem.parent, null);
   session.dispose();
+});
+
+test('contatos aplicam dano 1, 2 e 3 antes de notificar o desfecho', () => {
+  const expectedHealth = [99, 98, 97];
+
+  for (const [index, type] of GAMEPLAY_CONFIG.enemy.types.entries()) {
+    const events = [];
+    const config = createGameplayConfig({
+      enemy: {
+        moveSpeed: 2,
+        spawn: { minRadius: 3, maxRadius: 3 },
+        types: [{ ...type }],
+      },
+    });
+    const session = new GameSession({
+      camera: createCamera(),
+      scene: new Scene(),
+      config,
+      enemyRandom: () => 0,
+      onEnemyPlayerContact: (enemy) => {
+        events.push({ kind: 'contact', state: enemy });
+      },
+      onPlayerHealthChange: (player) => {
+        events.push({ kind: 'health', state: player });
+      },
+    });
+
+    session.update(1);
+    session.update(1);
+
+    assert.deepEqual(
+      events.map(({ kind }) => kind),
+      ['health', 'contact'],
+    );
+    assert.equal(session.playerState.health, expectedHealth[index]);
+    assert.equal(events[0].state.health, expectedHealth[index]);
+    assert.equal(events[0].state.damage, type.damage);
+    assert.equal(events[0].state.requestedDamage, type.damage);
+    assert.equal(events[1].state.type.damage, type.damage);
+    assert.equal(Object.isFrozen(events[0].state), true);
+    assert.equal(Object.isFrozen(events[1].state), true);
+    session.dispose();
+  }
 });
 
 test('impacto anterior ao contato vence no mesmo frame', () => {
@@ -591,7 +634,7 @@ test('impacto não letal no empate reduz resistência antes de resolver contato'
   assert.equal(contacts[0].type.id, 'medium');
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.activeProjectileCount, 0);
-  assert.equal(session.playerState.health, 100);
+  assert.equal(session.playerState.health, 98);
   session.dispose();
 });
 
@@ -653,7 +696,7 @@ test('contato anterior ao impacto vence no mesmo frame', () => {
   assert.equal(hits.length, 0);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.activeProjectileCount, 1);
-  assert.equal(session.playerState.health, 100);
+  assert.equal(session.playerState.health, 99);
   session.dispose();
 });
 
@@ -703,26 +746,61 @@ test('mantém contato terminal antes de propagar falha do observador', () => {
 
   assert.throws(() => session.update(1), failure);
   assert.equal(session.enemyState.outcome, 'player-contact');
-  assert.equal(session.playerState.health, 100);
+  assert.equal(session.playerState.health, 99);
   assert.equal(session.enemySystem.parent, null);
   session.update(0.01);
   session.dispose();
 });
 
-test('valida callback de impacto antes de criar recursos', () => {
+test('preserva dano e contato quando o observador da vida falha', () => {
+  const failure = new Error('falha no observador da vida');
+  const contacts = [];
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config: createGameplayConfig({
+      enemy: {
+        moveSpeed: 2,
+        spawn: { minRadius: 3, maxRadius: 3 },
+        types: [{ ...GAMEPLAY_CONFIG.enemy.types[2] }],
+      },
+    }),
+    enemyRandom: () => 0,
+    onEnemyPlayerContact: (state) => contacts.push(state),
+    onPlayerHealthChange: () => {
+      throw failure;
+    },
+  });
+
+  assert.throws(() => session.update(1), failure);
+  assert.equal(session.playerState.health, 97);
+  assert.equal(session.enemyState.outcome, 'player-contact');
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].type.damage, 3);
+  assert.doesNotThrow(() => session.update(0.01));
+  assert.equal(session.playerState.health, 97);
+  session.dispose();
+});
+
+test('valida callbacks da sessão antes de criar recursos', () => {
   const scene = new Scene();
 
-  assert.throws(
-    () =>
-      new GameSession({
-        camera: createCamera(),
-        scene,
-        onEnemyHit: null,
-      }),
-    /onEnemyHit como função/,
-  );
-  assert.equal(scene.children.length, 0);
-
+  for (const callback of [
+    'onEnemyHit',
+    'onEnemyPlayerContact',
+    'onPlayerHealthChange',
+  ]) {
+    assert.throws(
+      () =>
+        new GameSession({
+          camera: createCamera(),
+          scene,
+          [callback]: null,
+        }),
+      new RegExp(`${callback} como função`),
+    );
+    assert.equal(scene.children.length, 0);
+  }
 });
 
 test('remove recursos criados quando construção intermediária falha', () => {

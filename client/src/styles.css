@@ -434,6 +434,58 @@ footer {
   line-height: 1.35;
 }
 
+.player-hud[data-player-state='damaged'] {
+  border-color: rgba(255, 125, 125, 0.58);
+  animation: player-damage-pulse 360ms ease-out;
+}
+
+.player-hud[data-player-state='damaged'] #player-health-value,
+.player-hud[data-player-state='damaged'] .player-status {
+  color: #ffd1d1;
+}
+
+.player-hud[data-player-state='damaged'] .player-health {
+  background: rgba(255, 112, 112, 0.14);
+  border-color: rgba(255, 144, 144, 0.38);
+}
+
+.player-hud[data-player-state='damaged'] .player-health-fill {
+  background: linear-gradient(90deg, #ef4444, #ff9a8b);
+  box-shadow: 0 0 0.85rem rgba(239, 68, 68, 0.5);
+}
+
+.player-hud[data-player-state='depleted'] {
+  border-color: rgba(255, 104, 104, 0.7);
+}
+
+.player-hud[data-player-state='depleted'] #player-health-value,
+.player-hud[data-player-state='depleted'] .player-status {
+  color: #ffb1b1;
+}
+
+.player-hud[data-player-state='depleted'] .player-health {
+  background: rgba(120, 36, 49, 0.34);
+  border-color: rgba(255, 104, 104, 0.42);
+}
+
+.player-hud[data-player-state='depleted'] .player-health-fill {
+  background: #ef4444;
+  box-shadow: none;
+}
+
+@keyframes player-damage-pulse {
+  0%,
+  100% {
+    box-shadow: 0 1rem 3rem rgba(0, 5, 18, 0.22);
+  }
+
+  35% {
+    box-shadow:
+      0 0 0 0.18rem rgba(255, 104, 104, 0.28),
+      0 1rem 3rem rgba(91, 15, 29, 0.36);
+  }
+}
+
 .enemy-hud {
   --enemy-resistance: 100;
   position: absolute;
