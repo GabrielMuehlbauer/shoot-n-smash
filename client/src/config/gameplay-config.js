@@ -5,23 +5,30 @@ const ENEMY_TYPES = freeze([
     id: 'weak',
     label: 'Fraco',
     maxResistance: 1,
+    damage: 1,
     color: 0x6edcff,
   }),
   freeze({
     id: 'medium',
     label: 'Médio',
     maxResistance: 2,
+    damage: 2,
     color: 0x6f8cff,
   }),
   freeze({
     id: 'resistant',
     label: 'Resistente',
     maxResistance: 3,
+    damage: 3,
     color: 0x9e6fff,
   }),
 ]);
 
 export const GAMEPLAY_CONFIG = freeze({
+  player: freeze({
+    initialHealth: 100,
+    maxHealth: 100,
+  }),
   charge: freeze({
     durationSeconds: 1.2,
   }),

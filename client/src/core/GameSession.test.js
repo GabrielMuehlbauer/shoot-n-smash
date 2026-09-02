@@ -251,9 +251,19 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
     update: (delta) => calls.push(['feedback.update', delta]),
     dispose: () => calls.push(['feedback.dispose']),
   };
+  const playerHealthSystem = {
+    state: {
+      health: 100,
+      maxHealth: 100,
+      ratio: 1,
+      depleted: false,
+    },
+    dispose: () => calls.push(['player.dispose']),
+  };
   const session = new GameSession({
     enemySystem,
     impactFeedbackSystem,
+    playerHealthSystem,
     projectileSystem,
     slingshotSystem,
   });
@@ -271,6 +281,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
     ['slingshot.dispose'],
     ['projectiles.dispose'],
     ['enemy.dispose'],
+    ['player.dispose'],
     ['feedback.dispose'],
   ]);
 });
@@ -287,13 +298,19 @@ test('anexa inimigo ao cenário e expõe resistência inicial', () => {
   assert.equal(session.enemySystem.parent, scene);
   assert.equal(session.impactFeedbackSystem.parent, scene);
   assert.equal(session.activeImpactFeedbackCount, 0);
+  assert.deepEqual(session.playerState, {
+    health: 100,
+    maxHealth: 100,
+    ratio: 1,
+    depleted: false,
+  });
   assert.deepEqual(session.enemyState, {
     active: true,
     outcome: null,
     resistance: 1,
     maxResistance: 1,
     ratio: 1,
-    type: { id: 'weak', label: 'Fraco' },
+    type: { id: 'weak', label: 'Fraco', damage: 1 },
     distanceToPlayer: 17,
   });
   session.dispose();
@@ -378,6 +395,7 @@ test('colisão móvel aplica resistência, feedback e consumo uma vez por projé
   assert.deepEqual(eliminations[0].type, {
     id: 'resistant',
     label: 'Resistente',
+    damage: 3,
   });
   assert.equal(session.enemyState.outcome, 'eliminated');
   assert.equal(session.enemyState.resistance, 0);
@@ -468,6 +486,7 @@ test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
 
   assert.equal(contacts.length, 1);
   assert.equal(contacts[0].outcome, 'player-contact');
+  assert.equal(session.playerState.health, 100);
   assert.equal(session.enemyState.active, false);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assertAlmostEqual(
@@ -503,6 +522,7 @@ test('impacto anterior ao contato vence no mesmo frame', () => {
   assert.equal(contacts.length, 0);
   assert.equal(session.enemyState.outcome, 'eliminated');
   assert.equal(session.activeProjectileCount, 0);
+  assert.equal(session.playerState.health, 100);
   session.dispose();
 });
 
@@ -533,6 +553,7 @@ test('impacto na mesma fração temporal do contato tem precedência', () => {
   assert.equal(contacts.length, 0);
   assert.equal(session.enemyState.outcome, 'eliminated');
   assert.equal(session.activeProjectileCount, 0);
+  assert.equal(session.playerState.health, 100);
   session.dispose();
 });
 
@@ -570,6 +591,7 @@ test('impacto não letal no empate reduz resistência antes de resolver contato'
   assert.equal(contacts[0].type.id, 'medium');
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.activeProjectileCount, 0);
+  assert.equal(session.playerState.health, 100);
   session.dispose();
 });
 
@@ -602,6 +624,7 @@ test('mantém o tempo global ao testar impacto no trecho anterior ao contato', (
   );
   assert.equal(contacts.length, 0);
   assert.equal(session.activeProjectileCount, 0);
+  assert.equal(session.playerState.health, 100);
   session.dispose();
 });
 
@@ -630,6 +653,7 @@ test('contato anterior ao impacto vence no mesmo frame', () => {
   assert.equal(hits.length, 0);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.activeProjectileCount, 1);
+  assert.equal(session.playerState.health, 100);
   session.dispose();
 });
 
@@ -679,6 +703,7 @@ test('mantém contato terminal antes de propagar falha do observador', () => {
 
   assert.throws(() => session.update(1), failure);
   assert.equal(session.enemyState.outcome, 'player-contact');
+  assert.equal(session.playerState.health, 100);
   assert.equal(session.enemySystem.parent, null);
   session.update(0.01);
   session.dispose();
@@ -697,6 +722,7 @@ test('valida callback de impacto antes de criar recursos', () => {
     /onEnemyHit como função/,
   );
   assert.equal(scene.children.length, 0);
+
 });
 
 test('remove recursos criados quando construção intermediária falha', () => {

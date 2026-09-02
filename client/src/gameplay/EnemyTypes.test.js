@@ -4,17 +4,18 @@ import test from 'node:test';
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
 
-test('configura os três tipos normais com resistências 1, 2 e 3', () => {
+test('configura os três tipos normais com resistências e danos 1, 2 e 3', () => {
   assert.deepEqual(
-    GAMEPLAY_CONFIG.enemy.types.map(({ id, label, maxResistance }) => ({
+    GAMEPLAY_CONFIG.enemy.types.map(({ id, label, maxResistance, damage }) => ({
       id,
       label,
       maxResistance,
+      damage,
     })),
     [
-      { id: 'weak', label: 'Fraco', maxResistance: 1 },
-      { id: 'medium', label: 'Médio', maxResistance: 2 },
-      { id: 'resistant', label: 'Resistente', maxResistance: 3 },
+      { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 1 },
+      { id: 'medium', label: 'Médio', maxResistance: 2, damage: 2 },
+      { id: 'resistant', label: 'Resistente', maxResistance: 3, damage: 3 },
     ],
   );
   assert.equal(Object.isFrozen(GAMEPLAY_CONFIG.enemy.types), true);
@@ -41,7 +42,13 @@ test('seleciona os tipos uniformemente nas fronteiras dos três intervalos', () 
 
 test('retorna um snapshot imutável independente do catálogo de origem', () => {
   const source = [
-    { id: 'custom', label: 'Personalizado', maxResistance: 4, color: 0x123456 },
+    {
+      id: 'custom',
+      label: 'Personalizado',
+      maxResistance: 4,
+      damage: 7,
+      color: 0x123456,
+    },
   ];
   const selected = selectEnemyType({ types: source, random: () => 0 });
 
@@ -52,6 +59,7 @@ test('retorna um snapshot imutável independente do catálogo de origem', () => 
     id: 'custom',
     label: 'Personalizado',
     maxResistance: 4,
+    damage: 7,
     color: 0x123456,
   });
   assert.equal(Object.isFrozen(selected), true);
@@ -64,50 +72,57 @@ test('rejeita catálogos, descritores e geradores inválidos', () => {
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: '', label: 'Fraco', maxResistance: 1, color: 0 },
+        { id: '', label: 'Fraco', maxResistance: 1, damage: 1, color: 0 },
       ]),
     /\.id.*texto não vazio/,
   );
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: 'weak', label: '', maxResistance: 1, color: 0 },
+        { id: 'weak', label: '', maxResistance: 1, damage: 1, color: 0 },
       ]),
     /\.label.*texto não vazio/,
   );
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: ' weak ', label: 'Fraco', maxResistance: 1, color: 0 },
+        { id: ' weak ', label: 'Fraco', maxResistance: 1, damage: 1, color: 0 },
       ]),
     /\.id.*espaços externos/,
   );
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: 'weak', label: ' Fraco ', maxResistance: 1, color: 0 },
+        { id: 'weak', label: ' Fraco ', maxResistance: 1, damage: 1, color: 0 },
       ]),
     /\.label.*espaços externos/,
   );
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: 'weak', label: 'Fraco', maxResistance: 1.5, color: 0 },
+        { id: 'weak', label: 'Fraco', maxResistance: 1.5, damage: 1, color: 0 },
       ]),
     /maxResistance.*inteiro positivo/,
   );
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: 'weak', label: 'Fraco', maxResistance: 1, color: 0x1000000 },
+        { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 0, color: 0 },
+      ]),
+    /damage.*inteiro positivo/,
+  );
+  assert.throws(
+    () =>
+      validateEnemyTypes([
+        { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 1, color: 0x1000000 },
       ]),
     /color.*hexadecimal válida/,
   );
   assert.throws(
     () =>
       validateEnemyTypes([
-        { id: 'same', label: 'A', maxResistance: 1, color: 0 },
-        { id: 'same', label: 'B', maxResistance: 2, color: 1 },
+        { id: 'same', label: 'A', maxResistance: 1, damage: 1, color: 0 },
+        { id: 'same', label: 'B', maxResistance: 2, damage: 2, color: 1 },
       ]),
     /id duplicado/,
   );

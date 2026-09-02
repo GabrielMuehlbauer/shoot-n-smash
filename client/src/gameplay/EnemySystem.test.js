@@ -176,7 +176,7 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
     resistance: 1,
     maxResistance: 1,
     ratio: 1,
-    type: { id: 'weak', label: 'Fraco' },
+    type: { id: 'weak', label: 'Fraco', damage: 1 },
     distanceToPlayer: enemy.distanceToPlayer,
   });
 
@@ -209,7 +209,11 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
     assert.equal(typeSamples, 1);
     assert.equal(enemy.maxResistance, maxResistance);
     assert.equal(enemy.resistance, maxResistance);
-    assert.deepEqual(enemy.state.type, { id, label });
+    assert.deepEqual(enemy.state.type, {
+      id,
+      label,
+      damage: maxResistance,
+    });
     assert.equal(
       enemy.iceMaterial.color.getHex(),
       enemy.enemyType.color,
@@ -218,7 +222,11 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
     enemy.reset();
     assert.equal(typeSamples, 1);
     assert.equal(spawnSamples, 4);
-    assert.deepEqual(enemy.state.type, { id, label });
+    assert.deepEqual(enemy.state.type, {
+      id,
+      label,
+      damage: maxResistance,
+    });
     enemy.dispose();
   }
 });
@@ -334,6 +342,7 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
   assert.deepEqual(eliminations[0].type, {
     id: 'resistant',
     label: 'Resistente',
+    damage: 3,
   });
   assert.equal(enemy.resistance, 0);
   assert.equal(enemy.outcome, 'eliminated');
@@ -411,7 +420,11 @@ test('reset restaura estado, visual e um novo spawn sem emitir callbacks', () =>
   assert.equal(enemy.active, true);
   assert.equal(enemy.outcome, null);
   assert.equal(enemy.resistance, 2);
-  assert.deepEqual(enemy.state.type, { id: 'medium', label: 'Médio' });
+  assert.deepEqual(enemy.state.type, {
+    id: 'medium',
+    label: 'Médio',
+    damage: 2,
+  });
   assert.equal(enemy.pendingPlayerContact, false);
   assert.equal(enemy.playerContactFrameRatio, null);
   assert.equal(enemy.elapsedMovementSeconds, 0);

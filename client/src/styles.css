@@ -368,6 +368,7 @@ footer {
 
 .scene-heading,
 .exit-scene-button,
+.player-hud,
 .enemy-hud,
 .slingshot-hud,
 .scene-caption,
@@ -376,6 +377,61 @@ footer {
   border: 1px solid rgba(157, 229, 255, 0.24);
   box-shadow: 0 1rem 3rem rgba(0, 5, 18, 0.22);
   backdrop-filter: blur(12px);
+}
+
+.player-hud {
+  --player-health: 100;
+  position: absolute;
+  top: 5.4rem;
+  left: 1.25rem;
+  display: grid;
+  width: min(17rem, calc(100% - 2.5rem));
+  padding: 0.75rem 0.85rem;
+  gap: 0.48rem;
+  border-radius: 0.8rem;
+  pointer-events: none;
+}
+
+.player-health-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #ffffff;
+  font-size: 0.75rem;
+}
+
+#player-health-value {
+  color: #8ff4bf;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-health {
+  position: relative;
+  height: 0.62rem;
+  overflow: hidden;
+  background: rgba(127, 211, 166, 0.14);
+  border: 1px solid rgba(143, 244, 191, 0.3);
+  border-radius: 999px;
+}
+
+.player-health-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--player-health) * 1%);
+  height: 100%;
+  background: linear-gradient(90deg, #32ce7d, #a8f7c9);
+  border-radius: inherit;
+  box-shadow: 0 0 0.85rem rgba(50, 206, 125, 0.46);
+  transition: width 180ms ease, background 180ms ease;
+}
+
+.player-status {
+  margin: 0;
+  color: #bfe6cf;
+  font-size: 0.66rem;
+  line-height: 1.35;
 }
 
 .enemy-hud {
@@ -782,8 +838,15 @@ kbd {
     transform: none;
   }
 
-  .scene-caption {
+  .player-hud {
     top: 5.4rem;
+    right: 1.25rem;
+    left: auto;
+    width: min(17rem, calc(50% - 1.875rem));
+  }
+
+  .scene-caption {
+    top: 10.8rem;
     bottom: auto;
   }
 
@@ -830,7 +893,7 @@ kbd {
   }
 
   .scene-caption {
-    top: 11.2rem;
+    top: 15.7rem;
     right: 0.75rem;
     bottom: auto;
     left: 0.75rem;
@@ -838,12 +901,19 @@ kbd {
   }
 
   .enemy-hud {
-    top: 5.2rem;
+    top: 10.2rem;
     right: 0.75rem;
     left: 0.75rem;
     width: auto;
     min-width: 0;
     transform: none;
+  }
+
+  .player-hud {
+    top: 5.2rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
   }
 
   .scene-look-control {
@@ -870,6 +940,8 @@ kbd {
   *,
   *::before,
   *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

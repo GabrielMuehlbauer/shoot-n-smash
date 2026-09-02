@@ -4,6 +4,7 @@ import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { intersectMovingSpheres } from '../gameplay/CollisionSystem.js';
 import { EnemySystem } from '../gameplay/EnemySystem.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
+import { PlayerHealthSystem } from '../gameplay/PlayerHealthSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
 
@@ -23,6 +24,7 @@ export class GameSession {
     enemyTypeRandom = Math.random,
     enemySystem = null,
     impactFeedbackSystem = null,
+    playerHealthSystem = null,
     projectileSystem = null,
     slingshotSystem = null,
   } = {}) {
@@ -38,6 +40,7 @@ export class GameSession {
     const ownsSlingshotSystem = !slingshotSystem;
     const ownsEnemySystem = !enemySystem;
     const ownsImpactFeedbackSystem = !impactFeedbackSystem;
+    const ownsPlayerHealthSystem = !playerHealthSystem;
 
     this.config = config;
     this.encounterActive = encounterActive;
@@ -61,6 +64,11 @@ export class GameSession {
           config,
           onChargeChange,
           onShot,
+        });
+      this.playerHealthSystem =
+        playerHealthSystem ??
+        new PlayerHealthSystem({
+          config: config.player,
         });
       this.enemySystem =
         enemySystem ??
@@ -91,6 +99,14 @@ export class GameSession {
       if (ownsEnemySystem) {
         try {
           this.enemySystem?.dispose?.();
+        } catch {
+          // Preserva o erro original de construção.
+        }
+      }
+
+      if (ownsPlayerHealthSystem) {
+        try {
+          this.playerHealthSystem?.dispose?.();
         } catch {
           // Preserva o erro original de construção.
         }
@@ -132,6 +148,10 @@ export class GameSession {
 
   get enemyState() {
     return this.enemySystem.state;
+  }
+
+  get playerState() {
+    return this.playerHealthSystem.state;
   }
 
   get activeImpactFeedbackCount() {
@@ -352,6 +372,12 @@ export class GameSession {
 
     try {
       this.enemySystem.dispose();
+    } catch (error) {
+      disposalError ??= error;
+    }
+
+    try {
+      this.playerHealthSystem.dispose();
     } catch (error) {
       disposalError ??= error;
     }

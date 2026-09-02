@@ -6,6 +6,7 @@ import { RenderContext } from './core/RenderContext.js';
 import { describeEnemyState } from './enemy-hud.js';
 import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
+import { describePlayerHealth } from './player-hud.js';
 import { PROJECT_INFO } from './project-info.js';
 import './styles.css';
 
@@ -36,6 +37,10 @@ const enemyResistanceValue = document.querySelector(
   '#enemy-resistance-value',
 );
 const enemyStatus = document.querySelector('#enemy-status');
+const playerHud = document.querySelector('#player-hud');
+const playerHealth = document.querySelector('#player-health');
+const playerHealthValue = document.querySelector('#player-health-value');
+const playerStatus = document.querySelector('#player-status');
 
 let gameApp = null;
 let lookController = null;
@@ -96,6 +101,24 @@ function resetEnemyHud() {
     outcome: null,
     resistance: defaultType.maxResistance,
     type: defaultType,
+  });
+}
+
+function updatePlayerState(state) {
+  const description = describePlayerHealth(state);
+
+  playerHud.style.setProperty('--player-health', String(description.percent));
+  playerHealthValue.textContent = description.valueText;
+  playerHealth.setAttribute('aria-valuemax', String(state.maxHealth));
+  playerHealth.setAttribute('aria-valuenow', String(state.health));
+  playerHealth.setAttribute('aria-valuetext', description.ariaText);
+  playerStatus.textContent = description.message;
+}
+
+function resetPlayerHud() {
+  updatePlayerState({
+    health: GAMEPLAY_CONFIG.player.initialHealth,
+    maxHealth: GAMEPLAY_CONFIG.player.maxHealth,
   });
 }
 
@@ -281,6 +304,7 @@ function enterPrototype() {
   sceneError.hidden = true;
   document.body.classList.add('scene-active');
   resetEnemyHud();
+  resetPlayerHud();
 
   try {
     renderContext = new RenderContext(sceneContainer);
@@ -301,6 +325,7 @@ function enterPrototype() {
       onShot: handleShot,
     });
     updateEnemyState(gameSession.enemyState);
+    updatePlayerState(gameSession.playerState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
       onChargeStart: () => gameSession.beginCharge(),
@@ -350,6 +375,7 @@ function exitPrototype() {
   pointerLocked = false;
   resetSlingshotHud('idle');
   resetEnemyHud();
+  resetPlayerHud();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

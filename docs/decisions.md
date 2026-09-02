@@ -163,3 +163,23 @@ com um único inimigo, e os desfechos e o desempate temporal da Fase 8 permanece
 inalterados. Vida do jogador e dano de contato por tipo ficam explicitamente para
 a Fase 10; respawn, ondas, pontuação, chefão, persistência e XR seguem fora deste
 incremento.
+
+## ADR-013 — Vida isolada do DOM e dano aplicado pela sessão
+
+**Status:** aceita em 2 de setembro de 2026.
+
+A Fase 10 introduz `PlayerHealthSystem` com vida inicial e máxima 100. O sistema
+aceita somente dano inteiro positivo, limita a vida a zero e publica snapshots
+imutáveis. A barra HTML observa esses snapshots, mas não contém regra de dano;
+assim, um futuro HUD XR poderá apresentar o mesmo estado sem duplicar gameplay.
+
+Os descritores `weak`, `medium` e `resistant` passam a carregar dano 1, 2 e 3.
+Quando `EnemySystem` confirma o desfecho terminal `player-contact`, o callback
+interno de `GameSession` aplica esse valor antes de notificar o observador externo.
+O estado terminal do inimigo e a perda de vida permanecem válidos mesmo quando
+um callback de interface lança erro.
+
+O desempate contínuo da Fase 8 permanece a autoridade causal: impacto letal
+anterior ou empatado impede o contato e, portanto, não causa dano. O recorte
+continua com um inimigo por sessão e não antecipa respawn, ondas, derrota,
+pontuação, chefão ou WebXR.
