@@ -154,6 +154,7 @@ export class EnemySystem extends Group {
     this.typeState = Object.freeze({
       id: this.enemyType.id,
       label: this.enemyType.label,
+      damage: this.enemyType.damage,
     });
     this.onEliminate = onEliminate;
     this.onPlayerContact = onPlayerContact;

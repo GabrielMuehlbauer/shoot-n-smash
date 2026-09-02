@@ -29,6 +29,10 @@ function assertTypeDescriptor(type, index) {
     );
   }
 
+  if (!Number.isInteger(type.damage) || type.damage <= 0) {
+    throw new RangeError(`${prefix}.damage deve ser um inteiro positivo.`);
+  }
+
   if (
     !Number.isInteger(type.color) ||
     type.color < 0 ||
@@ -82,6 +86,7 @@ export function selectEnemyType({
     id: selected.id,
     label: selected.label,
     maxResistance: selected.maxResistance,
+    damage: selected.damage,
     color: selected.color,
   });
 }

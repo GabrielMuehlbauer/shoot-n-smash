@@ -6,6 +6,7 @@ import { RenderContext } from './core/RenderContext.js';
 import { describeEnemyState } from './enemy-hud.js';
 import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
+import { describePlayerHealth } from './player-hud.js';
 import { PROJECT_INFO } from './project-info.js';
 import './styles.css';
 
@@ -36,6 +37,10 @@ const enemyResistanceValue = document.querySelector(
   '#enemy-resistance-value',
 );
 const enemyStatus = document.querySelector('#enemy-status');
+const playerHud = document.querySelector('#player-hud');
+const playerHealth = document.querySelector('#player-health');
+const playerHealthValue = document.querySelector('#player-health-value');
+const playerStatus = document.querySelector('#player-status');
 
 let gameApp = null;
 let lookController = null;
@@ -99,6 +104,25 @@ function resetEnemyHud() {
   });
 }
 
+function updatePlayerState(state) {
+  const description = describePlayerHealth(state);
+
+  playerHud.dataset.playerState = description.hudState;
+  playerHud.style.setProperty('--player-health', String(description.percent));
+  playerHealthValue.textContent = description.valueText;
+  playerHealth.setAttribute('aria-valuemax', String(state.maxHealth));
+  playerHealth.setAttribute('aria-valuenow', String(state.health));
+  playerHealth.setAttribute('aria-valuetext', description.ariaText);
+  playerStatus.textContent = description.message;
+}
+
+function resetPlayerHud() {
+  updatePlayerState({
+    health: GAMEPLAY_CONFIG.player.initialHealth,
+    maxHealth: GAMEPLAY_CONFIG.player.maxHealth,
+  });
+}
+
 function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   if (outcome === 'eliminated') {
     setShotStatus(
@@ -109,10 +133,18 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   }
 
   if (outcome === 'player-contact') {
-    setShotStatus(
-      'idle',
-      'Contato registrado sem dano nesta fase. Volte ao menu para tentar novamente.',
-    );
+    const enemyState = gameSession?.enemyState;
+    const playerState = gameSession?.playerState;
+    const contactMessage =
+      enemyState && playerState
+        ? [
+            `O inimigo ${enemyState.type.label.toLocaleLowerCase('pt-BR')} causou ${enemyState.type.damage} de dano.`,
+            `Vida: ${playerState.health} / ${playerState.maxHealth}.`,
+            'Volte ao menu para tentar novamente.',
+          ].join(' ')
+        : 'O inimigo alcançou o jogador e causou dano. Volte ao menu para tentar novamente.';
+
+    setShotStatus('idle', contactMessage);
     return true;
   }
 
@@ -281,6 +313,7 @@ function enterPrototype() {
   sceneError.hidden = true;
   document.body.classList.add('scene-active');
   resetEnemyHud();
+  resetPlayerHud();
 
   try {
     renderContext = new RenderContext(sceneContainer);
@@ -298,9 +331,11 @@ function enterPrototype() {
       onEnemyHit: handleEnemyHit,
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,
+      onPlayerHealthChange: updatePlayerState,
       onShot: handleShot,
     });
     updateEnemyState(gameSession.enemyState);
+    updatePlayerState(gameSession.playerState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
       onChargeStart: () => gameSession.beginCharge(),
@@ -350,6 +385,7 @@ function exitPrototype() {
   pointerLocked = false;
   resetSlingshotHud('idle');
   resetEnemyHud();
+  resetPlayerHud();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

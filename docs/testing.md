@@ -325,10 +325,49 @@ O roteiro completo e a checklist ainda pendente de validação manual estão em
 O roteiro completo está em
 [Fase 9 — Tipos normais de inimigo](phases/phase-09-tipos-inimigo.md).
 
+## Fase 10
+
+### Cobertura automatizada adicionada
+
+- vida inicial e máxima 100 centralizadas em configuração imutável;
+- snapshots congelados com vida, máximo, proporção e estado esgotado;
+- dano inteiro positivo, limite mínimo zero e perda efetiva publicada;
+- rejeição de configurações e danos inválidos;
+- estado preservado quando o observador da vida falha;
+- reset e descarte idempotentes do `PlayerHealthSystem`;
+- dano canônico 1, 2 e 3 nos tipos Fraco, Médio e Resistente;
+- identidade e dano preservados nos snapshots do inimigo;
+- contatos dos três tipos resultando em 99, 98 e 97 pontos de vida;
+- contato terminal aplicando dano somente uma vez;
+- impacto letal anterior ou empatado preservando 100 pontos;
+- impacto não letal empatado seguido por um único dano de contato;
+- observadores de vida ou contato falhando sem corromper os estados terminais;
+- descrição do HUD para vida completa, danificada e esgotada;
+- progressbar estático com rótulos, valores e associações ARIA;
+- regressão de movimento, colisão, resistência e desempate das fases anteriores;
+- metadados e diagnóstico da API atualizados para a Fase 10.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 10 concluída**, use **Verificar API** e confira `phase: 10`.
+3. Abra a cena e confirme a barra de vida cheia em 100 / 100.
+4. Elimine um inimigo antes do contato e confirme que a vida permanece 100.
+5. Abra outra sessão, não dispare e aguarde o contato.
+6. Confirme feedback vermelho e vida 99, 98 ou 97 para Fraco, Médio ou
+   Resistente.
+7. Aguarde e confirme que o dano não se repete após a remoção do inimigo.
+8. Saia e entre novamente; confirme a restauração para 100 / 100.
+9. Repita três ciclos completos e confirme ausência de recursos residuais.
+10. Confirme que não há respawn, ondas, pontuação, derrota ou erros não tratados.
+
+O roteiro completo está em
+[Fase 10 — Vida do jogador e dano de contato](phases/phase-10-vida-dano.md).
+
 ## Estratégia futura
 
-- testes unitários para vida e dano do jogador, estados, pontuação e ondas;
-- testes de integração para contato aplicando dano ao jogador e partida completa;
+- testes unitários para estados, pontuação e ondas;
+- testes de integração para múltiplos contatos e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;
 - mocks WebXR apenas para lógica de entrada;

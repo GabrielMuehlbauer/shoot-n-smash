@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 9 com inimigos fraco, médio e resistente, sorteados a cada nova sessão."
+      content="Shoot 'n' Smash — protótipo da Fase 10 com vida inicial 100 e barra horizontal do jogador."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,20 +19,21 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 9 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Três tipos de inimigo</p>
+        <div class="phase-badge"><span></span> Fase 10 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Vida do jogador</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
           Encontre o monstro de gelo sorteado em qualquer direção da arena e
           use o estilingue antes que ele alcance o centro. O tipo fraco resiste
-          a um impacto, o médio a dois e o resistente a três; o contato ainda
-          encerra o encontro sem reduzir vida.
+          a um impacto, o médio a dois e o resistente a três. A nova barra
+          apresenta a vida inicial de 100, e cada tipo causa 1, 2 ou 3 de dano
+          ao alcançar o jogador.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Tipos e resistências da Fase 9</small>
+            <small>Vida 100 / 100 da Fase 10</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -79,7 +80,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Spawn 360° · Três tipos normais · WebXR planejado</span>
+        <span>Vida 100 / 100 · Dano por contato · WebXR planejado</span>
       </footer>
     </main>
 
@@ -94,13 +95,41 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 9 · Tipos de inimigo</span>
+          <span class="scene-phase">Fase 10 · Vida do jogador</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
           Voltar ao menu <kbd>Esc</kbd>
         </button>
       </div>
+
+      <section
+        id="player-hud"
+        class="player-hud"
+        data-player-state="healthy"
+        aria-labelledby="player-health-label"
+      >
+        <div class="player-health-heading">
+          <strong id="player-health-label">Vida do jogador</strong>
+          <span id="player-health-value" aria-hidden="true">100 / 100</span>
+        </div>
+        <div
+          id="player-health"
+          class="player-health"
+          role="progressbar"
+          aria-labelledby="player-health-label"
+          aria-describedby="player-status"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="100"
+          aria-valuetext="Vida do jogador completa: 100 de 100"
+        >
+          <span class="player-health-fill" aria-hidden="true"></span>
+        </div>
+        <p id="player-status" class="player-status">
+          Vida completa. 100 de 100 pontos.
+        </p>
+      </section>
 
       <section
         id="enemy-hud"
@@ -175,11 +204,11 @@
       </section>
 
       <div class="scene-caption">
-        <strong>Spawn em 360° · Resistência entre 1 e 3</strong>
+        <strong>Vida inicial 100 / 100 · Barra horizontal</strong>
         <span>
           Um tipo fraco, médio ou resistente surge entre os raios 17 e 20 e
-          avança até o centro. Contato ainda não reduz vida; ondas, pontuação
-          e WebXR permanecem fora deste incremento.
+          avança até o centro. O contato causa 1, 2 ou 3 de dano; ondas,
+          pontuação e WebXR permanecem fora deste incremento.
         </span>
       </div>
 

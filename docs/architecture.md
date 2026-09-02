@@ -13,6 +13,7 @@ DesktopLookController ──> câmera
 DesktopFireController ──> GameSession ──┬─> SlingshotSystem ──> ProjectileSystem ─┐
 XRInput (futuro) ───────────────────────┤                                        │
                                         ├─> EnemySystem ──> EnemyTypes            │
+                                        ├─> PlayerHealthSystem                    │
                                         ├─> CollisionSystem <─────────────────────┤
                                         ├─> ImpactFeedbackSystem <────────────────┤
                                         └─> DomHUD <───────────────────────────────┘
@@ -44,9 +45,10 @@ WaveSystem -> Player / Score / Item Systems (futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 9, seu `update(deltaSeconds)` preserva a ordem
+  fachada da partida. Na Fase 10, seu `update(deltaSeconds)` preserva a ordem
   estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
-  `dispose()` encerra todos os sistemas de forma idempotente.
+  quando o contato vence, aplica o dano pelo `PlayerHealthSystem` antes de
+  notificar a interface. `dispose()` encerra todos os sistemas de forma idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
   não conhece mouse, Pointer Lock nem elementos do DOM.
@@ -70,14 +72,19 @@ WaveSystem -> Player / Score / Item Systems (futuros)
 - `ImpactFeedbackSystem` mantém bursts 3D curtos no ponto de impacto. A geometria
   é compartilhada, os materiais são descartados individualmente e o limite FIFO
   impede o acúmulo de efeitos.
+- `PlayerHealthSystem` mantém vida inicial e máxima, aplica dano inteiro positivo,
+  limita o resultado a zero e publica snapshots imutáveis. Ele não conhece o
+  inimigo, a cena ou o DOM e começa uma nova instância em cada sessão.
 - O HUD HTML observa `onChargeChange({ charging, ratio })`, disparos, tipo,
-  resistência, impactos, eliminação e contato por callbacks. O núcleo de gameplay
-  não consulta nem altera elementos do DOM. Cancelamentos e desfechos informam
-  motivos semânticos, sem transformar mensagens de interface em regra de jogo.
+  resistência, vida, impactos, eliminação e contato por callbacks. O núcleo de
+  gameplay não consulta nem altera elementos do DOM. Cancelamentos e desfechos
+  informam motivos semânticos, sem transformar mensagens de interface em regra
+  de jogo.
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
-  gravidade, dimensões e limites do recorte para evitar números mágicos.
-- `GameSession` já coordena a ordem do encontro mínimo e incorporará vida, ondas
-  e pontuação quando uma partida completa for introduzida.
+  gravidade, dimensões, vida máxima e dano de cada tipo para evitar números
+  mágicos.
+- `GameSession` já coordena a ordem do encontro mínimo e incorporará ondas e
+  pontuação quando uma partida completa for introduzida.
 - Sistemas de gameplay não dependerão diretamente do mouse ou dos controles XR.
 - Os controles de câmera e de disparo são os adaptadores de entrada desktop já
   concretos. Um futuro `XRInput` produzirá as mesmas intenções de tensionar e
@@ -232,6 +239,47 @@ resistência e preservam a colisão por movimento relativo e o desempate tempora
 da Fase 8. O contato ainda produz somente `player-contact`, remove a entidade e
 não reduz vida. Respawn, ondas, pontuação e dano ao jogador não fazem parte deste
 recorte.
+
+## Recorte executável da Fase 10
+
+```text
+nova GameSession
+       │
+       ├──> PlayerHealthSystem inicia em 100 / 100
+       └──> EnemySystem sorteia weak | medium | resistant
+                                      │
+                           contato vence o frame
+                                      │
+                                      v
+                         remove inimigo uma única vez
+                                      │
+                                      v
+                    aplica damage 1 | 2 | 3 ao jogador
+                                      │
+                                      v
+                       onHealthChange atualiza o HUD
+```
+
+Os descritores dos tipos passam a carregar `damage` junto de ID, rótulo,
+resistência e cor. O valor é validado como inteiro positivo e o snapshot do tipo
+o preserva até o desfecho. `GameSession` consome esse dado no callback interno de
+contato; a regra não fica em `main.js` e, portanto, não depende da existência do
+HUD convencional.
+
+O jogador inicia toda nova sessão com `initialHealth = 100` e
+`maxHealth = 100`. `PlayerHealthSystem.applyDamage()` limita o mínimo a zero,
+publica a perda efetiva e mantém a transição mesmo se um observador falhar. A
+interface apenas descreve o snapshot, atualiza texto, atributos ARIA e a largura
+da barra horizontal.
+
+O desempate temporal continua inalterado. Um impacto letal anterior ou empatado
+com o contato elimina o inimigo e preserva a vida em 100. Um impacto não letal no
+empate reduz a resistência primeiro; o contato ainda ocorre em seguida e aplica
+o dano daquele tipo uma única vez.
+
+A Fase 10 conserva um inimigo por sessão. Por isso o fluxo jogável perde no
+máximo três pontos antes de encerrar o encontro e ainda não alcança derrota,
+respawn, ondas, pontuação ou telas de resultado.
 
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
 MVP. As colisões atuais usam volumes simples e testes de segmento estático ou de

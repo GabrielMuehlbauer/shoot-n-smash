@@ -3,11 +3,11 @@ import test from 'node:test';
 
 import { describeEnemyState } from './enemy-hud.js';
 
-const WEAK_TYPE = { id: 'weak', label: 'Fraco' };
-const MEDIUM_TYPE = { id: 'medium', label: 'Médio' };
-const RESISTANT_TYPE = { id: 'resistant', label: 'Resistente' };
+const WEAK_TYPE = { id: 'weak', label: 'Fraco', damage: 1 };
+const MEDIUM_TYPE = { id: 'medium', label: 'Médio', damage: 2 };
+const RESISTANT_TYPE = { id: 'resistant', label: 'Resistente', damage: 3 };
 
-test('descreve o tipo fraco ativo da Fase 9', () => {
+test('descreve o tipo fraco ativo com dano da Fase 10', () => {
   assert.deepEqual(
     describeEnemyState({
       active: true,
@@ -76,7 +76,7 @@ test('distingue eliminação de contato com o jogador e preserva o tipo', () => 
   assert.match(eliminated.message, /resistente eliminado/i);
   assert.equal(playerContact.hudState, 'player-contact');
   assert.match(playerContact.message, /inimigo médio/i);
-  assert.match(playerContact.message, /sem reduzir vida/i);
+  assert.match(playerContact.message, /causou 2 de dano/i);
 });
 
 test('rejeita estados impossíveis ou sem identidade de tipo', () => {
@@ -110,6 +110,6 @@ test('rejeita estados impossíveis ou sem identidade de tipo', () => {
         outcome: null,
         resistance: 1,
       }),
-    /tipo com id e label/,
+    /tipo com id, label e damage/,
   );
 });
