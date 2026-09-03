@@ -45,7 +45,7 @@ WaveManager -> Player / Score / Item Systems (futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 12, seu `update(deltaSeconds)` preserva a ordem
+  fachada da partida. Na Fase 13, seu `update(deltaSeconds)` preserva a ordem
   estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
   quando o contato vence, aplica o dano pelo `PlayerHealthSystem` antes de
   notificar a interface. Também coordena o `WaveManager` e aplica seus pedidos de
@@ -67,10 +67,11 @@ WaveManager -> Player / Score / Item Systems (futuros)
   os centros anterior e atual por frame, calcula a fração de um possível contato
   com o jogador, publica snapshots com a identidade do tipo por callbacks e não
   conhece elementos do DOM. `reset()` conserva o tipo sorteado por padrão; as
-  ondas podem solicitar explicitamente novo conjunto de tipos e velocidade.
+  ondas podem solicitar explicitamente novo conjunto de tipos e velocidade; o
+  chefão solicita descritor, velocidade, escala, altura e collider próprios.
 - `WaveManager` mantém a progressão pura das quatro ondas, inimigo atual,
-  intervalos entre spawns e pausas entre ondas. Ele publica snapshots imutáveis
-  e não conhece Three.js, vida, colisões ou DOM.
+  intervalos entre spawns, pausas entre ondas e a transição para o chefão. Ele
+  publica snapshots imutáveis e não conhece Three.js, vida, colisões ou DOM.
 - `CollisionSystem` contém matemática pura para segmento–esfera estática e para
   duas esferas móveis. O segundo teste subtrai o movimento de um volume do outro,
   soma os raios e encontra o primeiro contato em `[0, 1]`, evitando tunneling sem
@@ -347,6 +348,28 @@ velocidade crescem, enquanto o intervalo diminui. Todos esses valores ficam em
 O HUD apresenta onda e inimigo atuais. A vida continua pertencendo à sessão e
 não é restaurada entre spawns ou ondas. Ainda não existem chefão, bônus de
 conclusão, pontuação, derrota ou tela de resultados.
+
+## Recorte executável da Fase 13
+
+```text
+quarta onda concluída
+        │
+        └── espera 3 s ──> chefão de gelo
+                              │
+                              ├── escala visual 2,35 · collider 2,20
+                              ├── velocidade 0,85 · resistência 10
+                              └── contato: 10 de dano
+```
+
+Após o último inimigo normal, `WaveManager` entra em `boss-pending` e, ao fim do
+intervalo, publica `spawnKind: "boss"`. `GameSession` aplica o perfil dedicado
+ao `EnemySystem` com `reset({ enemyType, moveSpeed, radius, visualScale,
+spawnHeight })`. A mesma entidade e seus recursos gráficos são reutilizados.
+
+Durante o confronto, o gerenciador permanece em `boss`; qualquer desfecho
+terminal leva a `complete`. O HUD diferencia o chefão dos tipos normais e mostra
+sua resistência. A fase encerra a progressão de encontros, mas ainda não traduz
+o resultado em vitória, derrota, pontuação ou tela final.
 
 ## Servidor
 

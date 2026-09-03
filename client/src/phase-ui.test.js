@@ -8,8 +8,8 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 12 e prepara os HUDs', () => {
-  assert.match(indexHtml, /Fase 12 concluída/);
+test('marca a interface estática como Fase 13 e prepara os HUDs', () => {
+  assert.match(indexHtml, /Fase 13 concluída/);
   assert.match(indexHtml, /data-player-state="healthy"/);
   assert.match(indexHtml, /id="player-health-label">Vida do jogador/);
   assert.match(indexHtml, /id="player-health-value"[^>]*>100 \/ 100/);
@@ -83,4 +83,7 @@ test('conecta o progresso das ondas ao respawn e ao HUD', () => {
     /waveProgress\.textContent = `Onda \$\{state\.wave\} de \$\{state\.totalWaves\}/,
   );
   assert.match(stylesCss, /\.wave-progress/);
+  assert.match(mainSource, /state\.status === 'boss-pending'/);
+  assert.match(mainSource, /state\.status === 'boss'/);
+  assert.match(stylesCss, /data-enemy-type='boss'/);
 });

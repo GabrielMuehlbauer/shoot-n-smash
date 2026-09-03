@@ -33,6 +33,15 @@ function createConfig() {
         typeIds,
       })),
     },
+    boss: {
+      ...GAMEPLAY_CONFIG.boss,
+      spawnDelaySeconds: 0.3,
+      moveSpeed: 2,
+      radius: 2,
+      visualScale: 2.5,
+      spawnHeight: 2,
+      type: { ...GAMEPLAY_CONFIG.boss.type },
+    },
     enemy: {
       ...GAMEPLAY_CONFIG.enemy,
       playerPosition: { ...GAMEPLAY_CONFIG.enemy.playerPosition },
@@ -99,11 +108,7 @@ test('integra quatro ondas, tipos, velocidades e vida persistente', () => {
   assert.equal(session.enemySystem.currentMoveSpeed, 4);
   assert.equal(session.playerState.health, 97);
   session.enemySystem.applyHit(3);
-  assert.equal(session.waveState.status, 'complete');
-  assert.equal(session.enemySystem.parent, null);
-
-  session.update(10);
-  assert.equal(session.waveState.status, 'complete');
+  assert.equal(session.waveState.status, 'boss-pending');
   assert.equal(session.enemySystem.parent, null);
   assert.equal(session.playerState.health, 97);
   assert.equal(waveChanges.every(Object.isFrozen), true);
@@ -118,7 +123,7 @@ test('integra quatro ondas, tipos, velocidades e vida persistente', () => {
       [3, 1, 'active'],
       [4, 1, 'between-waves'],
       [4, 1, 'active'],
-      [4, 1, 'complete'],
+      [4, 1, 'boss-pending'],
     ],
   );
   session.dispose();
@@ -162,4 +167,3 @@ test('rejeita tipo de onda que nao existe no catalogo de inimigos', () => {
   );
   assert.equal(scene.children.length, 0);
 });
-

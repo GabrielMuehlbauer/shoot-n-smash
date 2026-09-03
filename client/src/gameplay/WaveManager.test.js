@@ -59,7 +59,10 @@ test('configura quatro ondas com dificuldade progressiva e dados imutaveis', () 
 });
 
 test('avanca inimigos e ondas respeitando os dois tipos de intervalo', () => {
-  const manager = new WaveManager({ config: createWaveConfig() });
+  const manager = new WaveManager({
+    config: createWaveConfig(),
+    bossDelaySeconds: 0.75,
+  });
 
   assert.deepEqual(manager.state, {
     wave: 1,
@@ -77,10 +80,10 @@ test('avanca inimigos e ondas respeitando os dois tipos de intervalo', () => {
   assert.equal(manager.completeEnemy(), true);
   assert.equal(manager.state.status, 'between-enemies');
   assert.equal(manager.state.enemy, 2);
-  assert.deepEqual(manager.update(0.25), { enemyDelta: 0, spawned: false });
+  assert.deepEqual(manager.update(0.25), { enemyDelta: 0, spawnKind: null });
   assert.equal(manager.state.remainingDelaySeconds, 0.25);
   const respawn = manager.update(0.3);
-  assert.equal(respawn.spawned, true);
+  assert.equal(respawn.spawnKind, 'enemy');
   assert.ok(Math.abs(respawn.enemyDelta - 0.05) < 1e-10);
   assert.equal(manager.state.status, 'active');
 
@@ -93,7 +96,10 @@ test('avanca inimigos e ondas respeitando os dois tipos de intervalo', () => {
     moveSpeed: 2,
     typeIds: ['weak', 'medium'],
   });
-  assert.deepEqual(manager.update(1.25), { enemyDelta: 0.25, spawned: true });
+  assert.deepEqual(manager.update(1.25), {
+    enemyDelta: 0.25,
+    spawnKind: 'enemy',
+  });
 
   manager.completeEnemy();
   manager.update(1);
@@ -101,9 +107,17 @@ test('avanca inimigos e ondas respeitando os dois tipos de intervalo', () => {
   manager.update(1);
   manager.completeEnemy();
   assert.equal(manager.state.wave, 4);
+  assert.equal(manager.state.status, 'boss-pending');
+  assert.equal(manager.state.remainingDelaySeconds, 0.75);
+  assert.deepEqual(manager.update(1), {
+    enemyDelta: 0.25,
+    spawnKind: 'boss',
+  });
+  assert.equal(manager.state.status, 'boss');
+  assert.equal(manager.completeEnemy(), true);
   assert.equal(manager.state.status, 'complete');
   assert.equal(manager.completeEnemy(), false);
-  assert.deepEqual(manager.update(10), { enemyDelta: 0, spawned: false });
+  assert.deepEqual(manager.update(10), { enemyDelta: 0, spawnKind: null });
 });
 
 test('pausa intervalos e reinicia no primeiro inimigo da primeira onda', () => {
@@ -112,7 +126,7 @@ test('pausa intervalos e reinicia no primeiro inimigo da primeira onda', () => {
   manager.completeEnemy();
   assert.deepEqual(manager.update(10, { active: false }), {
     enemyDelta: 0,
-    spawned: false,
+    spawnKind: null,
   });
   assert.equal(manager.state.remainingDelaySeconds, 0.5);
   manager.update(0.5);
@@ -170,4 +184,8 @@ test('rejeita configuracoes, deltas e estados invalidos', () => {
   assert.throws(() => manager.update(-1), /delta/);
   assert.throws(() => manager.update(Number.NaN), /delta/);
   assert.throws(() => manager.update(1, { active: 'yes' }), /booleano/);
+  assert.throws(
+    () => new WaveManager({ config: valid, bossDelaySeconds: -1 }),
+    /bossDelaySeconds/,
+  );
 });

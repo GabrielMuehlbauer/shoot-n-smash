@@ -177,6 +177,9 @@ export class EnemySystem extends Group {
     this.random = random;
     this.typeRandom = typeRandom;
     this.currentMoveSpeed = this.validateMoveSpeed(moveSpeed);
+    this.currentRadius = config.radius;
+    this.currentVisualScale = 1;
+    this.currentSpawnHeight = config.spawn.height;
     this.typeIds = null;
     this.selectType(typeIds);
     this.onEliminate = onEliminate;
@@ -221,6 +224,20 @@ export class EnemySystem extends Group {
       random: this.typeRandom,
     });
     this.typeIds = typeIds === null ? null : Object.freeze([...typeIds]);
+    this.typeState = Object.freeze({
+      id: this.enemyType.id,
+      label: this.enemyType.label,
+      damage: this.enemyType.damage,
+    });
+  }
+
+  selectExactType(type) {
+    validateEnemyTypes([type]);
+    this.enemyType = selectEnemyType({
+      types: [type],
+      random: () => 0,
+    });
+    this.typeIds = null;
     this.typeState = Object.freeze({
       id: this.enemyType.id,
       label: this.enemyType.label,
@@ -344,7 +361,7 @@ export class EnemySystem extends Group {
   }
 
   get radius() {
-    return this.config.radius;
+    return this.currentRadius;
   }
 
   get isMoving() {
@@ -381,6 +398,7 @@ export class EnemySystem extends Group {
       random: this.random,
       target: this.initialPosition,
     });
+    this.initialPosition.y = this.currentSpawnHeight;
     this.position.copy(this.initialPosition);
     this.previousPosition.copy(this.initialPosition);
     this.facePlayer();
@@ -570,7 +588,7 @@ export class EnemySystem extends Group {
       this.iceMaterial.color.setHex(this.config.colors.destroyed);
       this.iceMaterial.emissive.setHex(0x000000);
       this.iceMaterial.emissiveIntensity = 0;
-      this.visual.scale.setScalar(0.72);
+      this.visual.scale.setScalar(this.currentVisualScale * 0.72);
       this.visual.rotation.z = Math.PI / 8;
       return;
     }
@@ -582,14 +600,18 @@ export class EnemySystem extends Group {
     );
     this.iceMaterial.emissive.setHex(this.config.colors.emissive);
     this.iceMaterial.emissiveIntensity = damaged ? 0.16 : 0.28;
-    this.visual.scale.setScalar(1);
+    this.visual.scale.setScalar(this.currentVisualScale);
     this.visual.rotation.z = 0;
   }
 
   reset({
     rerollType = false,
     typeIds = this.typeIds,
+    enemyType = null,
     moveSpeed = this.currentMoveSpeed,
+    radius = this.currentRadius,
+    visualScale = this.currentVisualScale,
+    spawnHeight = this.currentSpawnHeight,
   } = {}) {
     if (this.disposed) {
       return false;
@@ -601,11 +623,33 @@ export class EnemySystem extends Group {
 
     const nextMoveSpeed = this.validateMoveSpeed(moveSpeed);
 
-    if (rerollType) {
+    for (const [name, value] of [
+      ['radius', radius],
+      ['visualScale', visualScale],
+    ]) {
+      if (!Number.isFinite(value) || value <= 0) {
+        throw new RangeError(`EnemySystem requer ${name} maior que zero.`);
+      }
+    }
+
+    if (!Number.isFinite(spawnHeight) || spawnHeight < 0) {
+      throw new RangeError('EnemySystem requer spawnHeight não negativo.');
+    }
+
+    if (enemyType !== null && rerollType) {
+      throw new TypeError('EnemySystem não combina enemyType com rerollType.');
+    }
+
+    if (enemyType !== null) {
+      this.selectExactType(enemyType);
+    } else if (rerollType) {
       this.selectType(typeIds);
     }
 
     this.currentMoveSpeed = nextMoveSpeed;
+    this.currentRadius = radius;
+    this.currentVisualScale = visualScale;
+    this.currentSpawnHeight = spawnHeight;
 
     this.currentResistance = this.maxResistance;
     this.outcome = null;

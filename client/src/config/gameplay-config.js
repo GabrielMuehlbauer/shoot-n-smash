@@ -62,6 +62,20 @@ export const GAMEPLAY_CONFIG = freeze({
       }),
     ]),
   }),
+  boss: freeze({
+    spawnDelaySeconds: 3,
+    moveSpeed: 0.85,
+    radius: 2.2,
+    visualScale: 2.35,
+    spawnHeight: 2.2,
+    type: freeze({
+      id: 'boss',
+      label: 'Chefão',
+      maxResistance: 10,
+      damage: 10,
+      color: 0xc7f3ff,
+    }),
+  }),
   charge: freeze({
     durationSeconds: 1.2,
   }),

@@ -427,9 +427,39 @@ O roteiro completo está em
 
 O roteiro completo está em [Fase 12 — Ondas](phases/phase-12-ondas.md).
 
+## Fase 13
+
+### Cobertura automatizada adicionada
+
+- perfil imutável do chefão com resistência 10, dano 10 e escala gigante;
+- validação de velocidade, collider, escala, altura e descritor antes da cena;
+- estados `boss-pending`, `boss` e `complete` após a quarta onda;
+- espera configurável e criação única do chefão;
+- reutilização da entidade, geometrias e materiais;
+- exigência de exatamente 10 impactos válidos para eliminação;
+- contato aplicando exatamente 10 de dano uma única vez;
+- HUD e mensagens específicos para o chefão;
+- regressão das quatro ondas, vida, colisões e lifecycle;
+- metadados e diagnóstico da API atualizados para a Fase 13.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 13 concluída**, use **Verificar API** e confira `phase: 13`.
+3. Complete os 18 encontros das quatro ondas.
+4. Confirme a mensagem de aproximação e aguarde cerca de 3 segundos.
+5. Verifique o chefão gigante, o HUD **Chefão final · 10 acertos** e a barra 10 / 10.
+6. Acerte nove projéteis e confirme que ele permanece ativo com resistência 1.
+7. No décimo impacto, confirme sua remoção e o encerramento do confronto.
+8. Em outra sessão, permita o contato e confirme a perda única de 10 pontos de vida.
+9. Confirme que não surge novo inimigo depois do desfecho do chefão.
+10. Confirme que pontuação, telas finais e WebXR ainda não aparecem.
+
+O roteiro completo está em [Fase 13 — Chefão de gelo](phases/phase-13-chefao.md).
+
 ## Estratégia futura
 
-- testes unitários para chefão, pontuação e estados finais;
+- testes unitários para pontuação e estados finais;
 - testes de integração para múltiplos contatos e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;

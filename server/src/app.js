@@ -19,7 +19,7 @@ export function createApp({ databasePool = null, clientDistPath = null } = {}) {
       response.status(databaseUnavailable ? 503 : 200).json({
         status: databaseUnavailable ? 'degraded' : 'ok',
         service: 'shoot-n-smash-api',
-        phase: 12,
+        phase: 13,
         database,
       });
     } catch (error) {

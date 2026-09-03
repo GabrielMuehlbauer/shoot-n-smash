@@ -128,16 +128,21 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   const waveState = gameSession?.waveState;
 
   if (outcome === 'eliminated' && waveState) {
+    const bossResolved = gameSession.enemyState.type.id === 'boss';
     const nextMessage =
       waveState.status === 'complete'
-        ? 'As quatro ondas foram concluídas.'
+        ? bossResolved
+          ? 'Chefão derrotado. Confronto final encerrado.'
+          : 'As quatro ondas foram concluídas.'
+        : waveState.status === 'boss-pending'
+          ? 'As quatro ondas terminaram. O chefão de gelo surge em instantes.'
         : waveState.status === 'between-waves'
           ? `Onda ${waveState.wave} de ${waveState.totalWaves} em instantes.`
           : `Inimigo ${waveState.enemy} de ${waveState.enemiesInWave} em instantes.`;
 
     setShotStatus(
       'ready',
-      `Inimigo eliminado. ${nextMessage}`,
+      bossResolved ? nextMessage : `Inimigo eliminado. ${nextMessage}`,
     );
     return true;
   }
@@ -145,16 +150,22 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   if (outcome === 'player-contact' && waveState) {
     const { health, maxHealth } = gameSession.playerState;
     const { damage, label } = gameSession.enemyState.type;
+    const enemyName =
+      gameSession.enemyState.type.id === 'boss'
+        ? 'chefão de gelo'
+        : `inimigo ${label.toLocaleLowerCase('pt-BR')}`;
     const nextMessage =
       waveState.status === 'complete'
-        ? 'As quatro ondas foram concluídas.'
+        ? 'Confronto final encerrado.'
+        : waveState.status === 'boss-pending'
+          ? 'O chefão de gelo surge em instantes.'
         : waveState.status === 'between-waves'
           ? `Onda ${waveState.wave} de ${waveState.totalWaves} em instantes.`
           : `Inimigo ${waveState.enemy} de ${waveState.enemiesInWave} em instantes.`;
 
     setShotStatus(
       'idle',
-      `O inimigo ${label.toLocaleLowerCase('pt-BR')} causou ${damage} de dano. Vida: ${health} / ${maxHealth}. ${nextMessage}`,
+      `O ${enemyName} causou ${damage} de dano. Vida: ${health} / ${maxHealth}. ${nextMessage}`,
     );
     return true;
   }
@@ -164,6 +175,29 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
 
 function updateWaveState(state) {
   prototypeView.dataset.waveState = state.status;
+
+  if (state.status === 'boss-pending') {
+    waveProgress.textContent = 'Chefão final · Preparando confronto';
+    showEncounterOutcome();
+    return;
+  }
+
+  if (state.status === 'boss') {
+    waveProgress.textContent = 'Chefão final · 10 acertos';
+    updateEnemyState(gameSession.enemyState);
+    setShotStatus(
+      pointerLocked ? 'ready' : 'idle',
+      'Chefão de gelo ativo. Acerte-o dez vezes antes do contato.',
+    );
+    return;
+  }
+
+  if (state.status === 'complete') {
+    waveProgress.textContent = 'Confronto final encerrado';
+    showEncounterOutcome();
+    return;
+  }
+
   waveProgress.textContent = `Onda ${state.wave} de ${state.totalWaves} · Inimigo ${state.enemy} de ${state.enemiesInWave}`;
 
   if (state.status === 'active') {

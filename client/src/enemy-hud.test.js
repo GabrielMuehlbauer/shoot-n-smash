@@ -6,6 +6,7 @@ import { describeEnemyState } from './enemy-hud.js';
 const WEAK_TYPE = { id: 'weak', label: 'Fraco', damage: 1 };
 const MEDIUM_TYPE = { id: 'medium', label: 'Médio', damage: 2 };
 const RESISTANT_TYPE = { id: 'resistant', label: 'Resistente', damage: 3 };
+const BOSS_TYPE = { id: 'boss', label: 'Chefão', damage: 10 };
 
 test('descreve o tipo fraco ativo com dano da Fase 10', () => {
   assert.deepEqual(
@@ -77,6 +78,29 @@ test('distingue eliminação de contato com o jogador e preserva o tipo', () => 
   assert.equal(playerContact.hudState, 'player-contact');
   assert.match(playerContact.message, /inimigo médio/i);
   assert.match(playerContact.message, /causou 2 de dano/i);
+});
+
+test('apresenta o chefão de gelo com resistência e dano próprios', () => {
+  const active = describeEnemyState({
+    active: true,
+    maxResistance: 10,
+    outcome: null,
+    resistance: 10,
+    type: BOSS_TYPE,
+  });
+  const damaged = describeEnemyState({
+    active: true,
+    maxResistance: 10,
+    outcome: null,
+    resistance: 1,
+    type: BOSS_TYPE,
+  });
+
+  assert.equal(active.labelText, 'Chefão de gelo');
+  assert.equal(active.valueText, '10 / 10');
+  assert.match(active.message, /Chefão de gelo se aproximando/);
+  assert.equal(damaged.percent, 10);
+  assert.match(damaged.message, /Restam 1 de 10/);
 });
 
 test('rejeita estados impossíveis ou sem identidade de tipo', () => {

@@ -218,3 +218,23 @@ Permanece no máximo um inimigo ativo para reutilizar a entidade e manter pequen
 o custo do protótipo. Spawns simultâneos só deverão ser considerados após testes
 de gameplay e desempenho. Chefão, pontuação e estados de vitória/derrota seguem
 fora deste incremento.
+
+## ADR-016 — Chefão como perfil da entidade reutilizada
+
+**Status:** aceita em 3 de setembro de 2026.
+
+A Fase 13 estende a máquina de ondas com `boss-pending` e `boss`. Depois dos 18
+inimigos normais, há uma espera configurável de 3 segundos e um único pedido de
+spawn do chefão. Seu desfecho leva o fluxo a `complete`, sem criar ainda estados
+semânticos de vitória ou derrota.
+
+O chefão é um descritor validado separado dos tipos normais: resistência 10,
+dano 10, velocidade 0,85, escala visual 2,35, raio de colisão 2,20 e altura de
+spawn 2,20. `EnemySystem.reset()` aceita esse perfil explícito e reutiliza a
+entidade, as geometrias e os materiais existentes. Isso preserva a regra de uma
+única entidade ativa e evita uma hierarquia de classes antes de haver padrões de
+comportamento distintos que a justifiquem.
+
+O HUD recebe a mesma forma de snapshot, mas usa o ID `boss` para apresentar o
+nome e o estilo do confronto final. Pontuação, bônus, vitória, derrota e tela de
+resultados permanecem fora deste incremento.

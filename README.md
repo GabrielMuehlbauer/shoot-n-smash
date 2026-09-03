@@ -4,9 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 12 — quatro ondas**. Dezoito inimigos são distribuídos
-> em ondas progressivas, com tipos, velocidades e intervalos configuráveis. A
-> vida do jogador permanece entre todos os encontros.
+> Status atual: **Fase 13 — chefão de gelo**. Depois dos 18 inimigos das quatro
+> ondas, surge um chefão gigante com resistência de 10 acertos e dano de 10.
+> A vida do jogador permanece durante todo o confronto.
 
 ## Equipe
 
@@ -46,7 +46,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 12.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 13.
 
 ## Execução em desenvolvimento
 
@@ -74,9 +74,9 @@ e o servidor. Para testar o recorte jogável:
 5. confirme que cada impacto válido cria um burst branco, consome o projétil e
    reduz a resistência em um acerto; o tipo Fraco exige 1, o Médio 2 e o
    Resistente 3 impactos;
-6. em uma nova sessão, não dispare e confirme o contato após cerca de 12,4 a
-   14,8 segundos. O inimigo é removido, a barra reage visualmente e a vida cai
-   para 99, 98 ou 97 conforme o tipo Fraco, Médio ou Resistente.
+6. complete as quatro ondas e confirme que, após 3 segundos, surge um chefão
+   gigante identificado no HUD; ele exige 10 impactos e causa 10 de dano ao
+   tocar o jogador.
 
 Os HUDs identificam vida, tipo sorteado, resistência atual e tensão de 0% a
 100%. A carga máxima é atingida em 1,2 segundo; segurar por mais tempo não
@@ -85,7 +85,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 12](docs/phases/phase-12-ondas.md).
+[guia da Fase 13](docs/phases/phase-13-chefao.md).
 
 ## Build e execução de produção
 
@@ -114,7 +114,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 12](docs/phases/phase-12-ondas.md#como-testar-manualmente).
+[guia de teste da Fase 13](docs/phases/phase-13-chefao.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -159,11 +159,12 @@ entre frames.
 
 ## Gameplay planejado
 
-- chefão, itens e pontuação;
+- itens e pontuação;
 - resultados, persistência MySQL e ranking.
 
-Nenhum desses sistemas adicionais faz parte da Fase 12. A sequência atual termina
-após a quarta onda, ainda sem chefão, pontuação ou condição de derrota.
+Nenhum desses sistemas adicionais faz parte da Fase 13. A sequência atual termina
+quando o chefão é eliminado ou alcança o jogador, ainda sem pontuação ou telas de
+vitória e derrota.
 
 ### Realidade virtual
 
@@ -171,7 +172,7 @@ após a quarta onda, ainda sem chefão, pontuação ou condição de derrota.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 12.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 13.
 
 ## Modo VR
 
@@ -209,18 +210,17 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
 - mira e disparo são exclusivos do navegador desktop e requerem Pointer Lock e mouse;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
-- existe somente um inimigo hostil ativo por vez, distribuído em quatro ondas,
-  ainda sem chefão ou pontuação;
-- a vida persiste pelos 18 encontros, mas ainda não existe tela de derrota;
+- existe somente um inimigo hostil ativo por vez; depois das quatro ondas, a
+  mesma entidade é reutilizada para o chefão;
+- a vida persiste pelos 18 encontros e pelo chefão, mas ainda não existe tela de derrota;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 13: criar o chefão de gelo com escala gigante, resistência de 10 acertos e
-dano 10. Pontuação, persistência, ranking e WebXR continuam em incrementos
-posteriores.
+Fase 14: introduzir pontuação por inimigos e chefão, mantendo persistência,
+ranking e WebXR para incrementos posteriores.
 
 Consulte também:
 
@@ -240,3 +240,4 @@ Consulte também:
 - [Guia da Fase 10](docs/phases/phase-10-vida-dano.md)
 - [Guia da Fase 11](docs/phases/phase-11-respawn-controlado.md)
 - [Guia da Fase 12](docs/phases/phase-12-ondas.md)
+- [Guia da Fase 13](docs/phases/phase-13-chefao.md)

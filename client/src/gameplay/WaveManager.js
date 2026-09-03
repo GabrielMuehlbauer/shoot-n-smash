@@ -54,9 +54,18 @@ export function validateWaveConfig(config) {
 }
 
 export class WaveManager {
-  constructor({ config = GAMEPLAY_CONFIG.waves } = {}) {
+  constructor({
+    config = GAMEPLAY_CONFIG.waves,
+    bossDelaySeconds = GAMEPLAY_CONFIG.boss.spawnDelaySeconds,
+  } = {}) {
     validateWaveConfig(config);
+
+    if (!Number.isFinite(bossDelaySeconds) || bossDelaySeconds < 0) {
+      throw new RangeError('WaveManager requer bossDelaySeconds não negativo.');
+    }
+
     this.config = config;
+    this.bossDelaySeconds = bossDelaySeconds;
     this.waveIndex = 0;
     this.enemyNumber = 1;
     this.status = 'active';
@@ -77,7 +86,9 @@ export class WaveManager {
       enemiesInWave: wave.enemyCount,
       status: this.status,
       remainingDelaySeconds:
-        this.status === 'between-enemies' || this.status === 'between-waves'
+        this.status === 'between-enemies' ||
+        this.status === 'between-waves' ||
+        this.status === 'boss-pending'
           ? this.remainingDelaySeconds
           : 0,
       moveSpeed: wave.moveSpeed,
@@ -95,6 +106,12 @@ export class WaveManager {
   }
 
   completeEnemy() {
+    if (this.status === 'boss') {
+      this.status = 'complete';
+      this.remainingDelaySeconds = 0;
+      return true;
+    }
+
     if (this.status !== 'active') {
       return false;
     }
@@ -116,8 +133,8 @@ export class WaveManager {
       return true;
     }
 
-    this.status = 'complete';
-    this.remainingDelaySeconds = 0;
+    this.status = 'boss-pending';
+    this.remainingDelaySeconds = this.bossDelaySeconds;
     return true;
   }
 
@@ -133,11 +150,11 @@ export class WaveManager {
     }
 
     if (!active || this.status === 'complete') {
-      return Object.freeze({ enemyDelta: 0, spawned: false });
+      return Object.freeze({ enemyDelta: 0, spawnKind: null });
     }
 
-    if (this.status === 'active') {
-      return Object.freeze({ enemyDelta: numericDelta, spawned: false });
+    if (this.status === 'active' || this.status === 'boss') {
+      return Object.freeze({ enemyDelta: numericDelta, spawnKind: null });
     }
 
     const remainingBeforeUpdate = this.remainingDelaySeconds;
@@ -147,13 +164,14 @@ export class WaveManager {
     );
 
     if (this.remainingDelaySeconds > 0) {
-      return Object.freeze({ enemyDelta: 0, spawned: false });
+      return Object.freeze({ enemyDelta: 0, spawnKind: null });
     }
 
-    this.status = 'active';
+    const spawnKind = this.status === 'boss-pending' ? 'boss' : 'enemy';
+    this.status = spawnKind === 'boss' ? 'boss' : 'active';
     return Object.freeze({
       enemyDelta: Math.max(0, numericDelta - remainingBeforeUpdate),
-      spawned: true,
+      spawnKind,
     });
   }
 

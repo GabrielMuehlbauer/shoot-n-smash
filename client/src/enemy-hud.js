@@ -56,8 +56,9 @@ export function describeEnemyState(state) {
   const valueText = `${resistance} / ${maxResistance}`;
   const typeLabel = type.label.trim();
   const typeName = typeLabel.toLocaleLowerCase('pt-BR');
+  const subject = type.id === 'boss' ? 'Chefão de gelo' : `Inimigo ${typeName}`;
   const sharedDescription = {
-    labelText: `Inimigo ${typeName}`,
+    labelText: subject,
     percent,
     typeId: type.id,
     typeLabel,
@@ -67,27 +68,27 @@ export function describeEnemyState(state) {
   if (outcome === 'eliminated') {
     return Object.freeze({
       ...sharedDescription,
-      ariaText: `Inimigo ${typeName} eliminado, sem resistência`,
+      ariaText: `${subject} eliminado, sem resistência`,
       hudState: 'eliminated',
-      message: `Inimigo ${typeName} eliminado. Abra uma nova sessão para gerar outro spawn.`,
+      message: `${subject} eliminado.`,
     });
   }
 
   if (outcome === 'player-contact') {
     return Object.freeze({
       ...sharedDescription,
-      ariaText: `Inimigo ${typeName} alcançou o jogador e causou ${type.damage} de dano`,
+      ariaText: `${subject} alcançou o jogador e causou ${type.damage} de dano`,
       hudState: 'player-contact',
-      message: `O inimigo ${typeName} alcançou o jogador e causou ${type.damage} de dano.`,
+      message: `${subject} alcançou o jogador e causou ${type.damage} de dano.`,
     });
   }
 
   if (!active) {
     return Object.freeze({
       ...sharedDescription,
-      ariaText: `Inimigo ${typeName} inativo com ${resistance} de ${maxResistance} pontos de resistência`,
+      ariaText: `${subject} inativo com ${resistance} de ${maxResistance} pontos de resistência`,
       hudState: 'inactive',
-      message: `O encontro com o inimigo ${typeName} está encerrado.`,
+      message: `O encontro com ${subject.toLocaleLowerCase('pt-BR')} está encerrado.`,
     });
   }
 
@@ -95,10 +96,10 @@ export function describeEnemyState(state) {
 
   return Object.freeze({
     ...sharedDescription,
-    ariaText: `Inimigo ${typeName} com ${resistance} de ${maxResistance} pontos de resistência`,
+    ariaText: `${subject} com ${resistance} de ${maxResistance} pontos de resistência`,
     hudState: damaged ? 'damaged' : 'active',
     message: damaged
-      ? `Impacto no inimigo ${typeName}. Restam ${resistance} de ${maxResistance} pontos de resistência.`
-      : `Inimigo ${typeName} se aproximando. Localize-o em 360° e acerte antes do contato.`,
+      ? `Impacto em ${subject.toLocaleLowerCase('pt-BR')}. Restam ${resistance} de ${maxResistance} pontos de resistência.`
+      : `${subject} se aproximando. Localize-o em 360° e acerte antes do contato.`,
   });
 }

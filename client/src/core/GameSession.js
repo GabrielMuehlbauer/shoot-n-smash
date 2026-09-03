@@ -3,11 +3,30 @@ import { Vector3 } from 'three';
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { intersectMovingSpheres } from '../gameplay/CollisionSystem.js';
 import { EnemySystem } from '../gameplay/EnemySystem.js';
+import { validateEnemyTypes } from '../gameplay/EnemyTypes.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
 import { PlayerHealthSystem } from '../gameplay/PlayerHealthSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
 import { WaveManager } from '../gameplay/WaveManager.js';
+
+function validateBossConfig(config) {
+  validateEnemyTypes([config?.type]);
+
+  for (const [name, value] of [
+    ['moveSpeed', config.moveSpeed],
+    ['radius', config.radius],
+    ['visualScale', config.visualScale],
+  ]) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(`boss.${name} deve ser maior que zero.`);
+    }
+  }
+
+  if (!Number.isFinite(config.spawnHeight) || config.spawnHeight < 0) {
+    throw new RangeError('boss.spawnHeight não pode ser negativo.');
+  }
+}
 
 export class GameSession {
   constructor({
@@ -54,13 +73,19 @@ export class GameSession {
     const ownsImpactFeedbackSystem = !impactFeedbackSystem;
     const ownsPlayerHealthSystem = !playerHealthSystem;
 
+    validateBossConfig(config?.boss);
     this.config = config;
     this.encounterActive = encounterActive;
     this.onEnemyHit = onEnemyHit;
     this.onEnemyEliminate = onEnemyEliminate;
     this.onEnemyPlayerContact = onEnemyPlayerContact;
     this.onWaveChange = onWaveChange;
-    this.waveManager = waveManager ?? new WaveManager({ config: config.waves });
+    this.waveManager =
+      waveManager ??
+      new WaveManager({
+        config: config.waves,
+        bossDelaySeconds: config.boss.spawnDelaySeconds,
+      });
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
@@ -232,13 +257,25 @@ export class GameSession {
         active: this.encounterActive,
       });
 
-      if (waveUpdate.spawned) {
-        const { moveSpeed, typeIds } = this.waveManager.spawnSettings;
-        this.enemySystem.reset({
-          rerollType: true,
-          moveSpeed,
-          typeIds,
-        });
+      if (waveUpdate.spawnKind) {
+        if (waveUpdate.spawnKind === 'boss') {
+          const boss = this.config.boss;
+          this.enemySystem.reset({
+            enemyType: boss.type,
+            moveSpeed: boss.moveSpeed,
+            radius: boss.radius,
+            visualScale: boss.visualScale,
+            spawnHeight: boss.spawnHeight,
+          });
+        } else {
+          const { moveSpeed, typeIds } = this.waveManager.spawnSettings;
+          this.enemySystem.reset({
+            rerollType: true,
+            moveSpeed,
+            typeIds,
+          });
+        }
+
         this.publishWaveChange();
       }
 

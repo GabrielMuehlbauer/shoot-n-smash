@@ -548,6 +548,16 @@ footer {
   box-shadow: 0 0 0.85rem rgba(158, 111, 255, 0.52);
 }
 
+.enemy-hud[data-enemy-type='boss'] {
+  border-color: rgba(199, 243, 255, 0.72);
+  box-shadow: 0 0 1.8rem rgba(110, 220, 255, 0.22);
+}
+
+.enemy-hud[data-enemy-type='boss'] .enemy-resistance-fill {
+  background: linear-gradient(90deg, #55c7f2, #ffffff);
+  box-shadow: 0 0 1rem rgba(199, 243, 255, 0.68);
+}
+
 .enemy-status {
   margin: 0;
   color: #b8d5e2;
