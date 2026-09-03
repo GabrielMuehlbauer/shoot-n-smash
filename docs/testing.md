@@ -364,9 +364,72 @@ O roteiro completo está em
 O roteiro completo está em
 [Fase 10 — Vida do jogador e dano de contato](phases/phase-10-vida-dano.md).
 
+## Fase 11
+
+### Cobertura automatizada adicionada
+
+- total de encontros e intervalo de respawn centralizados e validados;
+- snapshots imutáveis com estados `active`, `waiting` e `complete`;
+- nenhum respawn antes de 1,25 segundo e nenhum quarto inimigo;
+- novo sorteio independente de tipo e posição em cada respawn;
+- reutilização da entidade, das geometrias e dos materiais;
+- vida preservada entre eliminação, contato e próximo encontro;
+- pausa do cronômetro quando o encontro está inativo;
+- progresso “Encontro N de 3” conectado ao HUD;
+- metadados e diagnóstico da API atualizados para a Fase 11.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 11 concluída**, use **Verificar API** e confira `phase: 11`.
+3. Abra a cena e confirme “Encontro 1 de 3” no HUD.
+4. Elimine o primeiro inimigo ou permita o contato.
+5. Confirme a remoção imediata e o novo spawn após cerca de 1,25 segundo.
+6. Confirme “Encontro 2 de 3”, novo tipo/posição e a vida anterior preservada.
+7. Repita até o terceiro desfecho e confirme a mensagem de ciclo concluído.
+8. Aguarde e confirme que não surge um quarto inimigo.
+9. Repita três entradas e saídas da cena e confirme ausência de recursos residuais.
+10. Confirme que ondas completas, pontuação, derrota e WebXR ainda não aparecem.
+
+O roteiro completo está em
+[Fase 11 — Respawn controlado](phases/phase-11-respawn-controlado.md).
+
+## Fase 12
+
+### Cobertura automatizada adicionada
+
+- exatamente quatro definições de onda, imutáveis e validadas;
+- quantidades 3, 4, 5 e 6, totalizando 18 inimigos;
+- liberação progressiva de Fraco, Médio e Resistente;
+- velocidades crescentes e intervalos decrescentes por onda;
+- distinção entre intervalo de inimigos e pausa entre ondas;
+- estados `active`, `between-enemies`, `between-waves` e `complete`;
+- uso somente do excesso do delta após um intervalo;
+- novo tipo, velocidade e spawn aplicados à entidade reutilizada;
+- vida preservada entre todas as ondas;
+- ausência de quinto spawn após a conclusão da quarta onda;
+- HUD com onda e inimigo atuais;
+- regressão do desempate temporal, dano, colisões e lifecycle;
+- metadados e diagnóstico da API atualizados para a Fase 12.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 12 concluída**, use **Verificar API** e confira `phase: 12`.
+3. Abra a cena e confirme “Onda 1 de 4 · Inimigo 1 de 3”.
+4. Confirme que a onda 1 apresenta apenas monstros Fracos.
+5. Após três desfechos, confirme a pausa e o início da onda 2 com quatro inimigos.
+6. Confirme que a onda 2 pode apresentar Fracos e Médios.
+7. Nas ondas 3 e 4, confirme a presença possível dos três tipos e maior velocidade.
+8. Verifique que a vida não é restaurada entre inimigos ou ondas.
+9. Após o sexto inimigo da onda 4, confirme a conclusão sem novo spawn.
+10. Confirme que chefão, pontuação, derrota e WebXR ainda não aparecem.
+
+O roteiro completo está em [Fase 12 — Ondas](phases/phase-12-ondas.md).
+
 ## Estratégia futura
 
-- testes unitários para estados, pontuação e ondas;
+- testes unitários para chefão, pontuação e estados finais;
 - testes de integração para múltiplos contatos e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;

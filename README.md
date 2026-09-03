@@ -4,9 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 10 — vida e dano de contato**. O jogador começa cada
-> sessão com 100 pontos de vida; um inimigo Fraco, Médio ou Resistente causa
-> respectivamente 1, 2 ou 3 pontos ao alcançar o centro.
+> Status atual: **Fase 12 — quatro ondas**. Dezoito inimigos são distribuídos
+> em ondas progressivas, com tipos, velocidades e intervalos configuráveis. A
+> vida do jogador permanece entre todos os encontros.
 
 ## Equipe
 
@@ -46,7 +46,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 10.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 12.
 
 ## Execução em desenvolvimento
 
@@ -85,7 +85,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 10](docs/phases/phase-10-vida-dano.md).
+[guia da Fase 12](docs/phases/phase-12-ondas.md).
 
 ## Build e execução de produção
 
@@ -114,7 +114,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 10](docs/phases/phase-10-vida-dano.md#como-testar-manualmente).
+[guia de teste da Fase 12](docs/phases/phase-12-ondas.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -159,12 +159,11 @@ entre frames.
 
 ## Gameplay planejado
 
-- ondas, chefão, itens e pontuação;
+- chefão, itens e pontuação;
 - resultados, persistência MySQL e ranking.
 
-Nenhum desses sistemas adicionais faz parte da Fase 10. O contato atual aplica
-o dano uma única vez e encerra o encontro, mas ainda não inicia outro inimigo,
-uma onda ou uma condição de derrota.
+Nenhum desses sistemas adicionais faz parte da Fase 12. A sequência atual termina
+após a quarta onda, ainda sem chefão, pontuação ou condição de derrota.
 
 ### Realidade virtual
 
@@ -172,7 +171,7 @@ uma onda ou uma condição de derrota.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 10.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 12.
 
 ## Modo VR
 
@@ -210,19 +209,18 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
 - mira e disparo são exclusivos do navegador desktop e requerem Pointer Lock e mouse;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
-- existe somente um inimigo hostil sorteado por sessão, sem respawn, ondas ou
-  pontuação;
-- cada sessão permite somente um contato, portanto a vida ainda não chega a zero
-  pelo fluxo normal e não existe tela de derrota;
+- existe somente um inimigo hostil ativo por vez, distribuído em quatro ondas,
+  ainda sem chefão ou pontuação;
+- a vida persiste pelos 18 encontros, mas ainda não existe tela de derrota;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 11: criar o primeiro ciclo de respawn controlado e a base configurável das
-ondas, reutilizando o mesmo estado de vida entre encontros. Pontuação, chefão,
-persistência, ranking e WebXR continuam em incrementos posteriores.
+Fase 13: criar o chefão de gelo com escala gigante, resistência de 10 acertos e
+dano 10. Pontuação, persistência, ranking e WebXR continuam em incrementos
+posteriores.
 
 Consulte também:
 
@@ -240,3 +238,5 @@ Consulte também:
 - [Guia da Fase 8](docs/phases/phase-08-inimigo-hostil.md)
 - [Guia da Fase 9](docs/phases/phase-09-tipos-inimigo.md)
 - [Guia da Fase 10](docs/phases/phase-10-vida-dano.md)
+- [Guia da Fase 11](docs/phases/phase-11-respawn-controlado.md)
+- [Guia da Fase 12](docs/phases/phase-12-ondas.md)

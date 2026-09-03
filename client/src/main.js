@@ -37,6 +37,7 @@ const enemyResistanceValue = document.querySelector(
   '#enemy-resistance-value',
 );
 const enemyStatus = document.querySelector('#enemy-status');
+const waveProgress = document.querySelector('#wave-progress');
 const playerHud = document.querySelector('#player-hud');
 const playerHealth = document.querySelector('#player-health');
 const playerHealthValue = document.querySelector('#player-health-value');
@@ -124,31 +125,57 @@ function resetPlayerHud() {
 }
 
 function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
-  if (outcome === 'eliminated') {
+  const waveState = gameSession?.waveState;
+
+  if (outcome === 'eliminated' && waveState) {
+    const nextMessage =
+      waveState.status === 'complete'
+        ? 'As quatro ondas foram concluídas.'
+        : waveState.status === 'between-waves'
+          ? `Onda ${waveState.wave} de ${waveState.totalWaves} em instantes.`
+          : `Inimigo ${waveState.enemy} de ${waveState.enemiesInWave} em instantes.`;
+
     setShotStatus(
       'ready',
-      'Inimigo eliminado. Volte ao menu para iniciar uma nova sessão.',
+      `Inimigo eliminado. ${nextMessage}`,
     );
     return true;
   }
 
-  if (outcome === 'player-contact') {
-    const enemyState = gameSession?.enemyState;
-    const playerState = gameSession?.playerState;
-    const contactMessage =
-      enemyState && playerState
-        ? [
-            `O inimigo ${enemyState.type.label.toLocaleLowerCase('pt-BR')} causou ${enemyState.type.damage} de dano.`,
-            `Vida: ${playerState.health} / ${playerState.maxHealth}.`,
-            'Volte ao menu para tentar novamente.',
-          ].join(' ')
-        : 'O inimigo alcançou o jogador e causou dano. Volte ao menu para tentar novamente.';
+  if (outcome === 'player-contact' && waveState) {
+    const { health, maxHealth } = gameSession.playerState;
+    const { damage, label } = gameSession.enemyState.type;
+    const nextMessage =
+      waveState.status === 'complete'
+        ? 'As quatro ondas foram concluídas.'
+        : waveState.status === 'between-waves'
+          ? `Onda ${waveState.wave} de ${waveState.totalWaves} em instantes.`
+          : `Inimigo ${waveState.enemy} de ${waveState.enemiesInWave} em instantes.`;
 
-    setShotStatus('idle', contactMessage);
+    setShotStatus(
+      'idle',
+      `O inimigo ${label.toLocaleLowerCase('pt-BR')} causou ${damage} de dano. Vida: ${health} / ${maxHealth}. ${nextMessage}`,
+    );
     return true;
   }
 
   return false;
+}
+
+function updateWaveState(state) {
+  prototypeView.dataset.waveState = state.status;
+  waveProgress.textContent = `Onda ${state.wave} de ${state.totalWaves} · Inimigo ${state.enemy} de ${state.enemiesInWave}`;
+
+  if (state.status === 'active') {
+    updateEnemyState(gameSession.enemyState);
+    setShotStatus(
+      pointerLocked ? 'ready' : 'idle',
+      `Onda ${state.wave}. Inimigo ${state.enemy} de ${state.enemiesInWave}: localize-o em 360°.`,
+    );
+    return;
+  }
+
+  showEncounterOutcome();
 }
 
 function updateChargeState({ charging, ratio }) {
@@ -331,10 +358,12 @@ function enterPrototype() {
       onEnemyHit: handleEnemyHit,
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,
+      onWaveChange: updateWaveState,
       onPlayerHealthChange: updatePlayerState,
       onShot: handleShot,
     });
     updateEnemyState(gameSession.enemyState);
+    updateWaveState(gameSession.waveState);
     updatePlayerState(gameSession.playerState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,

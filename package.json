@@ -1,8 +1,8 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.10.0",
+  "version": "0.12.0",
   "private": true,
-  "description": "Protótipo 3D no navegador com arena de neve, vida do jogador e dano de contato por tipo de inimigo.",
+  "description": "Protótipo 3D no navegador com arena de neve, quatro ondas configuráveis e dificuldade progressiva.",
   "type": "module",
   "workspaces": [
     "client",

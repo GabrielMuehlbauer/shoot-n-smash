@@ -183,3 +183,38 @@ O desempate contínuo da Fase 8 permanece a autoridade causal: impacto letal
 anterior ou empatado impede o contato e, portanto, não causa dano. O recorte
 continua com um inimigo por sessão e não antecipa respawn, ondas, derrota,
 pontuação, chefão ou WebXR.
+
+## ADR-014 — Ciclo curto antes das quatro ondas
+
+**Status:** aceita em 3 de setembro de 2026.
+
+A Fase 11 introduz três encontros sequenciais com intervalo configurável de
+1,25 segundo. Continua existindo no máximo um inimigo ativo. A mesma entidade
+3D é reiniciada após cada desfecho, mas seu tipo e spawn são sorteados novamente;
+isso evita alocações repetidas de geometrias e materiais sem transformar um
+`reset()` comum em sorteio implícito.
+
+`GameSession` publica snapshots imutáveis com encontro atual, total e estado
+`active`, `waiting` ou `complete`. A vida pertence à sessão e não é restaurada
+nos respawns. Esse recorte valida a progressão e a persistência de estado antes
+da Fase 12, sem antecipar a composição e o balanceamento das quatro ondas.
+
+## ADR-015 — Progressão de ondas como estado puro
+
+**Status:** aceita em 3 de setembro de 2026.
+
+A Fase 12 cria `WaveManager` sem dependências de Three.js ou DOM. O sistema
+controla quatro definições, o inimigo atual, intervalos e os estados `active`,
+`between-enemies`, `between-waves` e `complete`. `GameSession` continua sendo a
+fachada que converte pedidos de spawn em resets da entidade 3D.
+
+As ondas possuem respectivamente 3, 4, 5 e 6 inimigos. Tipos são liberados de
+Fraco para Fraco/Médio e depois para os três tipos normais; velocidades crescem
+de 1,15 para 1,60, e intervalos caem de 1,25 para 0,80 segundo. Há uma pausa de
+2,50 segundos entre ondas. Esses valores são parâmetros iniciais de balanceamento,
+centralizados e não tratados como definitivos.
+
+Permanece no máximo um inimigo ativo para reutilizar a entidade e manter pequeno
+o custo do protótipo. Spawns simultâneos só deverão ser considerados após testes
+de gameplay e desempenho. Chefão, pontuação e estados de vitória/derrota seguem
+fora deste incremento.

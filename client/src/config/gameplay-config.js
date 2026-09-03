@@ -29,6 +29,39 @@ export const GAMEPLAY_CONFIG = freeze({
     initialHealth: 100,
     maxHealth: 100,
   }),
+  waves: freeze({
+    interWaveDelaySeconds: 2.5,
+    definitions: freeze([
+      freeze({
+        number: 1,
+        enemyCount: 3,
+        spawnIntervalSeconds: 1.25,
+        moveSpeed: 1.15,
+        typeIds: freeze(['weak']),
+      }),
+      freeze({
+        number: 2,
+        enemyCount: 4,
+        spawnIntervalSeconds: 1.1,
+        moveSpeed: 1.25,
+        typeIds: freeze(['weak', 'medium']),
+      }),
+      freeze({
+        number: 3,
+        enemyCount: 5,
+        spawnIntervalSeconds: 0.95,
+        moveSpeed: 1.4,
+        typeIds: freeze(['weak', 'medium', 'resistant']),
+      }),
+      freeze({
+        number: 4,
+        enemyCount: 6,
+        spawnIntervalSeconds: 0.8,
+        moveSpeed: 1.6,
+        typeIds: freeze(['weak', 'medium', 'resistant']),
+      }),
+    ]),
+  }),
   charge: freeze({
     durationSeconds: 1.2,
   }),

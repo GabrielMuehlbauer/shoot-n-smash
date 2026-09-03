@@ -7,6 +7,7 @@ import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
 import { PlayerHealthSystem } from '../gameplay/PlayerHealthSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
+import { WaveManager } from '../gameplay/WaveManager.js';
 
 export class GameSession {
   constructor({
@@ -17,6 +18,7 @@ export class GameSession {
     onEnemyHit = () => {},
     onEnemyPlayerContact = () => {},
     onEnemyResistanceChange = () => {},
+    onWaveChange = () => {},
     onPlayerHealthChange = () => {},
     onShot = () => {},
     config = GAMEPLAY_CONFIG,
@@ -28,10 +30,13 @@ export class GameSession {
     playerHealthSystem = null,
     projectileSystem = null,
     slingshotSystem = null,
+    waveManager = null,
   } = {}) {
     for (const [name, callback] of [
       ['onEnemyHit', onEnemyHit],
       ['onEnemyPlayerContact', onEnemyPlayerContact],
+      ['onEnemyEliminate', onEnemyEliminate],
+      ['onWaveChange', onWaveChange],
       ['onPlayerHealthChange', onPlayerHealthChange],
     ]) {
       if (typeof callback !== 'function') {
@@ -52,7 +57,10 @@ export class GameSession {
     this.config = config;
     this.encounterActive = encounterActive;
     this.onEnemyHit = onEnemyHit;
+    this.onEnemyEliminate = onEnemyEliminate;
     this.onEnemyPlayerContact = onEnemyPlayerContact;
+    this.onWaveChange = onWaveChange;
+    this.waveManager = waveManager ?? new WaveManager({ config: config.waves });
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
@@ -86,7 +94,9 @@ export class GameSession {
           config: config.enemy,
           random: enemyRandom,
           typeRandom: enemyTypeRandom,
-          onEliminate: onEnemyEliminate,
+          typeIds: this.waveManager.spawnSettings.typeIds,
+          moveSpeed: this.waveManager.spawnSettings.moveSpeed,
+          onEliminate: (state) => this.handleEnemyEliminate(state),
           onPlayerContact: (state) => this.handleEnemyPlayerContact(state),
           onResistanceChange: onEnemyResistanceChange,
         });
@@ -167,6 +177,10 @@ export class GameSession {
     return this.impactFeedbackSystem.activeCount;
   }
 
+  get waveState() {
+    return this.waveManager.state;
+  }
+
   beginCharge() {
     this.assertNotDisposed();
     return this.slingshotSystem.beginCharge();
@@ -214,7 +228,21 @@ export class GameSession {
 
     try {
       this.slingshotSystem.update(delta);
-      this.enemySystem.update(this.encounterActive ? delta : 0);
+      const waveUpdate = this.waveManager.update(delta, {
+        active: this.encounterActive,
+      });
+
+      if (waveUpdate.spawned) {
+        const { moveSpeed, typeIds } = this.waveManager.spawnSettings;
+        this.enemySystem.reset({
+          rerollType: true,
+          moveSpeed,
+          typeIds,
+        });
+        this.publishWaveChange();
+      }
+
+      this.enemySystem.update(waveUpdate.enemyDelta);
       this.impactFeedbackSystem.update(delta);
       this.pendingEnemyImpacts.length = 0;
       this.projectileSystem.update(delta, this.handleProjectileStep);
@@ -241,6 +269,35 @@ export class GameSession {
     }
 
     return true;
+  }
+
+  finishCurrentEncounter() {
+    return this.waveManager.completeEnemy();
+  }
+
+  publishWaveChange() {
+    try {
+      this.onWaveChange(this.waveState);
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+  }
+
+  handleEnemyEliminate(enemyState) {
+    this.finishCurrentEncounter();
+    let observerError = null;
+
+    try {
+      this.onEnemyEliminate(enemyState);
+    } catch (error) {
+      observerError = error;
+    }
+
+    this.publishWaveChange();
+
+    if (observerError) {
+      throw observerError;
+    }
   }
 
   handleProjectileStep({
@@ -358,11 +415,15 @@ export class GameSession {
       observerError = error;
     }
 
+    this.finishCurrentEncounter();
+
     try {
       this.onEnemyPlayerContact(enemyState);
     } catch (error) {
       observerError ??= error;
     }
+
+    this.publishWaveChange();
 
     if (observerError) {
       throw observerError;
@@ -418,7 +479,9 @@ export class GameSession {
     }
 
     this.onEnemyHit = () => {};
+    this.onEnemyEliminate = () => {};
     this.onEnemyPlayerContact = () => {};
+    this.onWaveChange = () => {};
     this.disposed = true;
 
     if (disposalError) {

@@ -18,7 +18,7 @@ XRInput (futuro) ─────────────────────
                                         ├─> ImpactFeedbackSystem <────────────────┤
                                         └─> DomHUD <───────────────────────────────┘
 
-WaveSystem -> Player / Score / Item Systems (futuros)
+WaveManager -> Player / Score / Item Systems (futuros)
                                          │
                                          v
                                 StateMachine e XRHud
@@ -45,10 +45,12 @@ WaveSystem -> Player / Score / Item Systems (futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 10, seu `update(deltaSeconds)` preserva a ordem
+  fachada da partida. Na Fase 12, seu `update(deltaSeconds)` preserva a ordem
   estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
   quando o contato vence, aplica o dano pelo `PlayerHealthSystem` antes de
-  notificar a interface. `dispose()` encerra todos os sistemas de forma idempotente.
+  notificar a interface. Também coordena o `WaveManager` e aplica seus pedidos de
+  spawn à entidade reutilizada. `dispose()` encerra todos os sistemas de forma
+  idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
   não conhece mouse, Pointer Lock nem elementos do DOM.
@@ -64,7 +66,11 @@ WaveSystem -> Player / Score / Item Systems (futuros)
   collider, resistência, spawn, aproximação e transições terminais. Ele preserva
   os centros anterior e atual por frame, calcula a fração de um possível contato
   com o jogador, publica snapshots com a identidade do tipo por callbacks e não
-  conhece elementos do DOM. `reset()` conserva o tipo sorteado na construção.
+  conhece elementos do DOM. `reset()` conserva o tipo sorteado por padrão; as
+  ondas podem solicitar explicitamente novo conjunto de tipos e velocidade.
+- `WaveManager` mantém a progressão pura das quatro ondas, inimigo atual,
+  intervalos entre spawns e pausas entre ondas. Ele publica snapshots imutáveis
+  e não conhece Three.js, vida, colisões ou DOM.
 - `CollisionSystem` contém matemática pura para segmento–esfera estática e para
   duas esferas móveis. O segundo teste subtrai o movimento de um volume do outro,
   soma os raios e encontra o primeiro contato em `[0, 1]`, evitando tunneling sem
@@ -83,8 +89,8 @@ WaveSystem -> Player / Score / Item Systems (futuros)
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
   gravidade, dimensões, vida máxima e dano de cada tipo para evitar números
   mágicos.
-- `GameSession` já coordena a ordem do encontro mínimo e incorporará ondas e
-  pontuação quando uma partida completa for introduzida.
+- `GameSession` coordena a progressão das quatro ondas sem duplicar regras de
+  spawn, tipo ou velocidade dentro da interface.
 - Sistemas de gameplay não dependerão diretamente do mouse ou dos controles XR.
 - Os controles de câmera e de disparo são os adaptadores de entrada desktop já
   concretos. Um futuro `XRInput` produzirá as mesmas intenções de tensionar e
@@ -284,6 +290,63 @@ respawn, ondas, pontuação ou telas de resultado.
 Não serão introduzidos ECS, engine de física ou barramento global de eventos no
 MVP. As colisões atuais usam volumes simples e testes de segmento estático ou de
 movimento relativo para os projéteis rápidos.
+
+## Recorte executável da Fase 11
+
+```text
+encontro 1 ativo
+       │ eliminação ou contato
+       v
+espera configurável de 1,25 s
+       │ reset da mesma entidade 3D
+       │ novo tipo + novo spawn
+       v
+encontro 2 ativo → espera → encontro 3 ativo
+                              │
+                              v
+                           complete
+```
+
+`GAMEPLAY_CONFIG.encounter` centraliza o total de três inimigos e o intervalo de
+respawn. O cronômetro só avança com o encontro habilitado e usa apenas o excesso
+do delta após a espera para mover o novo inimigo, evitando movimento invisível
+durante a pausa.
+
+O `reset()` padrão de `EnemySystem` continua preservando o tipo, mantendo o
+contrato das fases anteriores. Somente o respawn coordenado solicita
+`reset({ rerollType: true })`; a entidade reutiliza geometrias e materiais,
+restaura resistência e visual, sorteia outro descritor e recebe nova posição no
+anel de spawn.
+
+A vida permanece no mesmo `PlayerHealthSystem` durante todo o ciclo. O HUD recebe
+snapshots imutáveis de progresso, mostra “Encontro N de 3” e anuncia o próximo
+spawn ou a conclusão. Ainda não existem quatro ondas, dificuldade crescente,
+pontuação, chefão ou derrota.
+
+## Recorte executável da Fase 12
+
+```text
+Onda 1: 3 × Fraco                    · velocidade 1,15 · intervalo 1,25 s
+Onda 2: 4 × Fraco/Médio              · velocidade 1,25 · intervalo 1,10 s
+Onda 3: 5 × Fraco/Médio/Resistente   · velocidade 1,40 · intervalo 0,95 s
+Onda 4: 6 × Fraco/Médio/Resistente   · velocidade 1,60 · intervalo 0,80 s
+                    │
+                    └── pausa entre ondas: 2,50 s
+```
+
+`WaveManager` separa a progressão da coordenação gráfica. Ao terminar um inimigo,
+ele escolhe `between-enemies`, `between-waves` ou `complete`. Quando o cronômetro
+termina, `GameSession` aplica `spawnSettings` ao `EnemySystem`, que reutiliza a
+mesma entidade com novo tipo, resistência, velocidade e posição.
+
+Os catálogos de tipos são restritos por onda: a primeira ensina o inimigo fraco,
+a segunda introduz o médio e as duas últimas liberam o resistente. Quantidade e
+velocidade crescem, enquanto o intervalo diminui. Todos esses valores ficam em
+`GAMEPLAY_CONFIG.waves` e podem ser balanceados sem alterar a lógica.
+
+O HUD apresenta onda e inimigo atuais. A vida continua pertencendo à sessão e
+não é restaurada entre spawns ou ondas. Ainda não existem chefão, bônus de
+conclusão, pontuação, derrota ou tela de resultados.
 
 ## Servidor
 

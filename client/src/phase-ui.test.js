@@ -8,8 +8,8 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 10 e prepara os HUDs', () => {
-  assert.match(indexHtml, /Fase 10 concluída/);
+test('marca a interface estática como Fase 12 e prepara os HUDs', () => {
+  assert.match(indexHtml, /Fase 12 concluída/);
   assert.match(indexHtml, /data-player-state="healthy"/);
   assert.match(indexHtml, /id="player-health-label">Vida do jogador/);
   assert.match(indexHtml, /id="player-health-value"[^>]*>100 \/ 100/);
@@ -19,6 +19,10 @@ test('marca a interface estática como Fase 10 e prepara os HUDs', () => {
   assert.match(indexHtml, /data-enemy-type="weak"/);
   assert.match(indexHtml, /id="enemy-resistance-label">Inimigo fraco/);
   assert.match(indexHtml, /aria-describedby="enemy-status"/);
+  assert.match(
+    indexHtml,
+    /id="wave-progress"[^>]*>Onda 1 de 4 · Inimigo 1 de 3/,
+  );
 });
 
 test('mantém eventos do inimigo visíveis sem duplicar o live region de disparo', () => {
@@ -70,4 +74,13 @@ test('conecta mudanças de vida aos estados visuais do HUD', () => {
     /\.player-hud\[data-player-state='depleted'\]/,
   );
   assert.match(stylesCss, /@keyframes player-damage-pulse/);
+});
+
+test('conecta o progresso das ondas ao respawn e ao HUD', () => {
+  assert.match(mainSource, /onWaveChange:\s*updateWaveState/);
+  assert.match(
+    mainSource,
+    /waveProgress\.textContent = `Onda \$\{state\.wave\} de \$\{state\.totalWaves\}/,
+  );
+  assert.match(stylesCss, /\.wave-progress/);
 });

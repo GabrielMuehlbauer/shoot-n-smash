@@ -45,8 +45,22 @@ function createProjectileSystem() {
 }
 
 function createGameplayConfig({ enemy = {}, projectile = {} } = {}) {
+  const enemyTypes =
+    'types' in enemy
+      ? enemy.types
+      : [{ ...GAMEPLAY_CONFIG.enemy.types[0] }];
+  const typeIds = enemyTypes.map(({ id }) => id);
+
   return {
     ...GAMEPLAY_CONFIG,
+    waves: {
+      ...GAMEPLAY_CONFIG.waves,
+      definitions: GAMEPLAY_CONFIG.waves.definitions.map((wave) => ({
+        ...wave,
+        moveSpeed: enemy.moveSpeed ?? GAMEPLAY_CONFIG.enemy.moveSpeed,
+        typeIds,
+      })),
+    },
     projectile: {
       ...GAMEPLAY_CONFIG.projectile,
       gravity: 0,
@@ -56,10 +70,7 @@ function createGameplayConfig({ enemy = {}, projectile = {} } = {}) {
     enemy: {
       ...GAMEPLAY_CONFIG.enemy,
       ...enemy,
-      types:
-        'types' in enemy
-          ? enemy.types
-          : [{ ...GAMEPLAY_CONFIG.enemy.types[0] }],
+      types: enemyTypes,
       playerPosition: {
         ...GAMEPLAY_CONFIG.enemy.playerPosition,
         ...enemy.playerPosition,
@@ -786,8 +797,10 @@ test('valida callbacks da sessão antes de criar recursos', () => {
   const scene = new Scene();
 
   for (const callback of [
+    'onEnemyEliminate',
     'onEnemyHit',
     'onEnemyPlayerContact',
+    'onWaveChange',
     'onPlayerHealthChange',
   ]) {
     assert.throws(
@@ -822,7 +835,7 @@ test('remove recursos criados quando construção intermediária falha', () => {
         scene,
         config: invalidConfig,
       }),
-    /enemy\.moveSpeed.*maior que zero/,
+    /moveSpeed.*positivo/,
   );
   assert.equal(scene.getObjectByName('snowball-projectiles'), undefined);
 });

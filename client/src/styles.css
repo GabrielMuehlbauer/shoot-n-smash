@@ -555,6 +555,15 @@ footer {
   line-height: 1.35;
 }
 
+.wave-progress {
+  margin: 0.45rem 0 0;
+  color: #f4fbff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .enemy-hud[data-enemy-state='damaged'] .enemy-resistance-fill {
   background: linear-gradient(90deg, #ffad5b, #ffe6ae);
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 10 com vida inicial 100 e barra horizontal do jogador."
+      content="Shoot 'n' Smash — protótipo da Fase 12 com quatro ondas configuráveis de inimigos."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,21 +19,20 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 10 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Vida do jogador</p>
+        <div class="phase-badge"><span></span> Fase 12 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Quatro ondas</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
           Encontre o monstro de gelo sorteado em qualquer direção da arena e
-          use o estilingue antes que ele alcance o centro. O tipo fraco resiste
-          a um impacto, o médio a dois e o resistente a três. A nova barra
-          apresenta a vida inicial de 100, e cada tipo causa 1, 2 ou 3 de dano
-          ao alcançar o jogador.
+          use o estilingue antes que ele alcance o centro. Quatro ondas aumentam
+          gradualmente a quantidade, os tipos e a velocidade dos monstros. A
+          vida começa em 100 e é preservada durante toda a sequência.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Vida 100 / 100 da Fase 10</small>
+            <small>Quatro ondas da Fase 12</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -80,7 +79,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Vida 100 / 100 · Dano por contato · WebXR planejado</span>
+        <span>Quatro ondas · Dificuldade progressiva · WebXR planejado</span>
       </footer>
     </main>
 
@@ -95,7 +94,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 10 · Vida do jogador</span>
+          <span class="scene-phase">Fase 12 · Ondas configuráveis</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -161,6 +160,7 @@
         >
           Inimigo fraco se aproximando. Localize-o em 360° e acerte antes do contato.
         </p>
+        <p id="wave-progress" class="wave-progress">Onda 1 de 4 · Inimigo 1 de 3</p>
       </section>
 
       <div class="scene-reticle" aria-hidden="true"></div>
@@ -204,11 +204,11 @@
       </section>
 
       <div class="scene-caption">
-        <strong>Vida inicial 100 / 100 · Barra horizontal</strong>
+        <strong>Quatro ondas · 18 inimigos configurados</strong>
         <span>
-          Um tipo fraco, médio ou resistente surge entre os raios 17 e 20 e
-          avança até o centro. O contato causa 1, 2 ou 3 de dano; ondas,
-          pontuação e WebXR permanecem fora deste incremento.
+          Cada onda aumenta a quantidade ou velocidade e libera novos tipos. A
+          vida é compartilhada por toda a sequência; chefão, pontuação e WebXR
+          permanecem fora deste incremento.
         </span>
       </div>
 

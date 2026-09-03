@@ -95,6 +95,32 @@ function readRandomUnit(random, label) {
   return value;
 }
 
+function resolveTypePool(types, typeIds = null) {
+  validateEnemyTypes(types);
+
+  if (typeIds === null) {
+    return types;
+  }
+
+  if (
+    !Array.isArray(typeIds) ||
+    typeIds.length === 0 ||
+    typeIds.some((id) => typeof id !== 'string' || id.length === 0) ||
+    new Set(typeIds).size !== typeIds.length
+  ) {
+    throw new TypeError('EnemySystem requer typeIds únicos e não vazios.');
+  }
+
+  const descriptorsById = new Map(types.map((type) => [type.id, type]));
+  const typePool = typeIds.map((id) => descriptorsById.get(id));
+
+  if (typePool.some((type) => !type)) {
+    throw new RangeError('EnemySystem recebeu um typeId desconhecido.');
+  }
+
+  return typePool;
+}
+
 export function createEnemySpawnPosition({
   config = GAMEPLAY_CONFIG.enemy,
   random = Math.random,
@@ -126,6 +152,8 @@ export class EnemySystem extends Group {
     config = GAMEPLAY_CONFIG.enemy,
     random = Math.random,
     typeRandom = Math.random,
+    typeIds = null,
+    moveSpeed = config.moveSpeed,
     onEliminate = () => {},
     onPlayerContact = () => {},
     onResistanceChange = () => {},
@@ -147,15 +175,10 @@ export class EnemySystem extends Group {
     this.scene = scene;
     this.config = config;
     this.random = random;
-    this.enemyType = selectEnemyType({
-      types: config.types,
-      random: typeRandom,
-    });
-    this.typeState = Object.freeze({
-      id: this.enemyType.id,
-      label: this.enemyType.label,
-      damage: this.enemyType.damage,
-    });
+    this.typeRandom = typeRandom;
+    this.currentMoveSpeed = this.validateMoveSpeed(moveSpeed);
+    this.typeIds = null;
+    this.selectType(typeIds);
     this.onEliminate = onEliminate;
     this.onPlayerContact = onPlayerContact;
     this.onResistanceChange = onResistanceChange;
@@ -181,6 +204,28 @@ export class EnemySystem extends Group {
     const material = new MeshStandardMaterial(options);
     this.materials.add(material);
     return material;
+  }
+
+  validateMoveSpeed(moveSpeed) {
+    if (!Number.isFinite(moveSpeed) || moveSpeed <= 0) {
+      throw new RangeError('EnemySystem requer moveSpeed maior que zero.');
+    }
+
+    return moveSpeed;
+  }
+
+  selectType(typeIds = this.typeIds) {
+    const typePool = resolveTypePool(this.config.types, typeIds);
+    this.enemyType = selectEnemyType({
+      types: typePool,
+      random: this.typeRandom,
+    });
+    this.typeIds = typeIds === null ? null : Object.freeze([...typeIds]);
+    this.typeState = Object.freeze({
+      id: this.enemyType.id,
+      label: this.enemyType.label,
+      damage: this.enemyType.damage,
+    });
   }
 
   createGeometry(geometry) {
@@ -403,7 +448,7 @@ export class EnemySystem extends Group {
       0,
       distance - this.config.playerContactRadius,
     );
-    const travelDistance = this.config.moveSpeed * delta;
+    const travelDistance = this.currentMoveSpeed * delta;
 
     if (distance > 0 && remainingDistance > 0) {
       this.position.addScaledVector(
@@ -541,10 +586,26 @@ export class EnemySystem extends Group {
     this.visual.rotation.z = 0;
   }
 
-  reset() {
+  reset({
+    rerollType = false,
+    typeIds = this.typeIds,
+    moveSpeed = this.currentMoveSpeed,
+  } = {}) {
     if (this.disposed) {
       return false;
     }
+
+    if (typeof rerollType !== 'boolean') {
+      throw new TypeError('EnemySystem requer rerollType booleano.');
+    }
+
+    const nextMoveSpeed = this.validateMoveSpeed(moveSpeed);
+
+    if (rerollType) {
+      this.selectType(typeIds);
+    }
+
+    this.currentMoveSpeed = nextMoveSpeed;
 
     this.currentResistance = this.maxResistance;
     this.outcome = null;
