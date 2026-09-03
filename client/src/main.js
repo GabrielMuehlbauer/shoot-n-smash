@@ -8,6 +8,7 @@ import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
 import { describePlayerHealth } from './player-hud.js';
 import { PROJECT_INFO } from './project-info.js';
+import { describeScoreState } from './score-hud.js';
 import './styles.css';
 
 const teamList = document.querySelector('#team-list');
@@ -42,6 +43,9 @@ const playerHud = document.querySelector('#player-hud');
 const playerHealth = document.querySelector('#player-health');
 const playerHealthValue = document.querySelector('#player-health-value');
 const playerStatus = document.querySelector('#player-status');
+const scoreHud = document.querySelector('#score-hud');
+const scoreValue = document.querySelector('#score-value');
+const scoreStatus = document.querySelector('#score-status');
 
 let gameApp = null;
 let lookController = null;
@@ -122,6 +126,18 @@ function resetPlayerHud() {
     health: GAMEPLAY_CONFIG.player.initialHealth,
     maxHealth: GAMEPLAY_CONFIG.player.maxHealth,
   });
+}
+
+function updateScoreState(state) {
+  const description = describeScoreState(state);
+
+  scoreHud.dataset.scoreEvent = description.eventType;
+  scoreValue.textContent = description.valueText;
+  scoreStatus.textContent = description.message;
+}
+
+function resetScoreHud() {
+  updateScoreState({ score: 0, eventCount: 0, lastEvent: null });
 }
 
 function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
@@ -375,6 +391,7 @@ function enterPrototype() {
   document.body.classList.add('scene-active');
   resetEnemyHud();
   resetPlayerHud();
+  resetScoreHud();
 
   try {
     renderContext = new RenderContext(sceneContainer);
@@ -394,11 +411,13 @@ function enterPrototype() {
       onEnemyResistanceChange: handleEnemyResistanceChange,
       onWaveChange: updateWaveState,
       onPlayerHealthChange: updatePlayerState,
+      onScoreChange: updateScoreState,
       onShot: handleShot,
     });
     updateEnemyState(gameSession.enemyState);
     updateWaveState(gameSession.waveState);
     updatePlayerState(gameSession.playerState);
+    updateScoreState(gameSession.scoreState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
       onChargeStart: () => gameSession.beginCharge(),
@@ -449,6 +468,7 @@ function exitPrototype() {
   resetSlingshotHud('idle');
   resetEnemyHud();
   resetPlayerHud();
+  resetScoreHud();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

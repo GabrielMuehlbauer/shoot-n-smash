@@ -14,11 +14,12 @@ DesktopFireController ──> GameSession ──┬─> SlingshotSystem ──> 
 XRInput (futuro) ───────────────────────┤                                        │
                                         ├─> EnemySystem ──> EnemyTypes            │
                                         ├─> PlayerHealthSystem                    │
+                                        ├─> ScoreManager                           │
                                         ├─> CollisionSystem <─────────────────────┤
                                         ├─> ImpactFeedbackSystem <────────────────┤
                                         └─> DomHUD <───────────────────────────────┘
 
-WaveManager -> Player / Score / Item Systems (futuros)
+WaveManager -> ScoreManager / StateMachine / Item Systems (parcial/futuros)
                                          │
                                          v
                                 StateMachine e XRHud
@@ -45,7 +46,7 @@ WaveManager -> Player / Score / Item Systems (futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 13, seu `update(deltaSeconds)` preserva a ordem
+  fachada da partida. Na Fase 14, seu `update(deltaSeconds)` preserva a ordem
   estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
   quando o contato vence, aplica o dano pelo `PlayerHealthSystem` antes de
   notificar a interface. Também coordena o `WaveManager` e aplica seus pedidos de
@@ -82,6 +83,9 @@ WaveManager -> Player / Score / Item Systems (futuros)
 - `PlayerHealthSystem` mantém vida inicial e máxima, aplica dano inteiro positivo,
   limita o resultado a zero e publica snapshots imutáveis. Ele não conhece o
   inimigo, a cena ou o DOM e começa uma nova instância em cada sessão.
+- `ScoreManager` recebe eventos semânticos identificados, consulta os valores
+  centralizados de balanceamento e mantém o total. Um `Set` de IDs processados
+  torna cada recompensa idempotente, mesmo se um callback for repetido.
 - O HUD HTML observa `onChargeChange({ charging, ratio })`, disparos, tipo,
   resistência, vida, impactos, eliminação e contato por callbacks. O núcleo de
   gameplay não consulta nem altera elementos do DOM. Cancelamentos e desfechos
@@ -370,6 +374,28 @@ Durante o confronto, o gerenciador permanece em `boss`; qualquer desfecho
 terminal leva a `complete`. O HUD diferencia o chefão dos tipos normais e mostra
 sua resistência. A fase encerra a progressão de encontros, mas ainda não traduz
 o resultado em vitória, derrota, pontuação ou tela final.
+
+## Recorte executável da Fase 14
+
+```text
+eliminação normal ──> 100 | 250 | 500
+fim de cada onda ───> +500
+chefão eliminado ───> +2.000
+fase concluída ─────> +1.000
+                           │
+                           └──> ScoreManager ──> HUD
+```
+
+`GameSession` captura a identidade da onda e do inimigo antes de avançar o
+`WaveManager`. Eliminações recebem IDs `enemy:onda:inimigo`; bônus de onda usam
+`wave:onda:completed`, e os dois eventos finais possuem IDs fixos. O
+`ScoreManager` ignora IDs já processados e publica snapshots imutáveis somente
+quando o total realmente muda.
+
+Contatos não concedem pontos de eliminação. O último encontro normal ainda
+conclui sua onda e concede o respectivo bônus; já o contato do chefão não concede
+os bônus de chefão ou de fase. Vitória e derrota continuam sem estado e tela
+próprios até a Fase 15.
 
 ## Servidor
 

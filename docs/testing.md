@@ -457,9 +457,39 @@ O roteiro completo está em [Fase 12 — Ondas](phases/phase-12-ondas.md).
 
 O roteiro completo está em [Fase 13 — Chefão de gelo](phases/phase-13-chefao.md).
 
+## Fase 14
+
+### Cobertura automatizada adicionada
+
+- valores configuráveis para cada tipo, onda, chefão e fase;
+- snapshots imutáveis com total, quantidade e último evento;
+- prevenção de pontuação duplicada por ID de evento;
+- preservação do total quando um observador falha;
+- integração de eliminações e bônus com as quatro ondas;
+- nenhum ponto de eliminação por contato;
+- chefão eliminado concedendo 2.000 + 1.000 pontos;
+- contato do chefão sem bônus de chefão ou fase;
+- placar inicial, formatação e mensagens do HUD;
+- metadados e diagnóstico da API atualizados para a Fase 14.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 14 concluída**, use **Verificar API** e confira `phase: 14`.
+3. Abra a cena e confirme o placar inicial em zero.
+4. Elimine tipos Fraco, Médio e Resistente e confira +100, +250 e +500.
+5. Ao concluir cada onda, confirme o bônus adicional de 500.
+6. Permita um contato e confirme que não há pontos de eliminação.
+7. Elimine o chefão e confirme +2.000 e depois +1.000 pela fase.
+8. Em outra sessão, permita o contato do chefão e confirme que esses bônus não entram.
+9. Saia e entre novamente; confirme que a nova sessão começa em zero.
+10. Confirme que ainda não existem telas de vitória ou derrota.
+
+O roteiro completo está em [Fase 14 — Pontuação](phases/phase-14-pontuacao.md).
+
 ## Estratégia futura
 
-- testes unitários para pontuação e estados finais;
+- testes unitários para estados finais;
 - testes de integração para múltiplos contatos e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional para menu, vitória, derrota, ranking e replay;

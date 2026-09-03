@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 13 com quatro ondas e chefão de gelo."
+      content="Shoot 'n' Smash — protótipo da Fase 14 com pontuação, quatro ondas e chefão de gelo."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,20 +19,21 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 13 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Chefão final</p>
+        <div class="phase-badge"><span></span> Fase 14 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Pontuação ativa</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
           Encontre o monstro de gelo sorteado em qualquer direção da arena e
           use o estilingue antes que ele alcance o centro. Quatro ondas aumentam
           gradualmente a quantidade, os tipos e a velocidade dos monstros. Ao
-          final, um chefão gigante exige dez acertos e causa 10 de dano.
+          final, um chefão gigante exige dez acertos e causa 10 de dano. Cada
+          eliminação e conclusão válida agora alimenta um placar sem duplicidade.
         </p>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Abrir cena 3D
-            <small>Chefão de gelo da Fase 13</small>
+            <small>Pontuação da Fase 14</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -79,7 +80,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Quatro ondas · Chefão gigante · WebXR planejado</span>
+        <span>Quatro ondas · Chefão gigante · Pontuação</span>
       </footer>
     </main>
 
@@ -94,7 +95,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 13 · Chefão de gelo</span>
+          <span class="scene-phase">Fase 14 · Pontuação</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -108,6 +109,19 @@
         data-player-state="healthy"
         aria-labelledby="player-health-label"
       >
+        <div
+          id="score-hud"
+          class="score-hud"
+          data-score-event="initial"
+          aria-labelledby="score-label"
+          aria-describedby="score-status"
+        >
+          <div class="score-heading">
+            <strong id="score-label">Pontuação</strong>
+            <output id="score-value" aria-label="Pontuação atual">0</output>
+          </div>
+          <p id="score-status" class="score-status">Elimine monstros para pontuar.</p>
+        </div>
         <div class="player-health-heading">
           <strong id="player-health-label">Vida do jogador</strong>
           <span id="player-health-value" aria-hidden="true">100 / 100</span>

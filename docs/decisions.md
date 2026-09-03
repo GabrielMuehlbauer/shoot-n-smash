@@ -238,3 +238,23 @@ comportamento distintos que a justifiquem.
 O HUD recebe a mesma forma de snapshot, mas usa o ID `boss` para apresentar o
 nome e o estilo do confronto final. Pontuação, bônus, vitória, derrota e tela de
 resultados permanecem fora deste incremento.
+
+## ADR-017 — Pontuação por eventos idempotentes
+
+**Status:** aceita em 3 de setembro de 2026.
+
+A Fase 14 concretiza os valores definidos no ADR-005 em `GAMEPLAY_CONFIG.score`:
+100, 250 e 500 pelas três classes normais, 500 por onda, 2.000 pelo chefão e
+1.000 pela conclusão da fase. `ScoreManager` é independente de Three.js, DOM,
+vida e progressão de ondas.
+
+Cada concessão exige um ID semântico único. O gerenciador mantém os IDs já
+processados e ignora repetições sem alterar o total nem notificar o HUD. A
+pontuação é aplicada antes dos callbacks externos e permanece válida mesmo se
+um observador falhar.
+
+Contato não vale eliminação. Concluir o último encontro normal concede o bônus
+da onda independentemente do desfecho; eliminar o chefão concede tanto seus
+pontos quanto o bônus de fase. O contato do chefão não concede nenhum dos dois.
+A interpretação visual desses desfechos como vitória ou derrota fica para a
+Fase 15.

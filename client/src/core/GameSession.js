@@ -7,6 +7,7 @@ import { validateEnemyTypes } from '../gameplay/EnemyTypes.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
 import { PlayerHealthSystem } from '../gameplay/PlayerHealthSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
+import { ScoreManager } from '../gameplay/ScoreManager.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
 import { WaveManager } from '../gameplay/WaveManager.js';
 
@@ -39,6 +40,7 @@ export class GameSession {
     onEnemyResistanceChange = () => {},
     onWaveChange = () => {},
     onPlayerHealthChange = () => {},
+    onScoreChange = () => {},
     onShot = () => {},
     config = GAMEPLAY_CONFIG,
     encounterActive = true,
@@ -48,6 +50,7 @@ export class GameSession {
     impactFeedbackSystem = null,
     playerHealthSystem = null,
     projectileSystem = null,
+    scoreManager = null,
     slingshotSystem = null,
     waveManager = null,
   } = {}) {
@@ -57,6 +60,7 @@ export class GameSession {
       ['onEnemyEliminate', onEnemyEliminate],
       ['onWaveChange', onWaveChange],
       ['onPlayerHealthChange', onPlayerHealthChange],
+      ['onScoreChange', onScoreChange],
     ]) {
       if (typeof callback !== 'function') {
         throw new TypeError(`GameSession requer ${name} como função.`);
@@ -72,6 +76,7 @@ export class GameSession {
     const ownsEnemySystem = !enemySystem;
     const ownsImpactFeedbackSystem = !impactFeedbackSystem;
     const ownsPlayerHealthSystem = !playerHealthSystem;
+    const ownsScoreManager = !scoreManager;
 
     validateBossConfig(config?.boss);
     this.config = config;
@@ -86,6 +91,7 @@ export class GameSession {
         config: config.waves,
         bossDelaySeconds: config.boss.spawnDelaySeconds,
       });
+    this.currentEncounter = this.createEncounterIdentity('enemy');
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
@@ -111,6 +117,12 @@ export class GameSession {
         new PlayerHealthSystem({
           config: config.player,
           onHealthChange: onPlayerHealthChange,
+        });
+      this.scoreManager =
+        scoreManager ??
+        new ScoreManager({
+          config: config.score,
+          onScoreChange,
         });
       this.enemySystem =
         enemySystem ??
@@ -151,6 +163,14 @@ export class GameSession {
       if (ownsPlayerHealthSystem) {
         try {
           this.playerHealthSystem?.dispose?.();
+        } catch {
+          // Preserva o erro original de construção.
+        }
+      }
+
+      if (ownsScoreManager) {
+        try {
+          this.scoreManager?.dispose?.();
         } catch {
           // Preserva o erro original de construção.
         }
@@ -204,6 +224,10 @@ export class GameSession {
 
   get waveState() {
     return this.waveManager.state;
+  }
+
+  get scoreState() {
+    return this.scoreManager.state;
   }
 
   beginCharge() {
@@ -276,6 +300,9 @@ export class GameSession {
           });
         }
 
+        this.currentEncounter = this.createEncounterIdentity(
+          waveUpdate.spawnKind,
+        );
         this.publishWaveChange();
       }
 
@@ -320,9 +347,27 @@ export class GameSession {
     }
   }
 
+  createEncounterIdentity(kind) {
+    const state = this.waveState;
+
+    return Object.freeze({
+      kind,
+      wave: state.wave,
+      enemy: state.enemy,
+      enemiesInWave: state.enemiesInWave,
+    });
+  }
+
   handleEnemyEliminate(enemyState) {
+    const encounterState = this.currentEncounter;
     this.finishCurrentEncounter();
     let observerError = null;
+
+    try {
+      this.recordScoreForOutcome(enemyState, encounterState);
+    } catch (error) {
+      observerError = error;
+    }
 
     try {
       this.onEnemyEliminate(enemyState);
@@ -444,6 +489,7 @@ export class GameSession {
   }
 
   handleEnemyPlayerContact(enemyState) {
+    const encounterState = this.currentEncounter;
     let observerError = null;
 
     try {
@@ -455,6 +501,12 @@ export class GameSession {
     this.finishCurrentEncounter();
 
     try {
+      this.recordScoreForOutcome(enemyState, encounterState);
+    } catch (error) {
+      observerError ??= error;
+    }
+
+    try {
       this.onEnemyPlayerContact(enemyState);
     } catch (error) {
       observerError ??= error;
@@ -464,6 +516,57 @@ export class GameSession {
 
     if (observerError) {
       throw observerError;
+    }
+  }
+
+  recordScoreForOutcome(enemyState, encounterState) {
+    let scoreError = null;
+    const record = (operation) => {
+      try {
+        operation();
+      } catch (error) {
+        scoreError ??= error;
+      }
+    };
+
+    if (enemyState.outcome === 'eliminated') {
+      const eventId =
+        encounterState.kind === 'boss'
+          ? 'boss:eliminated'
+          : `enemy:${encounterState.wave}:${encounterState.enemy}`;
+
+      record(() =>
+        this.scoreManager.recordEnemyEliminated({
+          eventId,
+          typeId: enemyState.type.id,
+        }),
+      );
+    }
+
+    if (
+      encounterState.kind !== 'boss' &&
+      encounterState.enemy === encounterState.enemiesInWave
+    ) {
+      record(() =>
+        this.scoreManager.recordWaveCompleted({
+          eventId: `wave:${encounterState.wave}:completed`,
+        }),
+      );
+    }
+
+    if (
+      encounterState.kind === 'boss' &&
+      enemyState.outcome === 'eliminated'
+    ) {
+      record(() =>
+        this.scoreManager.recordPhaseCompleted({
+          eventId: 'phase:completed',
+        }),
+      );
+    }
+
+    if (scoreError) {
+      throw scoreError;
     }
   }
 
@@ -505,6 +608,12 @@ export class GameSession {
 
     try {
       this.playerHealthSystem.dispose();
+    } catch (error) {
+      disposalError ??= error;
+    }
+
+    try {
+      this.scoreManager.dispose();
     } catch (error) {
       disposalError ??= error;
     }

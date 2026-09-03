@@ -802,6 +802,7 @@ test('valida callbacks da sessão antes de criar recursos', () => {
     'onEnemyPlayerContact',
     'onWaveChange',
     'onPlayerHealthChange',
+    'onScoreChange',
   ]) {
     assert.throws(
       () =>

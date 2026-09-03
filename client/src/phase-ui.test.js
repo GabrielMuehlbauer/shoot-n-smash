@@ -8,8 +8,11 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 13 e prepara os HUDs', () => {
-  assert.match(indexHtml, /Fase 13 concluída/);
+test('marca a interface estática como Fase 14 e prepara os HUDs', () => {
+  assert.match(indexHtml, /Fase 14 concluída/);
+  assert.match(indexHtml, /id="score-label">Pontuação/);
+  assert.match(indexHtml, /id="score-value"[^>]*>0/);
+  assert.match(indexHtml, /data-score-event="initial"/);
   assert.match(indexHtml, /data-player-state="healthy"/);
   assert.match(indexHtml, /id="player-health-label">Vida do jogador/);
   assert.match(indexHtml, /id="player-health-value"[^>]*>100 \/ 100/);
@@ -86,4 +89,11 @@ test('conecta o progresso das ondas ao respawn e ao HUD', () => {
   assert.match(mainSource, /state\.status === 'boss-pending'/);
   assert.match(mainSource, /state\.status === 'boss'/);
   assert.match(stylesCss, /data-enemy-type='boss'/);
+});
+
+test('conecta o ScoreManager ao placar visivel', () => {
+  assert.match(mainSource, /onScoreChange:\s*updateScoreState/);
+  assert.match(mainSource, /scoreValue\.textContent = description\.valueText/);
+  assert.match(stylesCss, /\.score-hud/);
+  assert.match(stylesCss, /#score-value/);
 });

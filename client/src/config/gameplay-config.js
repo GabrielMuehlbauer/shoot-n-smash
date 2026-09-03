@@ -76,6 +76,16 @@ export const GAMEPLAY_CONFIG = freeze({
       color: 0xc7f3ff,
     }),
   }),
+  score: freeze({
+    enemyElimination: freeze({
+      weak: 100,
+      medium: 250,
+      resistant: 500,
+      boss: 2000,
+    }),
+    waveCompleted: 500,
+    phaseCompleted: 1000,
+  }),
   charge: freeze({
     durationSeconds: 1.2,
   }),
