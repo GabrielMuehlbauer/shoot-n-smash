@@ -120,6 +120,54 @@ test('avanca inimigos e ondas respeitando os dois tipos de intervalo', () => {
   assert.deepEqual(manager.update(10), { enemyDelta: 0, spawnKind: null });
 });
 
+test('repete o chefao apos contato nao letal e encerra em vitoria ou derrota', () => {
+  const manager = new WaveManager({
+    config: createWaveConfig(),
+    bossDelaySeconds: 0.75,
+  });
+
+  manager.completeEnemy();
+  manager.update(0.5);
+  manager.completeEnemy();
+  manager.update(1);
+  manager.completeEnemy();
+  manager.update(1);
+  manager.completeEnemy();
+  manager.update(1);
+  manager.completeEnemy();
+  manager.update(0.75);
+  assert.equal(manager.state.status, 'boss');
+
+  assert.equal(
+    manager.retryBoss(),
+    true,
+  );
+  assert.equal(manager.state.status, 'boss-pending');
+  assert.equal(manager.state.remainingDelaySeconds, 0.75);
+  assert.equal(manager.update(0.75).spawnKind, 'boss');
+  assert.equal(manager.state.status, 'boss');
+
+  assert.equal(manager.completeEnemy(), true);
+  assert.equal(manager.state.status, 'complete');
+
+  const victoryManager = new WaveManager({
+    config: createWaveConfig(),
+    bossDelaySeconds: 0,
+  });
+  victoryManager.completeEnemy();
+  victoryManager.update(0.5);
+  victoryManager.completeEnemy();
+  victoryManager.update(1);
+  victoryManager.completeEnemy();
+  victoryManager.update(1);
+  victoryManager.completeEnemy();
+  victoryManager.update(1);
+  victoryManager.completeEnemy();
+  victoryManager.update(0);
+  victoryManager.completeEnemy();
+  assert.equal(victoryManager.state.status, 'complete');
+});
+
 test('pausa intervalos e reinicia no primeiro inimigo da primeira onda', () => {
   const manager = new WaveManager({ config: createWaveConfig() });
 
@@ -184,6 +232,7 @@ test('rejeita configuracoes, deltas e estados invalidos', () => {
   assert.throws(() => manager.update(-1), /delta/);
   assert.throws(() => manager.update(Number.NaN), /delta/);
   assert.throws(() => manager.update(1, { active: 'yes' }), /booleano/);
+  assert.equal(manager.retryBoss(), false);
   assert.throws(
     () => new WaveManager({ config: valid, bossDelaySeconds: -1 }),
     /bossDelaySeconds/,

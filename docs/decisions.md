@@ -258,3 +258,28 @@ da onda independentemente do desfecho; eliminar o chefão concede tanto seus
 pontos quanto o bônus de fase. O contato do chefão não concede nenhum dos dois.
 A interpretação visual desses desfechos como vitória ou derrota fica para a
 Fase 15.
+
+## ADR-018 — Estado global terminal separado da progressão das ondas
+
+**Status:** aceita em 3 de setembro de 2026.
+
+A Fase 15 introduz `GameStateManager` com uma transição global unidirecional:
+`PLAYING → VICTORY | GAME_OVER`. Os estados `active`, `between-enemies`,
+`between-waves`, `boss-pending`, `boss` e `complete` continuam pertencendo ao
+`WaveManager`. Essa separação impede que uma pausa de spawn ou o fim de um
+encontro seja interpretado como resultado da partida.
+
+`VICTORY` ocorre somente quando o chefão é eliminado depois das quatro ondas.
+`GAME_OVER` ocorre somente quando a vida chega a zero. Se o chefão alcançar o
+jogador sem esgotar sua vida, ele causa 10 de dano, não concede pontos e retorna
+a `boss-pending`; após a espera configurada, a entidade é reutilizada com a
+resistência completa. Assim, um contato não letal não cria um terceiro desfecho
+nem viola a condição de derrota definida para o MVP.
+
+A transição terminal é idempotente e ocorre depois do processamento da
+pontuação, garantindo que a vitória apresente também os bônus do chefão e da
+fase. A partir dela, `GameSession` não aceita novos disparos nem atualiza o
+gameplay. A interface mostra nome normalizado do jogador, resultado, pontuação e
+cenário. O replay descarta a aplicação atual e constrói uma nova sessão; não
+ressuscita nem reinicializa parcialmente o estado encerrado. Persistência,
+ranking e duração da partida continuam fora deste incremento.

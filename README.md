@@ -4,9 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 14 — pontuação**. Eliminações, ondas concluídas, chefão e
-> conclusão da fase concedem pontos configuráveis. Eventos identificados impedem
-> que a mesma recompensa seja contabilizada duas vezes.
+> Status atual: **Fase 15 — vitória e derrota**. A partida agora possui estados
+> terminais, tela de resultados e replay que reconstrói vida, ondas e pontuação.
 
 ## Equipe
 
@@ -46,7 +45,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 14.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 15.
 
 ## Execução em desenvolvimento
 
@@ -65,7 +64,7 @@ URLs locais:
 Na tela inicial, use **Verificar API** para validar a comunicação entre o cliente
 e o servidor. Para testar o recorte jogável:
 
-1. pressione **Abrir cena 3D**;
+1. informe o nome do jogador e pressione **Iniciar partida**;
 2. confirme a barra horizontal em **100 / 100**, observe no outro HUD qual tipo
    foi sorteado e localize o único monstro de gelo;
 3. pressione **Ativar mira** e mova o mouse para apontar;
@@ -76,9 +75,13 @@ e o servidor. Para testar o recorte jogável:
    Resistente 3 impactos;
 6. complete as quatro ondas e confirme que, após 3 segundos, surge um chefão
    gigante identificado no HUD; ele exige 10 impactos e causa 10 de dano ao
-   tocar o jogador;
+   tocar o jogador. Se o contato não zerar a vida, ele retorna após a espera com
+   resistência completa e sem conceder pontos;
 7. acompanhe no HUD os pontos por eliminação e os bônus de 500 por onda; ao
-   eliminar o chefão, confirme mais 2.000 pontos e 1.000 pela fase concluída.
+   eliminar o chefão, confirme mais 2.000 pontos e 1.000 pela fase concluída;
+8. confirme a tela de vitória com nome, resultado, pontuação e cenário, e use
+   **Jogar novamente** para iniciar uma sessão limpa. Para validar a derrota,
+   permita contatos até a vida chegar a zero.
 
 Os HUDs identificam pontuação, vida, tipo sorteado, resistência atual e tensão
 de 0% a 100%. A carga máxima é atingida em 1,2 segundo; segurar por mais tempo não
@@ -87,7 +90,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 14](docs/phases/phase-14-pontuacao.md).
+[guia da Fase 15](docs/phases/phase-15-vitoria-derrota.md).
 
 ## Build e execução de produção
 
@@ -116,7 +119,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 14](docs/phases/phase-14-pontuacao.md#como-testar-manualmente).
+[guia de teste da Fase 15](docs/phases/phase-15-vitoria-derrota.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -143,12 +146,14 @@ nos diagnósticos públicos.
 
 ## Controles atuais da demonstração
 
-- **Abrir cena 3D**: inicia a cena e o game loop;
+- **Iniciar partida**: registra o nome local e inicia a cena e o game loop;
 - **Ativar mira**: captura o ponteiro após uma ação explícita;
 - **Mover o mouse**: gira a câmera; o jogador não se desloca;
 - **Segurar o botão esquerdo**: acumula tensão por até 1,2 segundo;
 - **Soltar o botão esquerdo**: cria um projétil na direção da mira, com
   velocidade proporcional à tensão;
+- **Jogar novamente**: após vitória ou derrota, descarta a partida encerrada e
+  inicia uma nova sessão;
 - primeiro `Esc`: cancela a carga, libera o ponteiro e mantém a cena;
 - segundo `Esc`, com o ponteiro livre, ou **Voltar ao menu**: encerra o loop,
   libera listeners e recursos e retorna à tela inicial.
@@ -162,10 +167,10 @@ entre frames.
 ## Gameplay planejado
 
 - itens;
-- resultados, persistência MySQL e ranking.
+- persistência MySQL e ranking.
 
-Nenhum desses sistemas adicionais faz parte da Fase 14. A sequência atual calcula
-o resultado numérico, mas ainda não apresenta telas de vitória e derrota.
+Nenhum desses sistemas adicionais faz parte da Fase 15. Nome e resultado existem
+somente na sessão local e ainda não são enviados à API.
 
 ### Realidade virtual
 
@@ -173,7 +178,7 @@ o resultado numérico, mas ainda não apresenta telas de vitória e derrota.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 14.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 15.
 
 ## Modo VR
 
@@ -189,7 +194,7 @@ shoot-n-smash/
 │   └── src/
 │       ├── config/  # valores do renderer, arena e gameplay
 │       ├── core/    # GameApp, GameSession e RenderContext
-│       ├── gameplay/ # estilingue, projéteis, inimigo, colisão e impacto
+│       ├── gameplay/ # partida, ondas, estado, combate e pontuação
 │       ├── input/   # adaptadores desktop de mira e disparo
 │       ├── utils/   # resize e cálculos testáveis
 │       └── world/   # composição visual do cenário de neve
@@ -212,17 +217,17 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - mira e disparo são exclusivos do navegador desktop e requerem Pointer Lock e mouse;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
 - existe somente um inimigo hostil ativo por vez; depois das quatro ondas, a
-  mesma entidade é reutilizada para o chefão;
-- a vida persiste pelos 18 encontros e pelo chefão, mas ainda não existe tela de derrota;
+  mesma entidade é reutilizada em cada tentativa contra o chefão;
 - a pontuação existe apenas na sessão local e ainda não é persistida;
+- o nome do jogador existe apenas no cliente e a duração da partida não é medida;
 - MySQL ainda não possui migration ou tabelas;
 - ranking e WebXR ainda não estão implementados;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 15: criar a lógica e as telas de vitória e derrota. Persistência, ranking e
-WebXR continuam em incrementos posteriores.
+Fase 16: adicionar recuperação de vida e uma munição especial com spawn aleatório
+por onda. Persistência, ranking e WebXR continuam em incrementos posteriores.
 
 Consulte também:
 
@@ -244,3 +249,4 @@ Consulte também:
 - [Guia da Fase 12](docs/phases/phase-12-ondas.md)
 - [Guia da Fase 13](docs/phases/phase-13-chefao.md)
 - [Guia da Fase 14](docs/phases/phase-14-pontuacao.md)
+- [Guia da Fase 15](docs/phases/phase-15-vitoria-derrota.md)

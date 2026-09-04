@@ -487,12 +487,49 @@ O roteiro completo está em [Fase 13 — Chefão de gelo](phases/phase-13-chefao
 
 O roteiro completo está em [Fase 14 — Pontuação](phases/phase-14-pontuacao.md).
 
+## Fase 15
+
+### Cobertura automatizada adicionada
+
+- estados globais imutáveis `PLAYING`, `VICTORY` e `GAME_OVER`;
+- permanência em `PLAYING` para encontros e contatos não terminais;
+- vitória exclusiva após a eliminação do chefão;
+- derrota exclusiva quando a vida chega a zero, com precedência terminal;
+- transição única mesmo diante de sincronizações ou callbacks repetidos;
+- preservação do estado terminal quando um observador falha;
+- contato não letal do chefão retornando a `boss-pending`;
+- novo spawn do chefão com resistência completa e nenhum bônus indevido;
+- pontuação final consolidada antes da publicação da vitória;
+- bloqueio de atualizações, cargas e disparos depois do resultado;
+- normalização, fallback e limite do nome do jogador;
+- descrição acessível de vitória e derrota com pontuação e cenário;
+- replay reconstruindo vida, ondas, placar, controles e estado global;
+- metadados e diagnóstico da API atualizados para a Fase 15.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 15 concluída**, use **Verificar API** e confira `phase: 15`.
+3. Informe um nome, complete as quatro ondas e elimine o chefão.
+4. Confirme a tela Vitória com nome, resultado, pontuação final e cenário Neve.
+5. Pressione **Jogar novamente** e confirme vida 100, placar zero e onda 1.
+6. Em outra partida, permita um contato não letal do chefão e confirme que ele
+   retorna após a espera com 10 de resistência, sem pontos extras.
+7. Repita contatos até zerar a vida e confirme a tela Derrota com o placar
+   preservado.
+8. Confirme que nenhum disparo ou encontro avança sob uma tela final.
+9. Repita três replays e verifique que canvas, listeners e controles não se
+   duplicam.
+10. Confirme o Console sem erros não tratados.
+
+O roteiro completo está em
+[Fase 15 — Vitória e derrota](phases/phase-15-vitoria-derrota.md).
+
 ## Estratégia futura
 
-- testes unitários para estados finais;
 - testes de integração para múltiplos contatos e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
-- E2E convencional para menu, vitória, derrota, ranking e replay;
+- E2E convencional em navegador para menu, partida completa, ranking e replay;
 - mocks WebXR apenas para lógica de entrada;
 - checklist manual obrigatório no Meta Quest 3;
 - profiling e testes de reinício prolongados para detectar vazamentos.

@@ -1,8 +1,8 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "private": true,
-  "description": "Protótipo 3D no navegador com ondas, chefão e pontuação.",
+  "description": "Protótipo 3D no navegador com ondas, chefão e resultados de partida.",
   "type": "module",
   "workspaces": [
     "client",

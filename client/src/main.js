@@ -8,6 +8,10 @@ import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
 import { describePlayerHealth } from './player-hud.js';
 import { PROJECT_INFO } from './project-info.js';
+import {
+  describeMatchResult,
+  normalizePlayerName,
+} from './result-screen.js';
 import { describeScoreState } from './score-hud.js';
 import './styles.css';
 
@@ -17,6 +21,7 @@ const apiStatus = document.querySelector('#api-status');
 const projectVersion = document.querySelector('#project-version');
 const landing = document.querySelector('[data-landing]');
 const startSceneButton = document.querySelector('#start-scene-button');
+const playerNameInput = document.querySelector('#player-name-input');
 const prototypeView = document.querySelector('#prototype-view');
 const sceneContainer = document.querySelector('#scene-container');
 const sceneError = document.querySelector('#scene-error');
@@ -46,6 +51,16 @@ const playerStatus = document.querySelector('#player-status');
 const scoreHud = document.querySelector('#score-hud');
 const scoreValue = document.querySelector('#score-value');
 const scoreStatus = document.querySelector('#score-status');
+const resultScreen = document.querySelector('#result-screen');
+const resultEyebrow = document.querySelector('#result-eyebrow');
+const resultTitle = document.querySelector('#result-title');
+const resultMessage = document.querySelector('#result-message');
+const resultPlayerName = document.querySelector('#result-player-name');
+const resultOutcome = document.querySelector('#result-outcome');
+const resultScore = document.querySelector('#result-score');
+const resultScenario = document.querySelector('#result-scenario');
+const replayButton = document.querySelector('#replay-button');
+const resultMenuButton = document.querySelector('#result-menu-button');
 
 let gameApp = null;
 let lookController = null;
@@ -53,6 +68,7 @@ let fireController = null;
 let gameSession = null;
 let pointerLocked = false;
 let announcedChargeStage = -1;
+let currentPlayerName = normalizePlayerName('');
 
 for (const member of PROJECT_INFO.team) {
   const item = document.createElement('li');
@@ -140,6 +156,84 @@ function resetScoreHud() {
   updateScoreState({ score: 0, eventCount: 0, lastEvent: null });
 }
 
+function closeResultScreen() {
+  if (!resultScreen.open && !resultScreen.hasAttribute('open')) {
+    return false;
+  }
+
+  if (typeof resultScreen.close === 'function' && resultScreen.open) {
+    resultScreen.close();
+  } else {
+    resultScreen.removeAttribute('open');
+  }
+
+  return true;
+}
+
+function resetResultScreen() {
+  closeResultScreen();
+  resultScreen.dataset.result = 'victory';
+  resultEyebrow.textContent = 'Partida encerrada';
+  resultTitle.textContent = 'Resultado';
+  resultMessage.textContent = '';
+  resultPlayerName.textContent = currentPlayerName;
+  resultOutcome.textContent = '';
+  resultScore.textContent = '0';
+  resultScenario.textContent = PROJECT_INFO.scenario;
+}
+
+function showResultScreen(state) {
+  const result = describeMatchResult({
+    gameState: state,
+    playerName: currentPlayerName,
+    scenario: PROJECT_INFO.scenario,
+    score: gameSession.scoreState.score,
+  });
+
+  resultScreen.dataset.result = result.kind;
+  resultEyebrow.textContent = result.eyebrow;
+  resultTitle.textContent = result.title;
+  resultMessage.textContent = result.message;
+  resultPlayerName.textContent = result.playerName;
+  resultOutcome.textContent = result.resultText;
+  resultScore.textContent = result.scoreText;
+  resultScenario.textContent = result.scenario;
+
+  if (!resultScreen.open && !resultScreen.hasAttribute('open')) {
+    if (typeof resultScreen.showModal === 'function') {
+      resultScreen.showModal();
+    } else {
+      resultScreen.setAttribute('open', '');
+    }
+  }
+
+  replayButton.focus({ preventScroll: true });
+}
+
+function handleGameStateChange(state) {
+  prototypeView.dataset.gameState = state.status;
+
+  if (!state.terminal) {
+    return false;
+  }
+
+  try {
+    gameApp?.stop();
+  } catch (error) {
+    console.error('Falha ao pausar a partida encerrada.', error);
+  }
+
+  resetSlingshotHud('idle');
+  setShotStatus(
+    state.result === 'victory' ? 'ready' : 'idle',
+    state.result === 'victory'
+      ? 'Partida concluída com vitória.'
+      : 'Partida encerrada: a vida chegou a zero.',
+  );
+  showResultScreen(state);
+  return true;
+}
+
 function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   const waveState = gameSession?.waveState;
 
@@ -166,6 +260,7 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
   if (outcome === 'player-contact' && waveState) {
     const { health, maxHealth } = gameSession.playerState;
     const { damage, label } = gameSession.enemyState.type;
+    const bossReturning = gameSession.enemyState.type.id === 'boss';
     const enemyName =
       gameSession.enemyState.type.id === 'boss'
         ? 'chefão de gelo'
@@ -174,7 +269,9 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
       waveState.status === 'complete'
         ? 'Confronto final encerrado.'
         : waveState.status === 'boss-pending'
-          ? 'O chefão de gelo surge em instantes.'
+          ? bossReturning
+            ? 'O chefão recuou e retornará com resistência total.'
+            : 'O chefão de gelo surge em instantes.'
         : waveState.status === 'between-waves'
           ? `Onda ${waveState.wave} de ${waveState.totalWaves} em instantes.`
           : `Inimigo ${waveState.enemy} de ${waveState.enemiesInWave} em instantes.`;
@@ -193,7 +290,10 @@ function updateWaveState(state) {
   prototypeView.dataset.waveState = state.status;
 
   if (state.status === 'boss-pending') {
-    waveProgress.textContent = 'Chefão final · Preparando confronto';
+    waveProgress.textContent =
+      gameSession.enemyState.type.id === 'boss'
+        ? 'Chefão final · Preparando retorno'
+        : 'Chefão final · Preparando confronto';
     showEncounterOutcome();
     return;
   }
@@ -357,7 +457,12 @@ function updateLookState({ locked, supported }) {
     }
   }
 
-  if (!locked && supported && !prototypeView.hidden) {
+  if (
+    !locked &&
+    supported &&
+    !prototypeView.hidden &&
+    !gameSession?.isTerminal
+  ) {
     pointerLockButton.focus({ preventScroll: true });
   }
 }
@@ -385,10 +490,14 @@ function enterPrototype() {
   let renderContext = null;
 
   startSceneButton.disabled = true;
+  currentPlayerName = normalizePlayerName(playerNameInput.value);
+  playerNameInput.value = currentPlayerName;
   landing.hidden = true;
   prototypeView.hidden = false;
+  prototypeView.dataset.gameState = 'PLAYING';
   sceneError.hidden = true;
   document.body.classList.add('scene-active');
+  resetResultScreen();
   resetEnemyHud();
   resetPlayerHud();
   resetScoreHud();
@@ -409,6 +518,7 @@ function enterPrototype() {
       onEnemyHit: handleEnemyHit,
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,
+      onGameStateChange: handleGameStateChange,
       onWaveChange: updateWaveState,
       onPlayerHealthChange: updatePlayerState,
       onScoreChange: updateScoreState,
@@ -418,6 +528,7 @@ function enterPrototype() {
     updateWaveState(gameSession.waveState);
     updatePlayerState(gameSession.playerState);
     updateScoreState(gameSession.scoreState);
+    handleGameStateChange(gameSession.gameState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
       onChargeStart: () => gameSession.beginCharge(),
@@ -458,13 +569,15 @@ function enterPrototype() {
   }
 }
 
-function exitPrototype() {
+function exitPrototype({ focusMenu = true } = {}) {
+  closeResultScreen();
   gameApp?.dispose();
   gameApp = null;
   fireController = null;
   gameSession = null;
   lookController = null;
   pointerLocked = false;
+  prototypeView.dataset.gameState = 'PLAYING';
   resetSlingshotHud('idle');
   resetEnemyHud();
   resetPlayerHud();
@@ -474,14 +587,23 @@ function exitPrototype() {
   prototypeView.hidden = true;
   landing.hidden = false;
   document.body.classList.remove('scene-active');
-  startSceneButton.focus({ preventScroll: true });
+
+  if (focusMenu) {
+    startSceneButton.focus({ preventScroll: true });
+  }
+}
+
+function replayPrototype() {
+  exitPrototype({ focusMenu: false });
+  enterPrototype();
 }
 
 function handleSceneKeyboard(event) {
   if (
     event.key === 'Escape' &&
     !event.repeat &&
-    !prototypeView.hidden
+    !prototypeView.hidden &&
+    !resultScreen.open
   ) {
     if (pointerLocked || lookController?.isLocked) {
       if (!lookController?.unlock()) {
@@ -499,7 +621,7 @@ function handleSceneKeyboard(event) {
 }
 
 function requestPointerLock() {
-  if (!lookController) {
+  if (!lookController || gameSession?.isTerminal) {
     return;
   }
 
@@ -513,9 +635,17 @@ function requestPointerLock() {
   }
 }
 
+function handleResultCancel(event) {
+  event.preventDefault();
+  exitPrototype();
+}
+
 startSceneButton.addEventListener('click', enterPrototype);
 exitSceneButton.addEventListener('click', exitPrototype);
 pointerLockButton.addEventListener('click', requestPointerLock);
+replayButton.addEventListener('click', replayPrototype);
+resultMenuButton.addEventListener('click', exitPrototype);
+resultScreen.addEventListener('cancel', handleResultCancel);
 document.addEventListener('keydown', handleSceneKeyboard);
 
 apiButton.addEventListener('click', async () => {
@@ -550,6 +680,9 @@ if (import.meta.hot) {
     startSceneButton.removeEventListener('click', enterPrototype);
     exitSceneButton.removeEventListener('click', exitPrototype);
     pointerLockButton.removeEventListener('click', requestPointerLock);
+    replayButton.removeEventListener('click', replayPrototype);
+    resultMenuButton.removeEventListener('click', exitPrototype);
+    resultScreen.removeEventListener('cancel', handleResultCancel);
     document.removeEventListener('keydown', handleSceneKeyboard);
   });
 }

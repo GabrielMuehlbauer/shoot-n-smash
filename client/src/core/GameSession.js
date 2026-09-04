@@ -4,6 +4,7 @@ import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { intersectMovingSpheres } from '../gameplay/CollisionSystem.js';
 import { EnemySystem } from '../gameplay/EnemySystem.js';
 import { validateEnemyTypes } from '../gameplay/EnemyTypes.js';
+import { GameStateManager } from '../gameplay/GameStateManager.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
 import { PlayerHealthSystem } from '../gameplay/PlayerHealthSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
@@ -38,6 +39,7 @@ export class GameSession {
     onEnemyHit = () => {},
     onEnemyPlayerContact = () => {},
     onEnemyResistanceChange = () => {},
+    onGameStateChange = () => {},
     onWaveChange = () => {},
     onPlayerHealthChange = () => {},
     onScoreChange = () => {},
@@ -47,6 +49,7 @@ export class GameSession {
     enemyRandom = Math.random,
     enemyTypeRandom = Math.random,
     enemySystem = null,
+    gameStateManager = null,
     impactFeedbackSystem = null,
     playerHealthSystem = null,
     projectileSystem = null,
@@ -58,6 +61,7 @@ export class GameSession {
       ['onEnemyHit', onEnemyHit],
       ['onEnemyPlayerContact', onEnemyPlayerContact],
       ['onEnemyEliminate', onEnemyEliminate],
+      ['onGameStateChange', onGameStateChange],
       ['onWaveChange', onWaveChange],
       ['onPlayerHealthChange', onPlayerHealthChange],
       ['onScoreChange', onScoreChange],
@@ -74,6 +78,7 @@ export class GameSession {
     const ownsProjectileSystem = !projectileSystem;
     const ownsSlingshotSystem = !slingshotSystem;
     const ownsEnemySystem = !enemySystem;
+    const ownsGameStateManager = !gameStateManager;
     const ownsImpactFeedbackSystem = !impactFeedbackSystem;
     const ownsPlayerHealthSystem = !playerHealthSystem;
     const ownsScoreManager = !scoreManager;
@@ -124,6 +129,11 @@ export class GameSession {
           config: config.score,
           onScoreChange,
         });
+      this.gameStateManager =
+        gameStateManager ??
+        new GameStateManager({
+          onStateChange: onGameStateChange,
+        });
       this.enemySystem =
         enemySystem ??
         new EnemySystem({
@@ -144,6 +154,14 @@ export class GameSession {
           config: config.impactFeedback,
         });
     } catch (error) {
+      if (ownsGameStateManager) {
+        try {
+          this.gameStateManager?.dispose?.();
+        } catch {
+          // Preserva o erro original de construção.
+        }
+      }
+
       if (ownsImpactFeedbackSystem) {
         try {
           this.impactFeedbackSystem?.dispose?.();
@@ -230,13 +248,31 @@ export class GameSession {
     return this.scoreManager.state;
   }
 
+  get gameState() {
+    return this.gameStateManager.state;
+  }
+
+  get isTerminal() {
+    return this.gameStateManager.isTerminal;
+  }
+
   beginCharge() {
     this.assertNotDisposed();
+
+    if (this.isTerminal) {
+      return false;
+    }
+
     return this.slingshotSystem.beginCharge();
   }
 
   releaseShot() {
     this.assertNotDisposed();
+
+    if (this.isTerminal) {
+      return false;
+    }
+
     return this.slingshotSystem.releaseShot();
   }
 
@@ -264,7 +300,7 @@ export class GameSession {
   }
 
   update(deltaSeconds) {
-    if (this.disposed) {
+    if (this.disposed || this.isTerminal) {
       return false;
     }
 
@@ -304,6 +340,12 @@ export class GameSession {
           waveUpdate.spawnKind,
         );
         this.publishWaveChange();
+
+        try {
+          this.syncGameState();
+        } catch (error) {
+          this.queueObserverError(error);
+        }
       }
 
       this.enemySystem.update(waveUpdate.enemyDelta);
@@ -335,7 +377,16 @@ export class GameSession {
     return true;
   }
 
-  finishCurrentEncounter() {
+  finishCurrentEncounter({ outcome = 'eliminated' } = {}) {
+    if (
+      this.currentEncounter.kind === 'boss' &&
+      outcome === 'player-contact'
+    ) {
+      return this.playerState.health > 0
+        ? this.waveManager.retryBoss()
+        : false;
+    }
+
     return this.waveManager.completeEnemy();
   }
 
@@ -360,7 +411,7 @@ export class GameSession {
 
   handleEnemyEliminate(enemyState) {
     const encounterState = this.currentEncounter;
-    this.finishCurrentEncounter();
+    this.finishCurrentEncounter({ outcome: enemyState.outcome });
     let observerError = null;
 
     try {
@@ -376,6 +427,12 @@ export class GameSession {
     }
 
     this.publishWaveChange();
+
+    try {
+      this.syncGameState();
+    } catch (error) {
+      observerError ??= error;
+    }
 
     if (observerError) {
       throw observerError;
@@ -498,7 +555,7 @@ export class GameSession {
       observerError = error;
     }
 
-    this.finishCurrentEncounter();
+    this.finishCurrentEncounter({ outcome: enemyState.outcome });
 
     try {
       this.recordScoreForOutcome(enemyState, encounterState);
@@ -513,6 +570,12 @@ export class GameSession {
     }
 
     this.publishWaveChange();
+
+    try {
+      this.syncGameState();
+    } catch (error) {
+      observerError ??= error;
+    }
 
     if (observerError) {
       throw observerError;
@@ -570,6 +633,14 @@ export class GameSession {
     }
   }
 
+  syncGameState() {
+    return this.gameStateManager.sync({
+      enemyState: this.enemyState,
+      playerState: this.playerState,
+      waveState: this.waveState,
+    });
+  }
+
   queueObserverError(error) {
     this.pendingObserverError ??=
       error ?? new Error('Um observador da partida falhou.');
@@ -614,6 +685,12 @@ export class GameSession {
 
     try {
       this.scoreManager.dispose();
+    } catch (error) {
+      disposalError ??= error;
+    }
+
+    try {
+      this.gameStateManager.dispose();
     } catch (error) {
       disposalError ??= error;
     }

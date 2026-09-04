@@ -125,7 +125,7 @@ test('inicia o chefao apos a quarta onda e exige exatamente dez acertos', () => 
   session.dispose();
 });
 
-test('contato do chefao causa dez de dano uma unica vez', () => {
+test('contato do chefao causa dez de dano e reagenda o confronto', () => {
   const session = new GameSession({
     camera: createCamera(),
     scene: new Scene(),
@@ -141,8 +141,15 @@ test('contato do chefao causa dez de dano uma unica vez', () => {
 
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.playerState.health, 90);
-  assert.equal(session.waveState.status, 'complete');
-  session.update(10);
+  assert.equal(session.waveState.status, 'boss-pending');
+  session.update(0.19);
+  assert.equal(session.playerState.health, 90);
+  assert.equal(session.enemySystem.parent, null);
+  session.update(0.02);
+  assert.equal(session.waveState.status, 'boss');
+  assert.equal(session.enemyState.type.id, 'boss');
+  assert.equal(session.enemyState.outcome, null);
+  assert.equal(session.enemyState.resistance, 10);
   assert.equal(session.playerState.health, 90);
   session.dispose();
 });
@@ -171,4 +178,3 @@ test('rejeita configuracoes invalidas do chefao antes de criar recursos', () => 
     assert.equal(scene.children.length, 0);
   }
 });
-

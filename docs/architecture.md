@@ -15,17 +15,15 @@ XRInput (futuro) ─────────────────────
                                         ├─> EnemySystem ──> EnemyTypes            │
                                         ├─> PlayerHealthSystem                    │
                                         ├─> ScoreManager                           │
+                                        ├─> GameStateManager ──> DomResults        │
                                         ├─> CollisionSystem <─────────────────────┤
                                         ├─> ImpactFeedbackSystem <────────────────┤
                                         └─> DomHUD <───────────────────────────────┘
 
-WaveManager -> ScoreManager / StateMachine / Item Systems (parcial/futuros)
+WaveManager ──> GameStateManager / ScoreManager / Item Systems (parcial/futuros)
                                          │
                                          v
-                                StateMachine e XRHud
-                                         │
-                                         v
-                                RankingClient -> Express -> MySQL
+                                XRHud e RankingClient -> Express -> MySQL
 ```
 
 ## Cliente
@@ -46,12 +44,13 @@ WaveManager -> ScoreManager / StateMachine / Item Systems (parcial/futuros)
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 14, seu `update(deltaSeconds)` preserva a ordem
+  fachada da partida. Na Fase 15, seu `update(deltaSeconds)` preserva a ordem
   estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
   quando o contato vence, aplica o dano pelo `PlayerHealthSystem` antes de
   notificar a interface. Também coordena o `WaveManager` e aplica seus pedidos de
-  spawn à entidade reutilizada. `dispose()` encerra todos os sistemas de forma
-  idempotente.
+  spawn à entidade reutilizada. Depois de um desfecho, sincroniza o
+  `GameStateManager`; estados terminais tornam atualização e disparo inertes.
+  `dispose()` encerra todos os sistemas de forma idempotente.
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
   não conhece mouse, Pointer Lock nem elementos do DOM.
@@ -72,7 +71,13 @@ WaveManager -> ScoreManager / StateMachine / Item Systems (parcial/futuros)
   chefão solicita descritor, velocidade, escala, altura e collider próprios.
 - `WaveManager` mantém a progressão pura das quatro ondas, inimigo atual,
   intervalos entre spawns, pausas entre ondas e a transição para o chefão. Ele
-  publica snapshots imutáveis e não conhece Three.js, vida, colisões ou DOM.
+  publica snapshots imutáveis e não conhece Three.js, vida, colisões ou DOM. Um
+  contato não letal com o chefão retorna ao subestado `boss-pending`, permitindo
+  reagendar o mesmo perfil com resistência restaurada.
+- `GameStateManager` mantém o estado global `PLAYING`, `VICTORY` ou `GAME_OVER`
+  sem conhecer Three.js ou DOM. Ele interpreta snapshots do inimigo, da vida e
+  das ondas, publica uma única transição terminal e impede que observadores
+  externos dupliquem o encerramento.
 - `CollisionSystem` contém matemática pura para segmento–esfera estática e para
   duas esferas móveis. O segundo teste subtrai o movimento de um volume do outro,
   soma os raios e encontra o primeiro contato em `[0, 1]`, evitando tunneling sem
@@ -90,7 +95,8 @@ WaveManager -> ScoreManager / StateMachine / Item Systems (parcial/futuros)
   resistência, vida, impactos, eliminação e contato por callbacks. O núcleo de
   gameplay não consulta nem altera elementos do DOM. Cancelamentos e desfechos
   informam motivos semânticos, sem transformar mensagens de interface em regra
-  de jogo.
+  de jogo. A tela de resultados observa o estado global e recebe nome, resultado,
+  pontuação e cenário já consolidados.
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
   gravidade, dimensões, vida máxima e dano de cada tipo para evitar números
   mágicos.
@@ -397,6 +403,42 @@ conclui sua onda e concede o respectivo bônus; já o contato do chefão não co
 os bônus de chefão ou de fase. Vitória e derrota continuam sem estado e tela
 próprios até a Fase 15.
 
+## Recorte executável da Fase 15
+
+```text
+                           GameStateManager
+                                 │
+                   ┌─────────────┴─────────────┐
+                   │                           │
+vida chega a 0 ──> GAME_OVER       VICTORY <── chefão eliminado
+                   │                           │
+                   └──────────> resultados <──┘
+                                  │
+                                  └── jogar novamente ──> nova sessão
+
+chefão + contato + vida > 0 ──> boss-pending ──> boss com resistência cheia
+```
+
+O `GameStateManager` separa o estado global da partida dos subestados de
+progressão do `WaveManager`. Enquanto o estado global é `PLAYING`, as ondas podem
+estar em `active`, `between-enemies`, `between-waves`, `boss-pending` ou `boss`.
+Somente a eliminação do chefão, depois das quatro ondas, produz `VICTORY`; vida
+igual a zero produz `GAME_OVER` em qualquer encontro.
+
+Um contato não letal com o chefão aplica 10 de dano, não concede pontos e usa
+`WaveManager.retryBoss()` para voltar a `boss-pending`. Depois da espera
+configurada, `GameSession` restaura o perfil completo do chefão e o confronto
+continua. Isso mantém a condição de derrota ligada exclusivamente à vida, sem
+confundir um contato com vitória ou fim inconclusivo.
+
+A pontuação do desfecho é registrada antes da transição global. Assim, a tela de
+vitória já recebe os 2.000 pontos do chefão e os 1.000 da fase. Depois de qualquer
+estado terminal, a sessão recusa novas cargas e disparos e deixa de atualizar os
+sistemas de gameplay. A interface libera a mira e apresenta nome normalizado do
+jogador, resultado, pontuação e cenário. **Jogar novamente** descarta os recursos
+atuais e constrói uma nova sessão, restaurando vida, ondas e placar sem reutilizar
+estado terminal.
+
 ## Servidor
 
 O servidor é um monólito modular Express:
@@ -418,20 +460,23 @@ MySQL foi escolhido pela equipe. O acesso será feito com `mysql2`, queries
 parametrizadas e migrations SQL. O MVP terá somente as entidades `players` e
 `matches`; o ranking será derivado das partidas e não terá tabela própria.
 
-## Estados previstos
+## Estados da partida
 
 ```text
-BOOT -> LOADING -> MENU -> PLAYING
-                         <-> BETWEEN_WAVES
-                         -> BOSS
-PLAYING | BOSS -> GAME_OVER
-BOSS -> VICTORY
-GAME_OVER | VICTORY -> RESULTS
-RESULTS -> MENU | REPLAY
+estado global
+PLAYING ──> VICTORY
+    │
+    └────> GAME_OVER
+
+subestado do WaveManager enquanto PLAYING
+active <──> between-enemies
+   │
+   └─────> between-waves ──> boss-pending <──> boss ──> complete
 ```
 
-`PAUSED` será um estado adicional. O ciclo da sessão XR permanecerá separado do
-estado do jogo.
+Menu, tela final e replay pertencem ao fluxo da interface, não são confundidos
+com o estado causal do gameplay. `PAUSED` poderá ser adicionado depois. O ciclo
+da sessão XR permanecerá separado do estado do jogo.
 
 ## Implantação
 
