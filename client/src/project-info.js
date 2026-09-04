@@ -1,7 +1,7 @@
 export const PROJECT_INFO = Object.freeze({
   name: "Shoot 'n' Smash",
-  version: '0.18.0',
-  phase: 18,
+  version: '0.19.0',
+  phase: 19,
   scenario: 'Neve',
   team: Object.freeze([
     'DIANGELO BETT VIEIRA',

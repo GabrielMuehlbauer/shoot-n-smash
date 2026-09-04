@@ -1,8 +1,8 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
-  "description": "Protótipo 3D no navegador com ondas, itens coletáveis, chefão e resultados.",
+  "description": "Jogo 3D no navegador com ondas, itens, API e persistência MySQL.",
   "type": "module",
   "workspaces": [
     "client",
@@ -12,6 +12,7 @@
     "dev": "node scripts/dev.js",
     "dev:client": "npm run dev --workspace client",
     "dev:server": "npm run dev --workspace server",
+    "db:migrate": "npm run db:migrate --workspace server",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
     "test": "npm run test --workspaces --if-present",

@@ -4,8 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 18 — API**. Partidas concluídas podem ser validadas,
-> registradas de forma idempotente e consultadas em um ranking temporário.
+> Status atual: **Fase 19 — banco de dados**. A API persiste jogadores e partidas
+> no MySQL quando configurado e mantém um fallback em memória para desenvolvimento.
 
 ## Equipe
 
@@ -27,8 +27,7 @@ para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
 - Node.js 22.12 ou superior;
 - npm 10 ou superior;
-- MySQL será necessário a partir da fase de persistência. Na fase atual ele é
-  opcional.
+- MySQL 8 ou superior para persistência; sem ele, a API usa memória temporária.
 
 ## Instalação
 
@@ -45,7 +44,9 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 18.
+Sem `DATABASE_URL`, o jogo e a API continuam executando com armazenamento
+temporário. Para validar a persistência da Fase 19, configure o MySQL e aplique
+as migrations conforme a seção abaixo.
 
 ## Execução em desenvolvimento
 
@@ -96,7 +97,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 18](docs/phases/phase-18-api.md).
+[guia da Fase 19](docs/phases/phase-19-banco-dados.md).
 
 ## Build e execução de produção
 
@@ -125,7 +126,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 18](docs/phases/phase-18-api.md#como-testar-manualmente).
+[guia de teste da Fase 19](docs/phases/phase-19-banco-dados.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -134,6 +135,7 @@ O procedimento visual completo está no
 | `npm run dev` | Inicia cliente Vite e API Express |
 | `npm run dev:client` | Inicia somente o cliente |
 | `npm run dev:server` | Inicia somente a API com reload |
+| `npm run db:migrate` | Aplica migrations pendentes no MySQL configurado |
 | `npm run build` | Gera o build do cliente |
 | `npm start` | Inicia o servidor de produção |
 | `npm test` | Executa testes do cliente e servidor |
@@ -141,11 +143,28 @@ O procedimento visual completo está no
 
 ## Configuração do MySQL
 
-Quando a persistência for implementada, configure a URL no `.env`:
+Crie o banco vazio no MySQL:
+
+```sql
+CREATE DATABASE IF NOT EXISTS shoot_n_smash
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
+
+Configure a URL no `.env`:
 
 ```dotenv
 DATABASE_URL=mysql://usuario:senha@localhost:3306/shoot_n_smash
 ```
+
+Depois aplique o schema versionado:
+
+```bash
+npm run db:migrate
+```
+
+O comando pode ser repetido com segurança. Ele aplica somente arquivos novos e
+interrompe se detectar que uma migration já aplicada foi modificada.
 
 O `.env` não deve ser versionado. A aplicação não imprime senha ou URL do banco
 nos diagnósticos públicos.
@@ -175,11 +194,10 @@ entre frames.
 ## Gameplay planejado
 
 - poderes temporários adicionais;
-- persistência MySQL e integração do ranking na interface.
+- integração do resultado e do ranking na interface.
 
-Nenhum desses sistemas adicionais faz parte da Fase 18. A API já aceita partidas,
-mas o jogo ainda não envia automaticamente o resultado antes da integração da
-fase 20.
+Essa integração não faz parte da Fase 19. A API e o banco já aceitam partidas,
+mas o jogo ainda não envia automaticamente o resultado antes da fase 20.
 
 ### Realidade virtual
 
@@ -187,7 +205,7 @@ fase 20.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 18.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 19.
 
 ## Modo VR
 
@@ -207,7 +225,7 @@ shoot-n-smash/
 │       ├── input/   # adaptadores desktop de mira e disparo
 │       ├── utils/   # resize e cálculos testáveis
 │       └── world/   # composição visual do cenário de neve
-├── server/       # API Express, partidas e futura integração MySQL
+├── server/       # API Express, migrations e repositórios de partidas
 ├── docs/         # arquitetura, fases e instruções técnicas
 ├── .env.example
 └── package.json  # scripts e workspaces
@@ -230,18 +248,16 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - existe no máximo um item ativo; ele expira após 12 segundos e novos itens não
   são sorteados durante o chefão;
 - o jogo ainda não envia automaticamente nome, resultado ou pontuação à API;
-- partidas enviadas diretamente à API ficam somente em memória e somem ao reiniciar;
+- sem `DATABASE_URL`, partidas ficam em memória e somem ao reiniciar;
 - a duração da partida ainda não é medida pelo cliente;
-- MySQL ainda não possui migration ou tabelas;
-- o endpoint de ranking existe, mas sua tela e a persistência ainda não;
+- o endpoint de ranking existe e persiste no MySQL, mas sua tela ainda não;
 - WebXR ainda não está implementado;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 19: criar as tabelas MySQL e substituir o repositório temporário por
-persistência. Integração visual do ranking e WebXR continuam em incrementos
-posteriores.
+Fase 20: enviar partidas concluídas pelo cliente e apresentar o ranking global.
+WebXR continua em incremento posterior.
 
 Consulte também:
 
@@ -267,3 +283,4 @@ Consulte também:
 - [Guia da Fase 16](docs/phases/phase-16-itens.md)
 - [Guia da Fase 17](docs/phases/phase-17-interface.md)
 - [Guia da Fase 18](docs/phases/phase-18-api.md)
+- [Guia da Fase 19](docs/phases/phase-19-banco-dados.md)

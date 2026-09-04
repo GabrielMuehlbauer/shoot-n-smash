@@ -515,6 +515,35 @@ ranking ficam fora de `app.js`. O aplicativo apenas compõe dependências, regis
 rotas e transforma `ApiError` em respostas JSON controladas. A data de conclusão
 é criada pelo servidor, nunca aceita do navegador.
 
+## Recorte executável da Fase 19
+
+```text
+                         DATABASE_URL existe?
+                          /              \
+                        não              sim
+                        /                  \
+        InMemoryMatchRepository     MysqlMatchRepository
+                                           │
+                         players <── transação ──> matches
+
+arquivos .sql ──> checksum + trava ──> schema_migrations
+```
+
+`createMatchRepository` é o único ponto que escolhe o adaptador. Rotas e
+`MatchService` continuam usando o contrato da Fase 18. No adaptador MySQL, a
+criação do jogador usa `ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)` para
+reutilizar a identidade normalizada; a partida é inserida na mesma transação.
+
+Todas as entradas são parâmetros separados do SQL. `submission_id` é único,
+`player_id` possui chave estrangeira e índices cobrem a busca do ranking. Datas
+são gravadas por `UTC_TIMESTAMP(3)`. A configuração do pool limita conexões,
+espera por disponibilidade e converte datas no fuso UTC.
+
+As migrations são uma operação explícita de implantação. O executor cria sua
+tabela de controle, usa `GET_LOCK` contra execuções concorrentes e compara
+checksums antes de aplicar arquivos pendentes. A API não altera schema durante o
+boot.
+
 ## Servidor
 
 O servidor é um monólito modular Express:

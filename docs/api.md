@@ -16,9 +16,12 @@ Resposta sem banco configurado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 18,
+  "phase": 19,
   "database": {
     "status": "not-configured"
+  },
+  "storage": {
+    "matches": "memory"
   }
 }
 ```
@@ -29,9 +32,12 @@ Resposta com banco conectado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 18,
+  "phase": 19,
   "database": {
     "status": "connected"
+  },
+  "storage": {
+    "matches": "mysql"
   }
 }
 ```
@@ -43,9 +49,12 @@ Resposta quando existe configuração, mas o banco está indisponível —
 {
   "status": "degraded",
   "service": "shoot-n-smash-api",
-  "phase": 18,
+  "phase": 19,
   "database": {
     "status": "unavailable"
+  },
+  "storage": {
+    "matches": "mysql"
   }
 }
 ```
@@ -54,8 +63,8 @@ O endpoint nunca retorna a URL, usuário ou senha do MySQL.
 
 ### POST `/api/partidas`
 
-Registra uma partida concluída. Nesta fase o armazenamento é temporário em
-memória e será substituído pelo MySQL na fase 19.
+Registra uma partida concluída. Com `DATABASE_URL`, jogadores e partidas são
+persistidos no MySQL; sem configuração, a API usa memória temporária.
 
 Parâmetros de URL: nenhum.
 
@@ -160,8 +169,8 @@ Possíveis erros: `400` e `500`.
 Erros de validação incluem `code` e uma lista `details` com campo e mensagem. O
 servidor nunca inclui stack trace, segredo ou entrada bruta na resposta.
 
-## Limitação da fase 18
+## Estado da fase 19
 
-Os contratos HTTP estão prontos, mas os registros ainda não sobrevivem ao
-reinício do servidor e o jogo não os envia automaticamente. Persistência entra
-na fase 19; integração do resultado e tela de ranking entram na fase 20.
+Os contratos HTTP e a persistência estão prontos. Sem `DATABASE_URL`, os dados
+ainda desaparecem ao reiniciar. O jogo não envia resultados automaticamente e
+não exibe o ranking; essas integrações entram na fase 20.

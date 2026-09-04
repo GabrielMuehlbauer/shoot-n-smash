@@ -622,6 +622,39 @@ O roteiro completo está em [Fase 17 — Interface](phases/phase-17-interface.md
 
 O roteiro completo está em [Fase 18 — API](phases/phase-18-api.md).
 
+## Fase 19
+
+### Cobertura automatizada adicionada
+
+- schema mínimo de jogadores e partidas;
+- chaves única e estrangeira e índices de ranking;
+- limites também protegidos por constraints no banco;
+- descoberta e ordenação de arquivos de migration;
+- checksum SHA-256 e rejeição de migration modificada;
+- trava MySQL e liberação da conexão em sucesso ou falha;
+- aplicação somente de migrations pendentes;
+- leitura de partidas e conversão de datas;
+- parâmetros separados do SQL em buscas, inserts e filtros;
+- transação com commit no sucesso e rollback na falha;
+- recuperação idempotente após corrida de `submission_id`;
+- seleção entre MySQL e memória;
+- diagnóstico expondo o armazenamento ativo;
+- regressão completa da API e do gameplay.
+
+### Verificação manual resumida
+
+1. Crie o banco e configure `DATABASE_URL`.
+2. Execute `npm run db:migrate` duas vezes; a segunda não deve reaplicar nada.
+3. Inicie a API e confirme `phase: 19`, banco conectado e storage MySQL.
+4. Registre uma partida e consulte o ranking.
+5. Reinicie a API e confirme que o resultado continua disponível.
+6. Confirme no banco a relação entre `players.id` e `matches.player_id`.
+7. Envie o mesmo UUID duas vezes e confirme somente uma linha em `matches`.
+8. Remova a configuração e confirme o fallback em memória.
+
+O roteiro completo está em
+[Fase 19 — Banco de dados](phases/phase-19-banco-dados.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;

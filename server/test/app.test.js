@@ -46,8 +46,9 @@ test('GET /api/health funciona sem MySQL configurado', async (testContext) => {
 
   assert.equal(response.status, 200);
   assert.equal(body.status, 'ok');
-  assert.equal(body.phase, 18);
+  assert.equal(body.phase, 19);
   assert.equal(body.database.status, 'not-configured');
+  assert.equal(body.storage.matches, 'memory');
 });
 
 test('rotas desconhecidas da API retornam JSON e status 404', async (testContext) => {
@@ -71,8 +72,9 @@ test('health informa indisponibilidade quando o MySQL configurado falha', async 
 
   assert.equal(response.status, 503);
   assert.equal(body.status, 'degraded');
-  assert.equal(body.phase, 18);
+  assert.equal(body.phase, 19);
   assert.equal(body.database.status, 'unavailable');
+  assert.equal(body.storage.matches, 'mysql');
 });
 
 test('POST /api/partidas registra e repete a mesma submissão sem duplicar', async (testContext) => {

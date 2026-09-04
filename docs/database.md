@@ -2,14 +2,10 @@
 
 ## Estado atual
 
-MySQL foi aprovado como banco do projeto. A conexão opcional e o diagnóstico
-foram preparados na Fase 1; até a Fase 18 ainda não existe schema nem migration.
-Isso evita antecipar tabelas antes do contrato definitivo da pontuação e das
-ondas.
-
-A Fase 18 usa um `InMemoryMatchRepository` temporário para validar os contratos
-da API. Seus dados são apagados ao reiniciar e não representam persistência. A
-fase 19 substituirá essa implementação por um repositório MySQL.
+MySQL 8 foi adotado para a persistência do MVP. A Fase 19 cria schema versionado,
+executor de migrations e `MysqlMatchRepository`. Quando `DATABASE_URL` não está
+configurada, o servidor preserva o `InMemoryMatchRepository` para permitir o
+desenvolvimento do jogo sem bloquear pela ausência do banco.
 
 ## Configuração local
 
@@ -20,9 +16,28 @@ DATABASE_URL=mysql://usuario:senha@localhost:3306/shoot_n_smash
 ```
 
 Quando a variável está vazia, a API continua executando e informa
-`not-configured` no diagnóstico.
+`not-configured` e `storage.matches: memory` no diagnóstico.
 
-## Modelo planejado
+Crie o banco antes de usar a URL:
+
+```sql
+CREATE DATABASE IF NOT EXISTS shoot_n_smash
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
+
+Depois execute:
+
+```bash
+npm run db:migrate
+```
+
+O executor cria `schema_migrations`, adquire uma trava nomeada no MySQL, aplica
+arquivos pendentes na ordem e registra um checksum SHA-256. Alterar uma migration
+já aplicada interrompe a execução. Criar uma nova mudança exige um novo arquivo
+numerado; arquivos aplicados nunca devem ser editados.
+
+## Modelo implementado
 
 ```text
 players
@@ -35,28 +50,40 @@ matches
 - id
 - submission_id
 - player_id -> players.id
+- score
 - scenario
 - result
-- score
-- resumo de eliminações e ondas
 - duration_ms
-- input_mode
 - config_version
 - completed_at
 ```
 
-Regras planejadas:
+Regras implementadas:
 
 - chave estrangeira de `matches.player_id` para `players.id`;
 - `submission_id` único para impedir duplicações de rede;
-- valores não negativos e enums controlados por constraints;
+- score entre 0 e 14.000 e valores controlados por `CHECK`;
 - data da partida gerada no servidor em UTC;
 - índices para cenário, pontuação, data e melhor resultado por jogador;
 - ranking calculado por consulta, sem tabela própria;
-- queries sempre parametrizadas.
+- queries sempre parametrizadas;
+- transação para localizar/criar jogador e inserir a partida;
+- `utf8mb4` para nomes com acentos e outros caracteres Unicode.
+
+## Seleção do repositório
+
+```text
+DATABASE_URL vazia       -> InMemoryMatchRepository
+DATABASE_URL preenchida  -> MysqlMatchRepository
+```
+
+O servidor não executa migrations automaticamente. Depois de configurar uma
+instância nova, rode `npm run db:migrate` antes de iniciar a API. O endpoint
+`/api/health` permite confirmar conexão e repositório ativo sem expor segredos.
 
 ## Limitação de segurança
 
-O servidor recalculará a pontuação e verificará limites da configuração. Um
-cliente modificado ainda pode inventar um resumo plausível; autenticação e
-simulação autoritativa ficam fora do ranking casual do MVP.
+O servidor verifica os limites da pontuação, mas ainda não recebe um resumo que
+permita recalcular cada evento. Um cliente modificado pode inventar um resultado
+plausível; autenticação e simulação autoritativa ficam fora do ranking casual do
+MVP. Usuário e senha do banco permanecem somente em `DATABASE_URL`, fora do Git.

@@ -345,3 +345,23 @@ em ordem decrescente, com posições compartilhadas nos empates. O teto de 14.00
 é derivado do balanceamento atual e serve apenas como validação de sanidade. O
 jogo não envia resultados nesta fase; essa integração continua reservada para a
 fase 20, depois da persistência.
+
+## ADR-022 — Repositório MySQL selecionado na composição
+
+**Status:** aceita em 4 de setembro de 2026.
+
+A Fase 19 preserva o contrato de repositório da Fase 18. Quando
+`DATABASE_URL` existe, a composição do servidor injeta `MysqlMatchRepository`;
+sem a variável, injeta o adaptador em memória. Rotas e serviço não conhecem essa
+escolha. Isso permite desenvolvimento sem banco e persistência real sem dois
+fluxos de negócio.
+
+O schema possui somente `players`, `matches` e a tabela técnica
+`schema_migrations`. A criação de jogador e partida é transacional, IDs de
+submissão e nomes normalizados são únicos, e todas as queries usam placeholders.
+Datas são geradas no MySQL em UTC.
+
+Migrations são explícitas por `npm run db:migrate`, não automáticas no boot. O
+executor usa trava nomeada e checksum para impedir concorrência e alteração do
+histórico. O banco precisa existir antes do comando; criar banco ou usuário
+automaticamente exigiria privilégios excessivos da conta da aplicação.

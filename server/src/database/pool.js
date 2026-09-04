@@ -5,7 +5,14 @@ export function createDatabasePool(databaseUrl) {
     return null;
   }
 
-  return mysql.createPool(databaseUrl);
+  return mysql.createPool({
+    uri: databaseUrl,
+    charset: 'utf8mb4',
+    timezone: 'Z',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  });
 }
 
 export async function readDatabaseStatus(databasePool) {

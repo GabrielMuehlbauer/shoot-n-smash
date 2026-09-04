@@ -9,12 +9,17 @@ import {
   readEnvironment,
 } from '../server/src/config/env.js';
 import { createDatabasePool } from '../server/src/database/pool.js';
+import { createMatchRepository } from '../server/src/matches/createMatchRepository.js';
+import { MatchService } from '../server/src/matches/MatchService.js';
 
 loadEnvironmentFile();
 
 const environment = readEnvironment();
 const databasePool = createDatabasePool(environment.databaseUrl);
-const app = createApp({ databasePool });
+const matchService = new MatchService({
+  repository: createMatchRepository(databasePool),
+});
+const app = createApp({ databasePool, matchService });
 const apiServer = app.listen(environment.port, environment.host);
 
 await new Promise((resolve, reject) => {
