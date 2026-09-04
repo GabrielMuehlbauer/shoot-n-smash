@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 16 com itens coletáveis e munição especial."
+      content="Shoot 'n' Smash — protótipo da Fase 17 com HUD responsivo e acessível."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,7 +19,7 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 16 concluída</div>
+        <div class="phase-badge"><span></span> Fase 17 concluída</div>
         <p class="eyebrow">Ilha de Gelo · Sobreviva até o fim</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
@@ -47,7 +47,7 @@
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Iniciar partida
-            <small>Itens coletáveis · Fase 16</small>
+            <small>HUD completo · Fase 17</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -94,7 +94,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Quatro ondas · Itens coletáveis · Resultado e replay</span>
+          <span>Vida · Pontuação · Ondas · Feedback em tempo real</span>
       </footer>
     </main>
 
@@ -110,7 +110,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 16 · Itens</span>
+          <span class="scene-phase">Fase 17 · Interface</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -118,12 +118,13 @@
         </button>
       </div>
 
-      <section
-        id="player-hud"
-        class="player-hud"
-        data-player-state="healthy"
-        aria-labelledby="player-health-label"
-      >
+      <div class="status-hud">
+        <section
+          id="player-hud"
+          class="player-hud"
+          data-player-state="healthy"
+          aria-labelledby="player-health-label"
+        >
         <div
           id="score-hud"
           class="score-hud"
@@ -174,15 +175,34 @@
             Acerte itens na arena para coletá-los.
           </p>
         </div>
-      </section>
+        </section>
 
-      <section
-        id="enemy-hud"
-        class="enemy-hud"
-        data-enemy-state="active"
-        data-enemy-type="weak"
-        aria-labelledby="enemy-resistance-label"
-      >
+        <section
+          id="enemy-hud"
+          class="enemy-hud"
+          data-enemy-state="active"
+          data-enemy-type="weak"
+          aria-labelledby="enemy-resistance-label"
+        >
+          <div
+            id="wave-hud"
+            class="wave-hud"
+            data-wave-state="active"
+            aria-labelledby="wave-label"
+          >
+            <div class="wave-heading">
+              <strong id="wave-label">Onda 1 de 4</strong>
+              <span id="wave-progress">Inimigo 1 de 3</span>
+            </div>
+            <progress
+              id="wave-meter"
+              max="5"
+              value="1"
+              aria-label="Etapa 1 de 5: onda 1 de 4"
+            >
+              Etapa 1 de 5
+            </progress>
+          </div>
         <div class="enemy-resistance-heading">
           <strong id="enemy-resistance-label">Inimigo fraco</strong>
           <span id="enemy-resistance-value" aria-hidden="true">1 / 1</span>
@@ -206,8 +226,8 @@
         >
           Inimigo fraco se aproximando. Localize-o em 360° e acerte antes do contato.
         </p>
-        <p id="wave-progress" class="wave-progress">Onda 1 de 4 · Inimigo 1 de 3</p>
-      </section>
+        </section>
+      </div>
 
       <div class="scene-reticle" aria-hidden="true"></div>
 

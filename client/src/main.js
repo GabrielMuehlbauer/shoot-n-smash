@@ -13,6 +13,7 @@ import {
   normalizePlayerName,
 } from './result-screen.js';
 import { describeScoreState } from './score-hud.js';
+import { describeWaveState } from './wave-hud.js';
 import './styles.css';
 
 const teamList = document.querySelector('#team-list');
@@ -43,7 +44,10 @@ const enemyResistanceValue = document.querySelector(
   '#enemy-resistance-value',
 );
 const enemyStatus = document.querySelector('#enemy-status');
+const waveHud = document.querySelector('#wave-hud');
+const waveLabel = document.querySelector('#wave-label');
 const waveProgress = document.querySelector('#wave-progress');
+const waveMeter = document.querySelector('#wave-meter');
 const playerHud = document.querySelector('#player-hud');
 const playerHealth = document.querySelector('#player-health');
 const playerHealthValue = document.querySelector('#player-health-value');
@@ -338,19 +342,25 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
 }
 
 function updateWaveState(state) {
+  const description = describeWaveState(state, {
+    bossReturning: gameSession?.enemyState?.type?.id === 'boss',
+  });
+
   prototypeView.dataset.waveState = state.status;
+  waveHud.dataset.waveState = description.hudState;
+  waveLabel.textContent = description.label;
+  waveProgress.textContent = description.detail;
+  waveMeter.max = description.stageMax;
+  waveMeter.value = description.stageValue;
+  waveMeter.textContent = `Etapa ${description.stageValue} de ${description.stageMax}`;
+  waveMeter.setAttribute('aria-label', description.ariaLabel);
 
   if (state.status === 'boss-pending') {
-    waveProgress.textContent =
-      gameSession.enemyState.type.id === 'boss'
-        ? 'Chefão final · Preparando retorno'
-        : 'Chefão final · Preparando confronto';
     showEncounterOutcome();
     return;
   }
 
   if (state.status === 'boss') {
-    waveProgress.textContent = 'Chefão final · 10 acertos';
     updateEnemyState(gameSession.enemyState);
     setShotStatus(
       pointerLocked ? 'ready' : 'idle',
@@ -360,12 +370,9 @@ function updateWaveState(state) {
   }
 
   if (state.status === 'complete') {
-    waveProgress.textContent = 'Confronto final encerrado';
     showEncounterOutcome();
     return;
   }
-
-  waveProgress.textContent = `Onda ${state.wave} de ${state.totalWaves} · Inimigo ${state.enemy} de ${state.enemiesInWave}`;
 
   if (state.status === 'active') {
     updateEnemyState(gameSession.enemyState);

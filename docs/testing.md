@@ -560,6 +560,36 @@ O roteiro completo está em
 
 O roteiro completo está em [Fase 16 — Itens](phases/phase-16-itens.md).
 
+## Fase 17
+
+### Cobertura automatizada adicionada
+
+- descrição de onda ativa e inimigo atual;
+- estados entre inimigos e entre ondas;
+- preparação inicial e retorno do chefão;
+- quinta etapa durante o confronto e conclusão;
+- rejeição de snapshots inválidos;
+- presença e valores iniciais do medidor nativo de etapa;
+- ligação do descritor com rótulo, detalhe, valor e nome acessível;
+- grade superior em desktop e duas colunas compactas no celular;
+- remoção do posicionamento absoluto individual dos painéis;
+- ocultação da legenda decorativa em telas pequenas;
+- regressão de vida, pontuação, itens, tensão, resultado e replay;
+- metadados e diagnóstico da API atualizados para a Fase 17.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 17 concluída**, use **Verificar API** e confira `phase: 17`.
+3. Inicie a partida e verifique todos os indicadores iniciais.
+4. Redimensione para 760 px e 320 px e confirme ausência de sobreposição.
+5. Avance inimigos, ondas e chefão; confira textos e cinco etapas do medidor.
+6. Cause dano, pontue, colete itens e carregue o estilingue; confira feedback
+   imediato nos respectivos painéis.
+7. Teste vitória, derrota, replay, foco por teclado e Console sem erros.
+
+O roteiro completo está em [Fase 17 — Interface](phases/phase-17-interface.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;

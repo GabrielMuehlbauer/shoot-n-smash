@@ -475,6 +475,28 @@ seis, com força 2. A carga é consumida no disparo mesmo quando o jogador erra.
 Itens ativos são removidos antes do spawn do chefão. Munição já coletada continua
 válida até acabar ou a sessão terminar. Nenhum item altera pontuação diretamente.
 
+## Recorte executável da Fase 17
+
+```text
+WaveManager ── snapshot ──> describeWaveState ──> wave-hud
+PlayerHealthSystem ─────────────────────────────> player-hud
+ScoreManager ───────────────────────────────────> score-hud
+ItemSystem ─────────────────────────────────────> item-hud
+SlingshotSystem ────────────────────────────────> slingshot-hud
+```
+
+O HUD continua como uma projeção dos sistemas, sem escrever de volta no estado
+do gameplay. `describeWaveState` concentra a tradução dos subestados de onda em
+rótulos, detalhe, etapa e nome acessível; isso evita condicionais de apresentação
+espalhadas pelo controlador principal.
+
+Os painéis de jogador e inimigo agora pertencem ao contêiner `status-hud`. A
+grade tem duas regiões estáveis tanto no desktop quanto no modo compacto. Áreas
+seguras usam `env(safe-area-inset-*)`, a legenda decorativa desaparece quando o
+espaço é limitado e as instruções do estilingue são reduzidas apenas em telas
+muito estreitas ou baixas. Nenhum objeto Three.js ou sistema de partida foi
+alterado nesta fase.
+
 ## Servidor
 
 O servidor é um monólito modular Express:

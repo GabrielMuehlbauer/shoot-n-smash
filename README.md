@@ -4,8 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 16 — itens**. Itens de vida e munição especial surgem de
-> forma configurável durante as ondas e são coletados ao serem atingidos.
+> Status atual: **Fase 17 — interface**. O HUD reúne vida, pontuação, itens,
+> onda, inimigo e tensão com feedback acessível e layout responsivo.
 
 ## Equipe
 
@@ -45,7 +45,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 16.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 17.
 
 ## Execução em desenvolvimento
 
@@ -87,15 +87,16 @@ e o servidor. Para testar o recorte jogável:
    **Jogar novamente** para iniciar uma sessão limpa. Para validar a derrota,
    permita contatos até a vida chegar a zero.
 
-Os HUDs identificam pontuação, vida, item disponível, munição especial, tipo
-sorteado, resistência atual e tensão
-de 0% a 100%. A carga máxima é atingida em 1,2 segundo; segurar por mais tempo não
+Os HUDs identificam pontuação, vida, item disponível, munição especial, etapa da
+partida, inimigo atual, resistência e tensão de 0% a 100%. Em telas estreitas,
+os painéis superiores formam duas colunas compactas e a legenda decorativa é
+ocultada para preservar a arena. A carga máxima é atingida em 1,2 segundo; segurar por mais tempo não
 ultrapassa esse limite. O primeiro `Esc` libera o cursor e cancela uma carga em
 andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 16](docs/phases/phase-16-itens.md).
+[guia da Fase 17](docs/phases/phase-17-interface.md).
 
 ## Build e execução de produção
 
@@ -124,7 +125,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 16](docs/phases/phase-16-itens.md#como-testar-manualmente).
+[guia de teste da Fase 17](docs/phases/phase-17-interface.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -176,7 +177,7 @@ entre frames.
 - poderes temporários adicionais;
 - persistência MySQL e ranking.
 
-Nenhum desses sistemas adicionais faz parte da Fase 16. Nome e resultado existem
+Nenhum desses sistemas adicionais faz parte da Fase 17. Nome e resultado existem
 somente na sessão local e ainda não são enviados à API.
 
 ### Realidade virtual
@@ -185,7 +186,7 @@ somente na sessão local e ainda não são enviados à API.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 16.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 17.
 
 ## Modo VR
 
@@ -260,3 +261,4 @@ Consulte também:
 - [Guia da Fase 14](docs/phases/phase-14-pontuacao.md)
 - [Guia da Fase 15](docs/phases/phase-15-vitoria-derrota.md)
 - [Guia da Fase 16](docs/phases/phase-16-itens.md)
+- [Guia da Fase 17](docs/phases/phase-17-interface.md)

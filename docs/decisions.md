@@ -304,3 +304,23 @@ coleta posterior.
 resolve somente a primeira para cada projétil. Assim, uma bola de neve não coleta
 um item e atinge o monstro no mesmo frame. Não foi adicionada biblioteca de
 física, pontuação por item, poder temporário nem spawn de item no chefão.
+
+## ADR-020 — HUD como projeção responsiva dos sistemas
+
+**Status:** aceita em 4 de setembro de 2026.
+
+A Fase 17 agrupa os painéis superiores em uma grade `status-hud`, mantendo
+jogador e partida em regiões estáveis em vez de posicionar cada bloco de forma
+independente. Em telas de até 760 px, duas colunas compactas preservam a leitura
+simultânea de vida e onda; textos longos ficam limitados e conteúdo apenas
+explicativo é ocultado.
+
+O progresso usa cinco etapas explícitas: quatro ondas e chefão. A função pura
+`describeWaveState` converte snapshots do `WaveManager` em rótulo, detalhe,
+valor, máximo e descrição acessível para um `progress` nativo. A interface não
+ganha autoridade sobre o gameplay e não adiciona novos booleanos de controle.
+
+As mensagens já anunciadas por `shot-status` e `item-status` foram preservadas.
+O estado do inimigo não se tornou outra live region, evitando anúncios
+concorrentes a cada impacto. HUD imersivo, personalização visual e telemetria
+continuam fora desta decisão.

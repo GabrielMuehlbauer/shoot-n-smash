@@ -8,8 +8,9 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 16 e prepara os HUDs', () => {
-  assert.match(indexHtml, /Fase 16 concluída/);
+test('marca a interface estática como Fase 17 e prepara o HUD consolidado', () => {
+  assert.match(indexHtml, /Fase 17 concluída/);
+  assert.match(indexHtml, /class="status-hud"/);
   assert.match(indexHtml, /id="score-label">Pontuação/);
   assert.match(indexHtml, /id="score-value"[^>]*>0/);
   assert.match(indexHtml, /data-score-event="initial"/);
@@ -22,10 +23,9 @@ test('marca a interface estática como Fase 16 e prepara os HUDs', () => {
   assert.match(indexHtml, /data-enemy-type="weak"/);
   assert.match(indexHtml, /id="enemy-resistance-label">Inimigo fraco/);
   assert.match(indexHtml, /aria-describedby="enemy-status"/);
-  assert.match(
-    indexHtml,
-    /id="wave-progress"[^>]*>Onda 1 de 4 · Inimigo 1 de 3/,
-  );
+  assert.match(indexHtml, /id="wave-label"[^>]*>Onda 1 de 4/);
+  assert.match(indexHtml, /id="wave-progress"[^>]*>Inimigo 1 de 3/);
+  assert.match(indexHtml, /id="wave-meter"[\s\S]*max="5"[\s\S]*value="1"/);
   assert.match(indexHtml, /id="item-hud"/);
   assert.match(indexHtml, /id="special-ammo-value"/);
 });
@@ -95,14 +95,29 @@ test('conecta mudanças de vida aos estados visuais do HUD', () => {
 
 test('conecta o progresso das ondas ao respawn e ao HUD', () => {
   assert.match(mainSource, /onWaveChange:\s*updateWaveState/);
-  assert.match(
-    mainSource,
-    /waveProgress\.textContent = `Onda \$\{state\.wave\} de \$\{state\.totalWaves\}/,
-  );
+  assert.match(mainSource, /describeWaveState\(state/);
+  assert.match(mainSource, /waveLabel\.textContent = description\.label/);
+  assert.match(mainSource, /waveProgress\.textContent = description\.detail/);
+  assert.match(mainSource, /waveMeter\.value = description\.stageValue/);
+  assert.match(mainSource, /aria-label', description\.ariaLabel/);
   assert.match(stylesCss, /\.wave-progress/);
   assert.match(mainSource, /state\.status === 'boss-pending'/);
   assert.match(mainSource, /state\.status === 'boss'/);
   assert.match(stylesCss, /data-enemy-type='boss'/);
+});
+
+test('evita sobreposição dos painéis em desktop e telas pequenas', () => {
+  assert.match(stylesCss, /\.status-hud\s*\{[\s\S]*grid-template-columns/);
+  assert.match(
+    stylesCss,
+    /@media \(max-width: 760px\)[\s\S]*\.status-hud\s*\{[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/,
+  );
+  assert.match(
+    stylesCss,
+    /@media \(max-width: 760px\)[\s\S]*\.scene-caption\s*\{\s*display: none/,
+  );
+  assert.doesNotMatch(stylesCss, /\.player-hud\s*\{[\s\S]{0,120}position: absolute/);
+  assert.doesNotMatch(stylesCss, /\.enemy-hud\s*\{[\s\S]{0,120}position: absolute/);
 });
 
 test('conecta o ScoreManager ao placar visivel', () => {
