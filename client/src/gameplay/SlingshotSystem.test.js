@@ -21,6 +21,8 @@ function createFixture() {
         direction: payload.direction.clone(),
         speed: payload.speed,
         charge: payload.charge,
+        hitStrength: payload.hitStrength,
+        ammoType: payload.ammoType,
       });
       this.activeProjectileCount += 1;
       return {};
@@ -93,10 +95,27 @@ test('dispara na direção mundial da câmera com velocidade proporcional', () =
   assertAlmostEqual(spawn.direction.y, 0);
   assertAlmostEqual(spawn.direction.z, -1);
   assert.equal(spawn.charge, 0.5);
+  assert.equal(spawn.hitStrength, GAMEPLAY_CONFIG.projectile.hitStrength);
+  assert.equal(spawn.ammoType, 'normal');
   assert.deepEqual(fixture.chargeStates.at(-1), {
     charging: false,
     ratio: 0,
   });
+});
+
+test('repassa a força e o tipo de uma munição especial', () => {
+  const fixture = createFixture();
+
+  fixture.slingshot.beginCharge();
+  const shot = fixture.slingshot.releaseShot({
+    hitStrength: 2,
+    ammoType: 'special',
+  });
+
+  assert.equal(shot.hitStrength, 2);
+  assert.equal(shot.ammoType, 'special');
+  assert.equal(fixture.spawnCalls[0].hitStrength, 2);
+  assert.equal(fixture.spawnCalls[0].ammoType, 'special');
 });
 
 test('um clique rápido usa a velocidade mínima', () => {
@@ -125,6 +144,23 @@ test('cancelamento zera a carga sem criar projétil', () => {
     charging: false,
     ratio: 0,
   });
+});
+
+test('rejeita propriedades inválidas antes de criar o projétil', () => {
+  const fixture = createFixture();
+
+  fixture.slingshot.beginCharge();
+  assert.throws(
+    () => fixture.slingshot.releaseShot({ hitStrength: 0 }),
+    /força.*inteiro positivo/i,
+  );
+  assert.equal(fixture.spawnCalls.length, 0);
+  assert.equal(fixture.slingshot.isCharging, true);
+  assert.throws(
+    () => fixture.slingshot.releaseShot({ ammoType: '' }),
+    /tipo de munição/i,
+  );
+  fixture.slingshot.cancelCharge();
 });
 
 test('ignora deltas inválidos e dispose é idempotente', () => {

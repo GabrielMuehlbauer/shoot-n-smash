@@ -1,11 +1,15 @@
 import { Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
-import { intersectMovingSpheres } from '../gameplay/CollisionSystem.js';
+import {
+  intersectMovingSpheres,
+  intersectSegmentSphere,
+} from '../gameplay/CollisionSystem.js';
 import { EnemySystem } from '../gameplay/EnemySystem.js';
 import { validateEnemyTypes } from '../gameplay/EnemyTypes.js';
 import { GameStateManager } from '../gameplay/GameStateManager.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
+import { ItemSystem } from '../gameplay/ItemSystem.js';
 import { PlayerHealthSystem } from '../gameplay/PlayerHealthSystem.js';
 import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { ScoreManager } from '../gameplay/ScoreManager.js';
@@ -40,17 +44,22 @@ export class GameSession {
     onEnemyPlayerContact = () => {},
     onEnemyResistanceChange = () => {},
     onGameStateChange = () => {},
+    onItemCollected = () => {},
+    onItemStateChange = () => {},
     onWaveChange = () => {},
     onPlayerHealthChange = () => {},
     onScoreChange = () => {},
     onShot = () => {},
+    onSpecialAmmoChange = () => {},
     config = GAMEPLAY_CONFIG,
     encounterActive = true,
     enemyRandom = Math.random,
     enemyTypeRandom = Math.random,
+    itemRandom = Math.random,
     enemySystem = null,
     gameStateManager = null,
     impactFeedbackSystem = null,
+    itemSystem = null,
     playerHealthSystem = null,
     projectileSystem = null,
     scoreManager = null,
@@ -62,9 +71,13 @@ export class GameSession {
       ['onEnemyPlayerContact', onEnemyPlayerContact],
       ['onEnemyEliminate', onEnemyEliminate],
       ['onGameStateChange', onGameStateChange],
+      ['onItemCollected', onItemCollected],
+      ['onItemStateChange', onItemStateChange],
       ['onWaveChange', onWaveChange],
       ['onPlayerHealthChange', onPlayerHealthChange],
       ['onScoreChange', onScoreChange],
+      ['onShot', onShot],
+      ['onSpecialAmmoChange', onSpecialAmmoChange],
     ]) {
       if (typeof callback !== 'function') {
         throw new TypeError(`GameSession requer ${name} como função.`);
@@ -80,6 +93,7 @@ export class GameSession {
     const ownsEnemySystem = !enemySystem;
     const ownsGameStateManager = !gameStateManager;
     const ownsImpactFeedbackSystem = !impactFeedbackSystem;
+    const ownsItemSystem = !itemSystem;
     const ownsPlayerHealthSystem = !playerHealthSystem;
     const ownsScoreManager = !scoreManager;
 
@@ -89,7 +103,18 @@ export class GameSession {
     this.onEnemyHit = onEnemyHit;
     this.onEnemyEliminate = onEnemyEliminate;
     this.onEnemyPlayerContact = onEnemyPlayerContact;
+    this.onItemCollected = onItemCollected;
+    this.onShot = onShot;
+    this.onSpecialAmmoChange = onSpecialAmmoChange;
     this.onWaveChange = onWaveChange;
+    this.specialAmmoRemainingShots = 0;
+    this.specialAmmoConfig = config?.items?.types?.find(
+      (type) => type.effect?.kind === 'special-ammo',
+    )?.effect;
+
+    if (!this.specialAmmoConfig) {
+      throw new TypeError('GameSession requer uma configuração de munição especial.');
+    }
     this.waveManager =
       waveManager ??
       new WaveManager({
@@ -100,7 +125,8 @@ export class GameSession {
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
-    this.pendingEnemyImpacts = [];
+    this.itemCenter = new Vector3();
+    this.pendingProjectileImpacts = [];
     this.pendingObserverError = null;
     this.disposed = false;
 
@@ -115,7 +141,7 @@ export class GameSession {
           projectileSystem: this.projectileSystem,
           config,
           onChargeChange,
-          onShot,
+          onShot: (shot) => this.handleShot(shot),
         });
       this.playerHealthSystem =
         playerHealthSystem ??
@@ -153,7 +179,24 @@ export class GameSession {
           scene,
           config: config.impactFeedback,
         });
+      this.itemSystem =
+        itemSystem ??
+        new ItemSystem({
+          scene,
+          config: config.items,
+          random: itemRandom,
+          onStateChange: onItemStateChange,
+        });
+      this.itemSystem.trySpawn({ wave: this.waveState.wave });
     } catch (error) {
+      if (ownsItemSystem) {
+        try {
+          this.itemSystem?.dispose?.();
+        } catch {
+          // Preserva o erro original de construção.
+        }
+      }
+
       if (ownsGameStateManager) {
         try {
           this.gameStateManager?.dispose?.();
@@ -248,6 +291,19 @@ export class GameSession {
     return this.scoreManager.state;
   }
 
+  get itemState() {
+    return this.itemSystem.state;
+  }
+
+  get specialAmmoState() {
+    return Object.freeze({
+      active: this.specialAmmoRemainingShots > 0,
+      remainingShots: this.specialAmmoRemainingShots,
+      maxShots: this.specialAmmoConfig.maxShots,
+      hitStrength: this.specialAmmoConfig.hitStrength,
+    });
+  }
+
   get gameState() {
     return this.gameStateManager.state;
   }
@@ -273,7 +329,14 @@ export class GameSession {
       return false;
     }
 
-    return this.slingshotSystem.releaseShot();
+    const special = this.specialAmmoRemainingShots > 0;
+
+    return this.slingshotSystem.releaseShot({
+      hitStrength: special
+        ? this.specialAmmoConfig.hitStrength
+        : this.config.projectile.hitStrength,
+      ammoType: special ? 'special' : 'normal',
+    });
   }
 
   cancelCharge() {
@@ -319,6 +382,11 @@ export class GameSession {
 
       if (waveUpdate.spawnKind) {
         if (waveUpdate.spawnKind === 'boss') {
+          try {
+            this.itemSystem.clear();
+          } catch (error) {
+            this.queueObserverError(error);
+          }
           const boss = this.config.boss;
           this.enemySystem.reset({
             enemyType: boss.type,
@@ -334,6 +402,11 @@ export class GameSession {
             moveSpeed,
             typeIds,
           });
+          try {
+            this.itemSystem.trySpawn({ wave: this.waveState.wave });
+          } catch (error) {
+            this.queueObserverError(error);
+          }
         }
 
         this.currentEncounter = this.createEncounterIdentity(
@@ -350,9 +423,14 @@ export class GameSession {
 
       this.enemySystem.update(waveUpdate.enemyDelta);
       this.impactFeedbackSystem.update(delta);
-      this.pendingEnemyImpacts.length = 0;
+      try {
+        this.itemSystem.update(delta);
+      } catch (error) {
+        this.queueObserverError(error);
+      }
+      this.pendingProjectileImpacts.length = 0;
       this.projectileSystem.update(delta, this.handleProjectileStep);
-      this.resolveEnemyImpacts();
+      this.resolveProjectileImpacts();
 
       try {
         this.enemySystem.resolvePlayerContact();
@@ -446,61 +524,97 @@ export class GameSession {
     projectile,
     radius,
   }) {
-    if (!this.enemySystem.active) {
-      return false;
+    let nearestImpact = null;
+
+    if (this.enemySystem.active) {
+      this.enemySystem.getPreviousCenter(this.enemyPreviousCenter);
+      this.enemySystem.getCenter(this.enemyCenter);
+      const contactRatio = this.enemySystem.playerContactFrameRatio;
+      const projectileEnd =
+        contactRatio === null
+          ? currentPosition
+          : this.projectileContactCenter
+              .copy(previousPosition)
+              .lerp(currentPosition, contactRatio);
+      const collision = intersectMovingSpheres(
+        previousPosition,
+        projectileEnd,
+        radius,
+        this.enemyPreviousCenter,
+        this.enemyCenter,
+        this.enemySystem.radius,
+      );
+
+      if (collision.hit) {
+        nearestImpact = {
+          kind: 'enemy',
+          collision,
+          impactRatio:
+            contactRatio === null ? collision.t : collision.t * contactRatio,
+          mesh,
+          projectile,
+        };
+      }
     }
 
-    this.enemySystem.getPreviousCenter(this.enemyPreviousCenter);
-    this.enemySystem.getCenter(this.enemyCenter);
-    const contactRatio = this.enemySystem.playerContactFrameRatio;
-    const projectileEnd =
-      contactRatio === null
-        ? currentPosition
-        : this.projectileContactCenter
-            .copy(previousPosition)
-            .lerp(currentPosition, contactRatio);
-    const collision = intersectMovingSpheres(
-      previousPosition,
-      projectileEnd,
-      radius,
-      this.enemyPreviousCenter,
-      this.enemyCenter,
-      this.enemySystem.radius,
-    );
+    if (this.itemSystem.state.active) {
+      this.itemSystem.getCenter(this.itemCenter);
+      const itemCollision = intersectSegmentSphere(
+        previousPosition,
+        currentPosition,
+        this.itemCenter,
+        radius + this.itemSystem.radius,
+      );
 
-    if (!collision.hit) {
-      return false;
+      if (
+        itemCollision.hit &&
+        (!nearestImpact || itemCollision.t < nearestImpact.impactRatio)
+      ) {
+        nearestImpact = {
+          kind: 'item',
+          collision: {
+            ...itemCollision,
+            projectileCenter: itemCollision.point,
+          },
+          impactRatio: itemCollision.t,
+          mesh,
+          projectile,
+        };
+      }
     }
 
-    this.pendingEnemyImpacts.push({
-      collision,
-      impactRatio:
-        contactRatio === null ? collision.t : collision.t * contactRatio,
-      mesh,
-      projectile,
-    });
+    if (nearestImpact) {
+      this.pendingProjectileImpacts.push(nearestImpact);
+    }
 
     return false;
   }
 
-  resolveEnemyImpacts() {
-    this.pendingEnemyImpacts.sort(
+  resolveProjectileImpacts() {
+    this.pendingProjectileImpacts.sort(
       (left, right) => left.impactRatio - right.impactRatio,
     );
 
     for (const {
+      kind,
       collision,
       impactRatio,
       mesh,
       projectile,
-    } of this.pendingEnemyImpacts) {
+    } of this.pendingProjectileImpacts) {
+      if (kind === 'item') {
+        this.resolveItemImpact({ collision, impactRatio, mesh, projectile });
+        continue;
+      }
+
       if (!this.enemySystem.active) {
-        break;
+        continue;
       }
 
       const resistanceBeforeImpact = this.enemySystem.state.resistance;
-      const lethalImpact =
-        resistanceBeforeImpact <= this.config.projectile.hitStrength;
+      const hitStrength =
+        projectile.hitStrength ?? this.config.projectile.hitStrength;
+      const lethalImpact = resistanceBeforeImpact <= hitStrength;
       let hitApplied = false;
 
       if (lethalImpact) {
@@ -508,9 +622,7 @@ export class GameSession {
       }
 
       try {
-        hitApplied = this.enemySystem.applyHit(
-          this.config.projectile.hitStrength,
-        );
+        hitApplied = this.enemySystem.applyHit(hitStrength);
       } catch (error) {
         this.queueObserverError(error);
         hitApplied =
@@ -532,7 +644,7 @@ export class GameSession {
       try {
         this.onEnemyHit({
           ...this.enemySystem.state,
-          hitStrength: this.config.projectile.hitStrength,
+          hitStrength,
           impactPoint: collision.projectileCenter.clone(),
           impactRatio,
           projectile: mesh,
@@ -542,7 +654,122 @@ export class GameSession {
       }
     }
 
-    this.pendingEnemyImpacts.length = 0;
+    this.pendingProjectileImpacts.length = 0;
+  }
+
+  resolveItemImpact({ collision, impactRatio, mesh, projectile }) {
+    if (!this.itemSystem.state.active) {
+      return false;
+    }
+
+    if (!this.projectileSystem.removeProjectile(projectile)) {
+      return false;
+    }
+
+    let itemState;
+
+    try {
+      itemState = this.itemSystem.collect();
+    } catch (error) {
+      this.queueObserverError(error);
+      itemState = this.itemSystem.state;
+    }
+
+    const effect = this.applyItemEffect(itemState.type.effect);
+
+    try {
+      this.impactFeedbackSystem.spawn(collision.projectileCenter);
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+
+    const collection = Object.freeze({
+      item: itemState,
+      effect,
+      impactPoint: collision.projectileCenter.clone(),
+      impactRatio,
+      projectile: mesh,
+    });
+
+    try {
+      this.onItemCollected(collection);
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+
+    return collection;
+  }
+
+  applyItemEffect(effect) {
+    if (effect.kind === 'heal') {
+      const previousHealth = this.playerState.health;
+      let change = null;
+
+      try {
+        change = this.playerHealthSystem.heal(effect.amount);
+      } catch (error) {
+        this.queueObserverError(error);
+      }
+
+      return Object.freeze({
+        kind: effect.kind,
+        requestedAmount: effect.amount,
+        appliedAmount: change?.healing ??
+          Math.max(0, this.playerState.health - previousHealth),
+        health: this.playerState.health,
+      });
+    }
+
+    const previousShots = this.specialAmmoRemainingShots;
+    this.specialAmmoRemainingShots = Math.min(
+      effect.maxShots,
+      previousShots + effect.shots,
+    );
+    const change = Object.freeze({
+      ...this.specialAmmoState,
+      reason: 'collected',
+      addedShots: this.specialAmmoRemainingShots - previousShots,
+    });
+    try {
+      this.onSpecialAmmoChange(change);
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+
+    return Object.freeze({
+      kind: effect.kind,
+      addedShots: change.addedShots,
+      remainingShots: change.remainingShots,
+      hitStrength: change.hitStrength,
+    });
+  }
+
+  handleShot(shot) {
+    let observerError = null;
+
+    if (shot.ammoType === 'special' && this.specialAmmoRemainingShots > 0) {
+      this.specialAmmoRemainingShots -= 1;
+
+      try {
+        this.onSpecialAmmoChange(Object.freeze({
+          ...this.specialAmmoState,
+          reason: 'shot',
+          addedShots: 0,
+        }));
+      } catch (error) {
+        observerError = error;
+      }
+    }
+
+    try {
+      this.onShot(shot);
+    } catch (error) {
+      observerError ??= error;
+    }
+
+    if (observerError) {
+      throw observerError;
+    }
   }
 
   handleEnemyPlayerContact(enemyState) {
@@ -701,9 +928,18 @@ export class GameSession {
       disposalError ??= error;
     }
 
+    try {
+      this.itemSystem.dispose();
+    } catch (error) {
+      disposalError ??= error;
+    }
+
     this.onEnemyHit = () => {};
     this.onEnemyEliminate = () => {};
     this.onEnemyPlayerContact = () => {};
+    this.onItemCollected = () => {};
+    this.onShot = () => {};
+    this.onSpecialAmmoChange = () => {};
     this.onWaveChange = () => {};
     this.disposed = true;
 

@@ -14,13 +14,14 @@ DesktopFireController ──> GameSession ──┬─> SlingshotSystem ──> 
 XRInput (futuro) ───────────────────────┤                                        │
                                         ├─> EnemySystem ──> EnemyTypes            │
                                         ├─> PlayerHealthSystem                    │
+                                        ├─> ItemSystem                            │
                                         ├─> ScoreManager                           │
                                         ├─> GameStateManager ──> DomResults        │
                                         ├─> CollisionSystem <─────────────────────┤
                                         ├─> ImpactFeedbackSystem <────────────────┤
                                         └─> DomHUD <───────────────────────────────┘
 
-WaveManager ──> GameStateManager / ScoreManager / Item Systems (parcial/futuros)
+WaveManager ──> GameStateManager / ScoreManager / ItemSystem
                                          │
                                          v
                                 XRHud e RankingClient -> Express -> MySQL
@@ -44,8 +45,8 @@ WaveManager ──> GameStateManager / ScoreManager / Item Systems (parcial/futu
   Pointer Lock está ativa e cancela a carga quando esse estado deixa de ser
   válido. Conexão, desconexão e descarte são idempotentes.
 - `GameSession` expõe `beginCharge()`, `releaseShot()` e `cancelCharge()` como
-  fachada da partida. Na Fase 15, seu `update(deltaSeconds)` preserva a ordem
-  estilingue → inimigo → feedbacks existentes → projéteis → resolução do contato;
+  fachada da partida. Na Fase 16, seu `update(deltaSeconds)` preserva a ordem
+  estilingue → inimigo → feedbacks e itens → projéteis → resolução do contato;
   quando o contato vence, aplica o dano pelo `PlayerHealthSystem` antes de
   notificar a interface. Também coordena o `WaveManager` e aplica seus pedidos de
   spawn à entidade reutilizada. Depois de um desfecho, sincroniza o
@@ -54,10 +55,12 @@ WaveManager ──> GameStateManager / ScoreManager / Item Systems (parcial/futu
 - `SlingshotSystem` normaliza a carga de 0 a 1, calcula a velocidade, obtém a
   posição e a direção mundiais da câmera e publica mudanças por callbacks. Ele
   não conhece mouse, Pointer Lock nem elementos do DOM.
-- `ProjectileSystem` recebe origem, direção e carga, calcula a velocidade inicial
+- `ProjectileSystem` recebe origem, direção, carga, tipo e força, calcula a velocidade inicial
   entre 10 e 24 unidades por segundo e aplica gravidade de -9,8. Cada projétil é
   uma esfera visual de raio 0,18, preserva a posição anterior para a
-  colisão por segmento e tem ciclo de vida limitado. `update()` e `dispose()`
+  colisão por segmento e tem ciclo de vida limitado. A força fica armazenada no
+  próprio projétil, portanto uma coleta posterior não altera tiros já lançados.
+  Munição normal e especial reutilizam dois materiais compartilhados. `update()` e `dispose()`
   não dependem do DOM e são idempotentes.
 - `EnemyTypes` valida o catálogo dos tipos normais e seleciona uniformemente um
   descritor imutável por sessão. O gerador aleatório dessa seleção é injetável e
@@ -85,20 +88,25 @@ WaveManager ──> GameStateManager / ScoreManager / Item Systems (parcial/futu
 - `ImpactFeedbackSystem` mantém bursts 3D curtos no ponto de impacto. A geometria
   é compartilhada, os materiais são descartados individualmente e o limite FIFO
   impede o acúmulo de efeitos.
+- `ItemSystem` mantém no máximo um coletável, sorteia tipo e posição em 360° com
+  gerador injetável, aplica a chance configurada da onda e encerra o item por
+  coleta, expiração ou início do chefão. Geometrias e materiais são reutilizados.
+  O sistema publica o efeito, mas `GameSession` continua responsável por aplicá-lo.
 - `PlayerHealthSystem` mantém vida inicial e máxima, aplica dano inteiro positivo,
-  limita o resultado a zero e publica snapshots imutáveis. Ele não conhece o
+  aplica cura inteira e limita o resultado entre zero e o máximo antes de publicar
+  snapshots imutáveis. Ele não conhece o
   inimigo, a cena ou o DOM e começa uma nova instância em cada sessão.
 - `ScoreManager` recebe eventos semânticos identificados, consulta os valores
   centralizados de balanceamento e mantém o total. Um `Set` de IDs processados
   torna cada recompensa idempotente, mesmo se um callback for repetido.
 - O HUD HTML observa `onChargeChange({ charging, ratio })`, disparos, tipo,
-  resistência, vida, impactos, eliminação e contato por callbacks. O núcleo de
+  resistência, vida, itens, munição especial, impactos, eliminação e contato por callbacks. O núcleo de
   gameplay não consulta nem altera elementos do DOM. Cancelamentos e desfechos
   informam motivos semânticos, sem transformar mensagens de interface em regra
   de jogo. A tela de resultados observa o estado global e recebe nome, resultado,
   pontuação e cenário já consolidados.
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
-  gravidade, dimensões, vida máxima e dano de cada tipo para evitar números
+  gravidade, dimensões, vida máxima, chances e efeitos dos itens e dano de cada tipo para evitar números
   mágicos.
 - `GameSession` coordena a progressão das quatro ondas sem duplicar regras de
   spawn, tipo ou velocidade dentro da interface.
@@ -438,6 +446,34 @@ sistemas de gameplay. A interface libera a mira e apresenta nome normalizado do
 jogador, resultado, pontuação e cenário. **Jogar novamente** descarta os recursos
 atuais e constrói uma nova sessão, restaurando vida, ondas e placar sem reutilizar
 estado terminal.
+
+## Recorte executável da Fase 16
+
+```text
+início de encontro normal
+        │
+        └─> chance da onda ──> ItemSystem ──> item em posição 360°
+                                      │
+projétil ──> primeira colisão ─────────┤
+        │                             ├─> Vida: cura até 20, máximo 100
+        │                             └─> Munição: +3 tiros, máximo 6
+        │
+        └─> tiro especial ──> força 2 ──> consome uma carga ao disparar
+```
+
+Cada encontro normal faz no máximo uma tentativa de spawn. As probabilidades
+iniciais das ondas 1 a 4 são 12%, 20%, 30% e 40%; são valores de balanceamento,
+não regras espalhadas pelo código. Um item nasce entre 6 e 10 unidades do centro,
+permanece por até 12 segundos e precisa ser atingido pelo estilingue.
+
+A colisão usa o mesmo teste contínuo segmento–esfera dos demais alvos. Para cada
+projétil, `GameSession` escolhe somente o primeiro impacto entre item e inimigo;
+um único disparo nunca coleta e causa dano simultaneamente. O item verde cura 20,
+limitado à vida máxima. O item dourado concede três disparos, acumuláveis até
+seis, com força 2. A carga é consumida no disparo mesmo quando o jogador erra.
+
+Itens ativos são removidos antes do spawn do chefão. Munição já coletada continua
+válida até acabar ou a sessão terminar. Nenhum item altera pontuação diretamente.
 
 ## Servidor
 

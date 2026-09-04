@@ -58,11 +58,22 @@ export class SlingshotSystem {
     return true;
   }
 
-  releaseShot() {
+  releaseShot({
+    hitStrength = this.config.projectile.hitStrength,
+    ammoType = 'normal',
+  } = {}) {
     this.assertNotDisposed();
 
     if (!this.charging) {
       return false;
+    }
+
+    if (!Number.isInteger(hitStrength) || hitStrength <= 0) {
+      throw new RangeError('A força do disparo deve ser um inteiro positivo.');
+    }
+
+    if (!['normal', 'special'].includes(ammoType)) {
+      throw new TypeError('O tipo de munição do disparo deve ser normal ou special.');
     }
 
     const ratio = this.charge;
@@ -84,6 +95,8 @@ export class SlingshotSystem {
       direction: this.shotDirection,
       speed,
       charge: ratio,
+      hitStrength,
+      ammoType,
     });
 
     this.resetCharge();
@@ -92,6 +105,8 @@ export class SlingshotSystem {
       charge: ratio,
       ratio,
       speed,
+      hitStrength,
+      ammoType,
       activeProjectileCount: this.projectileSystem.activeProjectileCount,
     };
 

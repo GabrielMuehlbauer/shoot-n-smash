@@ -78,6 +78,29 @@ export class PlayerHealthSystem {
     return change;
   }
 
+  heal(amount) {
+    this.assertNotDisposed();
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new RangeError('A cura deve ser um inteiro positivo.');
+    }
+
+    if (this.currentHealth === this.maxHealth) {
+      return false;
+    }
+
+    const previousHealth = this.currentHealth;
+    this.currentHealth = Math.min(this.maxHealth, previousHealth + amount);
+    const change = Object.freeze({
+      ...this.state,
+      healing: this.currentHealth - previousHealth,
+      requestedHealing: amount,
+    });
+
+    this.onHealthChange(change);
+    return change;
+  }
+
   reset() {
     if (this.disposed) {
       return false;

@@ -150,16 +150,16 @@ metadados, API e regressões das fases anteriores.
 
 ## Critérios de aceite
 
-- [ ] Existe somente uma transição global de `PLAYING` para um resultado final.
-- [ ] Vida zero produz `GAME_OVER` e nenhum novo encontro é processado.
-- [ ] Eliminar o chefão produz `VICTORY` depois da pontuação final.
-- [ ] Contato não letal do chefão o reagenda com resistência cheia e sem bônus.
-- [ ] A tela final mostra nome, resultado, pontuação e cenário.
-- [ ] Nome vazio usa **Jogador** e entradas longas respeitam o limite.
-- [ ] O estado terminal bloqueia atualizações, cargas e disparos.
-- [ ] Replay cria uma sessão limpa sem duplicar recursos ou listeners.
-- [ ] Persistência, ranking, itens e WebXR não foram antecipados.
-- [ ] `npm run check` termina sem falhas.
+- [x] Existe somente uma transição global de `PLAYING` para um resultado final.
+- [x] Vida zero produz `GAME_OVER` e nenhum novo encontro é processado.
+- [x] Eliminar o chefão produz `VICTORY` depois da pontuação final.
+- [x] Contato não letal do chefão o reagenda com resistência cheia e sem bônus.
+- [x] A tela final mostra nome, resultado, pontuação e cenário.
+- [x] Nome vazio usa **Jogador** e entradas longas respeitam o limite.
+- [x] O estado terminal bloqueia atualizações, cargas e disparos.
+- [x] Replay cria uma sessão limpa sem duplicar recursos ou listeners.
+- [x] Persistência, ranking, itens e WebXR não foram antecipados.
+- [x] `npm run check` termina sem falhas.
 
 ## Próximo passo
 
