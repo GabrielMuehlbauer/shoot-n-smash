@@ -800,6 +800,7 @@ test('valida callbacks da sessão antes de criar recursos', () => {
     'onEnemyEliminate',
     'onEnemyHit',
     'onEnemyPlayerContact',
+    'onGameStateChange',
     'onWaveChange',
     'onPlayerHealthChange',
     'onScoreChange',

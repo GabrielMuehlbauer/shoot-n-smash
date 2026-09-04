@@ -8,8 +8,8 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 14 e prepara os HUDs', () => {
-  assert.match(indexHtml, /Fase 14 concluída/);
+test('marca a interface estática como Fase 15 e prepara os HUDs', () => {
+  assert.match(indexHtml, /Fase 15 concluída/);
   assert.match(indexHtml, /id="score-label">Pontuação/);
   assert.match(indexHtml, /id="score-value"[^>]*>0/);
   assert.match(indexHtml, /data-score-event="initial"/);
@@ -96,4 +96,42 @@ test('conecta o ScoreManager ao placar visivel', () => {
   assert.match(mainSource, /scoreValue\.textContent = description\.valueText/);
   assert.match(stylesCss, /\.score-hud/);
   assert.match(stylesCss, /#score-value/);
+});
+
+test('prepara nome e tela final acessivel com todos os dados obrigatorios', () => {
+  assert.match(
+    indexHtml,
+    /id="player-name-input"[\s\S]*maxlength="24"[\s\S]*autocomplete="nickname"/,
+  );
+  assert.match(
+    indexHtml,
+    /<dialog[\s\S]*id="result-screen"[\s\S]*aria-labelledby="result-title"[\s\S]*aria-describedby="result-message"/,
+  );
+
+  for (const id of [
+    'result-player-name',
+    'result-outcome',
+    'result-score',
+    'result-scenario',
+    'replay-button',
+    'result-menu-button',
+  ]) {
+    assert.match(indexHtml, new RegExp(`id="${id}"`));
+  }
+
+  assert.match(stylesCss, /\.result-screen\[open\]/);
+  assert.match(stylesCss, /\.result-screen\[data-result='defeat'\]/);
+  assert.match(stylesCss, /\.result-summary/);
+});
+
+test('conecta estado terminal, pausa real e replay com uma sessao nova', () => {
+  assert.match(mainSource, /onGameStateChange:\s*handleGameStateChange/);
+  assert.match(mainSource, /gameApp\?\.stop\(\)/);
+  assert.match(mainSource, /showResultScreen\(state\)/);
+  assert.match(mainSource, /replayButton\.focus/);
+  assert.match(
+    mainSource,
+    /function replayPrototype\(\)[\s\S]*exitPrototype\([\s\S]*enterPrototype\(\)/,
+  );
+  assert.match(mainSource, /resultScreen\.addEventListener\('cancel'/);
 });

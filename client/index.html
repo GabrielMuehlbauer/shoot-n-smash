@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 14 com pontuação, quatro ondas e chefão de gelo."
+      content="Shoot 'n' Smash — protótipo da Fase 15 com vitória, derrota e replay."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,21 +19,34 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 14 concluída</div>
-        <p class="eyebrow">Ilha de Gelo · Pontuação ativa</p>
+        <div class="phase-badge"><span></span> Fase 15 concluída</div>
+        <p class="eyebrow">Ilha de Gelo · Sobreviva até o fim</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
           Encontre o monstro de gelo sorteado em qualquer direção da arena e
           use o estilingue antes que ele alcance o centro. Quatro ondas aumentam
           gradualmente a quantidade, os tipos e a velocidade dos monstros. Ao
-          final, um chefão gigante exige dez acertos e causa 10 de dano. Cada
-          eliminação e conclusão válida agora alimenta um placar sem duplicidade.
+          final, um chefão gigante exige dez acertos e causa 10 de dano. Derrote-o
+          para vencer ou proteja sua vida para não deixar a ilha dominar a partida.
         </p>
+
+        <label class="player-name-field" for="player-name-input">
+          <span>Nome do jogador</span>
+          <input
+            id="player-name-input"
+            name="player-name"
+            type="text"
+            maxlength="24"
+            autocomplete="nickname"
+            placeholder="Jogador"
+          />
+          <small>Será exibido no resultado desta sessão.</small>
+        </label>
 
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
-            Abrir cena 3D
-            <small>Pontuação da Fase 14</small>
+            Iniciar partida
+            <small>Vitória e derrota · Fase 15</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -80,7 +93,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Quatro ondas · Chefão gigante · Pontuação</span>
+        <span>Quatro ondas · Chefão gigante · Resultado e replay</span>
       </footer>
     </main>
 
@@ -88,6 +101,7 @@
       id="prototype-view"
       class="game-view"
       data-look-state="unlocked"
+      data-game-state="PLAYING"
       aria-labelledby="scene-title"
       hidden
     >
@@ -95,7 +109,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 14 · Pontuação</span>
+          <span class="scene-phase">Fase 15 · Sobrevivência</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -217,12 +231,54 @@
         </ol>
       </section>
 
+      <dialog
+        id="result-screen"
+        class="result-screen"
+        data-result="victory"
+        aria-labelledby="result-title"
+        aria-describedby="result-message"
+      >
+        <div class="result-card">
+          <p id="result-eyebrow" class="result-eyebrow">Partida encerrada</p>
+          <h2 id="result-title">Resultado</h2>
+          <p id="result-message" class="result-message"></p>
+
+          <dl class="result-summary">
+            <div>
+              <dt>Jogador</dt>
+              <dd id="result-player-name">Jogador</dd>
+            </div>
+            <div>
+              <dt>Resultado</dt>
+              <dd id="result-outcome">Vitória</dd>
+            </div>
+            <div>
+              <dt>Pontuação</dt>
+              <dd><output id="result-score">0</output></dd>
+            </div>
+            <div>
+              <dt>Cenário</dt>
+              <dd id="result-scenario">Neve</dd>
+            </div>
+          </dl>
+
+          <div class="result-actions">
+            <button id="replay-button" class="result-primary-action" type="button">
+              Jogar novamente
+            </button>
+            <button id="result-menu-button" class="result-secondary-action" type="button">
+              Voltar ao menu
+            </button>
+          </div>
+        </div>
+      </dialog>
+
       <div class="scene-caption">
         <strong>Quatro ondas · Chefão com 10 acertos</strong>
         <span>
           Cada onda aumenta a quantidade ou velocidade e libera novos tipos. A
-          vida é compartilhada por toda a sequência e pelo chefão gigante;
-          pontuação, vitória, derrota e WebXR permanecem fora deste incremento.
+          vida é compartilhada por toda a sequência e pelo chefão gigante. Um
+          contato não letal faz o chefão retornar; itens e WebXR virão depois.
         </span>
       </div>
 

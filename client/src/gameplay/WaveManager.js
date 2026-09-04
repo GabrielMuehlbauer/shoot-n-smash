@@ -138,6 +138,16 @@ export class WaveManager {
     return true;
   }
 
+  retryBoss() {
+    if (this.status !== 'boss') {
+      return false;
+    }
+
+    this.status = 'boss-pending';
+    this.remainingDelaySeconds = this.bossDelaySeconds;
+    return true;
+  }
+
   update(deltaSeconds, { active = true } = {}) {
     const numericDelta = Number(deltaSeconds);
 

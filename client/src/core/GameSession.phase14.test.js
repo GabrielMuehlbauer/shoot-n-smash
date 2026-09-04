@@ -118,7 +118,14 @@ test('contato do chefao nao concede pontos de eliminacao nem de fase', () => {
   assert.equal(session.scoreState.score, 2000);
   session.update(30);
   assert.equal(session.enemyState.outcome, 'player-contact');
-  assert.equal(session.waveState.status, 'complete');
+  assert.equal(session.waveState.status, 'boss-pending');
+  assert.equal(session.scoreState.score, 2000);
+  assert.equal(session.scoreState.eventCount, 4);
+  spawnNext(session);
+  assert.equal(session.waveState.status, 'boss');
+  assert.equal(session.enemyState.type.id, 'boss');
+  assert.equal(session.enemyState.outcome, null);
+  assert.equal(session.enemyState.resistance, 10);
   assert.equal(session.scoreState.score, 2000);
   assert.equal(session.scoreState.eventCount, 4);
   session.dispose();
