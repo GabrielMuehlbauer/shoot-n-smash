@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — protótipo da Fase 15 com vitória, derrota e replay."
+      content="Shoot 'n' Smash — protótipo da Fase 16 com itens coletáveis e munição especial."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,7 +19,7 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 15 concluída</div>
+        <div class="phase-badge"><span></span> Fase 16 concluída</div>
         <p class="eyebrow">Ilha de Gelo · Sobreviva até o fim</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
@@ -27,7 +27,8 @@
           use o estilingue antes que ele alcance o centro. Quatro ondas aumentam
           gradualmente a quantidade, os tipos e a velocidade dos monstros. Ao
           final, um chefão gigante exige dez acertos e causa 10 de dano. Derrote-o
-          para vencer ou proteja sua vida para não deixar a ilha dominar a partida.
+          para vencer, e acerte os itens que surgirem para recuperar vida ou obter
+          munição especial de dano dobrado.
         </p>
 
         <label class="player-name-field" for="player-name-input">
@@ -46,7 +47,7 @@
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Iniciar partida
-            <small>Vitória e derrota · Fase 15</small>
+            <small>Itens coletáveis · Fase 16</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -93,7 +94,7 @@
 
       <footer>
         <span id="project-version">Shoot 'n' Smash</span>
-        <span>Quatro ondas · Chefão gigante · Resultado e replay</span>
+        <span>Quatro ondas · Itens coletáveis · Resultado e replay</span>
       </footer>
     </main>
 
@@ -109,7 +110,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 15 · Sobrevivência</span>
+          <span class="scene-phase">Fase 16 · Itens</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -156,6 +157,23 @@
         <p id="player-status" class="player-status">
           Vida completa. 100 de 100 pontos.
         </p>
+        <div
+          id="item-hud"
+          class="item-hud"
+          data-item-state="waiting"
+          data-special-ammo="inactive"
+          aria-labelledby="item-label"
+        >
+          <div class="item-heading">
+            <strong id="item-label">Itens</strong>
+            <output id="special-ammo-value" aria-label="Disparos especiais restantes">
+              0 especiais
+            </output>
+          </div>
+          <p id="item-status" class="item-status" role="status" aria-live="polite">
+            Acerte itens na arena para coletá-los.
+          </p>
+        </div>
       </section>
 
       <section
@@ -277,8 +295,8 @@
         <strong>Quatro ondas · Chefão com 10 acertos</strong>
         <span>
           Cada onda aumenta a quantidade ou velocidade e libera novos tipos. A
-          vida é compartilhada por toda a sequência e pelo chefão gigante. Um
-          contato não letal faz o chefão retornar; itens e WebXR virão depois.
+          vida é compartilhada por toda a sequência e pelo chefão gigante. Itens
+          de vida curam até o limite de 100; a munição dourada causa dano 2.
         </span>
       </div>
 

@@ -83,6 +83,23 @@ test('preserva a vida aplicada quando o observador falha', () => {
   assert.equal(player.state.ratio, 0.97);
 });
 
+test('cura sem ultrapassar a vida máxima e informa somente o ganho efetivo', () => {
+  const changes = [];
+  const player = new PlayerHealthSystem({
+    onHealthChange: (state) => changes.push(state),
+  });
+
+  player.applyDamage(15);
+  const change = player.heal(20);
+
+  assert.equal(change.health, 100);
+  assert.equal(change.healing, 15);
+  assert.equal(change.requestedHealing, 20);
+  assert.equal(change.ratio, 1);
+  assert.equal(player.heal(20), false);
+  assert.equal(changes.length, 2);
+});
+
 test('rejeita configurações e valores de dano inválidos', () => {
   for (const config of [
     { initialHealth: 0, maxHealth: 0 },
@@ -102,6 +119,7 @@ test('rejeita configurações e valores de dano inválidos', () => {
 
   for (const damage of [0, -1, 1.5, Number.NaN]) {
     assert.throws(() => player.applyDamage(damage), /inteiro positivo/);
+    assert.throws(() => player.heal(damage), /inteiro positivo/);
   }
   assert.equal(player.health, 100);
 });
@@ -116,4 +134,5 @@ test('reset restaura a vida inicial e dispose é idempotente', () => {
   assert.equal(player.dispose(), false);
   assert.equal(player.reset(), false);
   assert.throws(() => player.applyDamage(1), /descartado/);
+  assert.throws(() => player.heal(1), /descartado/);
 });

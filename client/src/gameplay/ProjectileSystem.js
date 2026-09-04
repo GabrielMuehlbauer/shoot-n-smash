@@ -74,6 +74,13 @@ export class ProjectileSystem {
       metalness: 0,
       roughness: config.roughness,
     });
+    this.specialMaterial = new MeshStandardMaterial({
+      color: config.specialColor,
+      emissive: config.specialEmissiveColor,
+      emissiveIntensity: config.specialEmissiveIntensity,
+      metalness: 0.04,
+      roughness: config.roughness,
+    });
     this.group = new Group();
     this.group.name = 'snowball-projectiles';
     this.scene.add(this.group);
@@ -83,7 +90,14 @@ export class ProjectileSystem {
     return this.projectiles.length;
   }
 
-  spawn({ origin, direction, speed, charge = 0 }) {
+  spawn({
+    origin,
+    direction,
+    speed,
+    charge = 0,
+    hitStrength = this.config.hitStrength,
+    ammoType = 'normal',
+  }) {
     if (this.disposed) {
       throw new Error('Não é possível usar um ProjectileSystem descartado.');
     }
@@ -93,6 +107,14 @@ export class ProjectileSystem {
 
     if (!Number.isFinite(speed) || speed <= 0) {
       throw new RangeError('A velocidade do projétil deve ser maior que zero.');
+    }
+
+    if (!Number.isInteger(hitStrength) || hitStrength <= 0) {
+      throw new RangeError('A força do projétil deve ser um inteiro positivo.');
+    }
+
+    if (!['normal', 'special'].includes(ammoType)) {
+      throw new TypeError('O tipo de munição do projétil deve ser normal ou special.');
     }
 
     const normalizedDirection = new Vector3(
@@ -111,7 +133,10 @@ export class ProjectileSystem {
       this.removeProjectile(this.projectiles[0]);
     }
 
-    const mesh = new Mesh(this.geometry, this.material);
+    const mesh = new Mesh(
+      this.geometry,
+      ammoType === 'special' ? this.specialMaterial : this.material,
+    );
     mesh.name = 'snowball-projectile';
     mesh.position.set(origin.x, origin.y, origin.z);
     mesh.userData.charge = Math.min(Math.max(Number(charge) || 0, 0), 1);
@@ -122,6 +147,8 @@ export class ProjectileSystem {
       spawnPosition: mesh.position.clone(),
       velocity: normalizedDirection.multiplyScalar(speed),
       ageSeconds: 0,
+      hitStrength,
+      ammoType,
     };
 
     this.projectiles.push(projectile);
@@ -211,6 +238,7 @@ export class ProjectileSystem {
     this.scene.remove(this.group);
     this.geometry.dispose();
     this.material.dispose();
+    this.specialMaterial.dispose();
     this.disposed = true;
 
     return true;

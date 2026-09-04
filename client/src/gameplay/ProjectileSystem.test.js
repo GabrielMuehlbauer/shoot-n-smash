@@ -80,6 +80,23 @@ test('expõe o segmento varrido e consome o projétil antes do descarte ambienta
   system.dispose();
 });
 
+test('preserva força e tipo de munição em cada projétil', () => {
+  const { system } = createSystem({ gravity: 0, groundY: -100 });
+
+  const mesh = system.spawn({
+    origin: new Vector3(0, 2, 0),
+    direction: new Vector3(0, 0, -1),
+    speed: 10,
+    hitStrength: 2,
+    ammoType: 'special',
+  });
+
+  assert.equal(system.projectiles[0].hitStrength, 2);
+  assert.equal(system.projectiles[0].ammoType, 'special');
+  assert.equal(mesh.material, system.specialMaterial);
+  system.dispose();
+});
+
 test('remove projéteis ao tocar o solo, expirar ou sair do limite horizontal', () => {
   const groundFixture = createSystem();
   groundFixture.system.spawn({
@@ -171,6 +188,16 @@ test('rejeita dados inválidos e direções nulas', () => {
         speed: 0,
       }),
     /velocidade.*maior que zero/i,
+  );
+  assert.throws(
+    () =>
+      system.spawn({
+        origin: new Vector3(),
+        direction: new Vector3(0, 0, -1),
+        speed: 10,
+        hitStrength: 0,
+      }),
+    /força.*inteiro positivo/i,
   );
   system.dispose();
 });

@@ -525,6 +525,41 @@ O roteiro completo está em [Fase 14 — Pontuação](phases/phase-14-pontuacao.
 O roteiro completo está em
 [Fase 15 — Vitória e derrota](phases/phase-15-vitoria-derrota.md).
 
+## Fase 16
+
+### Cobertura automatizada adicionada
+
+- configuração e validação de probabilidades, posições, duração, tipos e efeitos;
+- sorteio determinístico por onda, com no máximo um coletável ativo;
+- item animado sem deslocar o centro usado pela colisão;
+- estados imutáveis de spawn, coleta, expiração e limpeza;
+- cura inteira positiva com limite superior na vida máxima;
+- força e tipo armazenados individualmente em cada projétil;
+- material dourado compartilhado para a munição especial;
+- coleta por colisão contínua entre segmento e esfera;
+- prioridade do primeiro impacto entre item e inimigo;
+- cura de 20, munição de dano 2, três cargas por coleta e limite de seis;
+- consumo de uma carga especial no disparo, inclusive quando erra;
+- item removido antes do chefão sem alterar a pontuação;
+- HUD acessível para disponibilidade, coleta, expiração e cargas restantes;
+- descarte idempotente e regressão das fases anteriores;
+- metadados e diagnóstico da API atualizados para a Fase 16.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e abra `http://127.0.0.1:5173/`.
+2. Confirme **Fase 16 concluída**, use **Verificar API** e confira `phase: 16`.
+3. Permita dano e acerte um item verde; confirme cura sem ultrapassar 100.
+4. Acerte um item dourado; confirme três cargas no HUD.
+5. Dispare e confira bola dourada, dano 2 e redução imediata da carga.
+6. Erre um disparo especial e confirme que a carga também foi consumida.
+7. Deixe um item expirar após cerca de 12 segundos.
+8. Confirme posições variadas em 360° e no máximo um item ativo.
+9. Termine a onda 4 e confirme que nenhum item permanece no chefão.
+10. Repita três replays e verifique ausência de estado ou recursos residuais.
+
+O roteiro completo está em [Fase 16 — Itens](phases/phase-16-itens.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;

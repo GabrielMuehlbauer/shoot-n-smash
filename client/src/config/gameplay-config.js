@@ -96,6 +96,9 @@ export const GAMEPLAY_CONFIG = freeze({
     color: 0xf4fbff,
     emissiveColor: 0x173845,
     emissiveIntensity: 0.08,
+    specialColor: 0xffc857,
+    specialEmissiveColor: 0x8f4f00,
+    specialEmissiveIntensity: 0.85,
     roughness: 0.92,
     minSpeed: 10,
     maxSpeed: 24,
@@ -106,6 +109,47 @@ export const GAMEPLAY_CONFIG = freeze({
     horizontalLimit: 40,
     maxActive: 24,
     hitStrength: 1,
+  }),
+  items: freeze({
+    radius: 0.62,
+    lifetimeSeconds: 12,
+    spawnChanceByWave: freeze([0.12, 0.2, 0.3, 0.4]),
+    spawn: freeze({
+      minRadius: 6,
+      maxRadius: 10,
+      height: 1.35,
+    }),
+    animation: freeze({
+      bobAmplitude: 0.16,
+      bobAngularSpeed: 2.8,
+      rotationSpeed: 1.25,
+    }),
+    types: freeze([
+      freeze({
+        id: 'health',
+        label: 'Vida',
+        weight: 0.55,
+        color: 0x56e39f,
+        emissiveColor: 0x123f31,
+        effect: freeze({
+          kind: 'heal',
+          amount: 20,
+        }),
+      }),
+      freeze({
+        id: 'special-ammo',
+        label: 'Munição especial',
+        weight: 0.45,
+        color: 0xffc857,
+        emissiveColor: 0x4a2d08,
+        effect: freeze({
+          kind: 'special-ammo',
+          shots: 3,
+          maxShots: 6,
+          hitStrength: 2,
+        }),
+      }),
+    ]),
   }),
   enemy: freeze({
     radius: 1.05,

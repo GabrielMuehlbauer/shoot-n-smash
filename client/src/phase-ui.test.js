@@ -8,8 +8,8 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 15 e prepara os HUDs', () => {
-  assert.match(indexHtml, /Fase 15 concluída/);
+test('marca a interface estática como Fase 16 e prepara os HUDs', () => {
+  assert.match(indexHtml, /Fase 16 concluída/);
   assert.match(indexHtml, /id="score-label">Pontuação/);
   assert.match(indexHtml, /id="score-value"[^>]*>0/);
   assert.match(indexHtml, /data-score-event="initial"/);
@@ -26,6 +26,20 @@ test('marca a interface estática como Fase 15 e prepara os HUDs', () => {
     indexHtml,
     /id="wave-progress"[^>]*>Onda 1 de 4 · Inimigo 1 de 3/,
   );
+  assert.match(indexHtml, /id="item-hud"/);
+  assert.match(indexHtml, /id="special-ammo-value"/);
+});
+
+test('conecta itens coletáveis e munição especial ao HUD acessível', () => {
+  assert.match(mainSource, /onItemCollected:\s*handleItemCollected/);
+  assert.match(mainSource, /onItemStateChange:\s*updateItemState/);
+  assert.match(mainSource, /onSpecialAmmoChange:\s*updateSpecialAmmoState/);
+  assert.match(
+    indexHtml,
+    /id="item-status"[^>]*role="status"[^>]*aria-live="polite"/,
+  );
+  assert.match(stylesCss, /\.item-hud\[data-item-state='available'\]/);
+  assert.match(stylesCss, /data-special-ammo='active'/);
 });
 
 test('mantém eventos do inimigo visíveis sem duplicar o live region de disparo', () => {

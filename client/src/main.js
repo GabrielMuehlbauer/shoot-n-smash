@@ -51,6 +51,10 @@ const playerStatus = document.querySelector('#player-status');
 const scoreHud = document.querySelector('#score-hud');
 const scoreValue = document.querySelector('#score-value');
 const scoreStatus = document.querySelector('#score-status');
+const itemHud = document.querySelector('#item-hud');
+const itemLabel = document.querySelector('#item-label');
+const itemStatus = document.querySelector('#item-status');
+const specialAmmoValue = document.querySelector('#special-ammo-value');
 const resultScreen = document.querySelector('#result-screen');
 const resultEyebrow = document.querySelector('#result-eyebrow');
 const resultTitle = document.querySelector('#result-title');
@@ -154,6 +158,53 @@ function updateScoreState(state) {
 
 function resetScoreHud() {
   updateScoreState({ score: 0, eventCount: 0, lastEvent: null });
+}
+
+function updateItemState(state) {
+  const typeLabel = state.type?.label ?? 'Itens';
+  const hudState = state.active ? 'available' : state.outcome ?? 'waiting';
+
+  itemHud.dataset.itemState = hudState;
+  itemLabel.textContent = state.active ? typeLabel : 'Itens';
+
+  if (state.active) {
+    itemStatus.textContent = `${typeLabel} disponível na arena. Acerte para coletar.`;
+  } else if (state.outcome === 'expired') {
+    itemStatus.textContent = 'O item desapareceu antes de ser coletado.';
+  } else if (state.outcome === 'cleared') {
+    itemStatus.textContent = 'Itens encerrados. Prepare-se para o chefão.';
+  }
+}
+
+function updateSpecialAmmoState(state) {
+  itemHud.dataset.specialAmmo = state.active ? 'active' : 'inactive';
+  specialAmmoValue.textContent = `${state.remainingShots} especiais`;
+  specialAmmoValue.setAttribute(
+    'aria-label',
+    `${state.remainingShots} disparos especiais restantes`,
+  );
+}
+
+function handleItemCollected({ effect, item }) {
+  itemHud.dataset.itemState = 'collected';
+  itemLabel.textContent = item.type.label;
+
+  if (effect.kind === 'heal') {
+    itemStatus.textContent = effect.appliedAmount > 0
+      ? `Item coletado: +${effect.appliedAmount} de vida.`
+      : 'Item de vida coletado, mas a vida já estava completa.';
+  } else {
+    itemStatus.textContent =
+      `Munição especial coletada: +${effect.addedShots} disparos de dano ${effect.hitStrength}.`;
+  }
+}
+
+function resetItemHud() {
+  itemHud.dataset.itemState = 'waiting';
+  itemHud.dataset.specialAmmo = 'inactive';
+  itemLabel.textContent = 'Itens';
+  itemStatus.textContent = 'Acerte itens na arena para coletá-los.';
+  updateSpecialAmmoState({ active: false, remainingShots: 0 });
 }
 
 function closeResultScreen() {
@@ -369,6 +420,9 @@ function handleShot(shot) {
     shot.activeProjectileCount === 1
       ? '1 projétil ativo'
       : `${shot.activeProjectileCount} projéteis ativos`;
+  const ammoLabel = shot.ammoType === 'special'
+    ? ` · munição especial com dano ${shot.hitStrength}`
+    : '';
 
   if (showEncounterOutcome()) {
     return;
@@ -376,7 +430,7 @@ function handleShot(shot) {
 
   setShotStatus(
     'ready',
-    `Disparo de ${percent}% lançado · ${projectileLabel}.`,
+    `Disparo de ${percent}% lançado · ${projectileLabel}${ammoLabel}.`,
   );
 }
 
@@ -501,6 +555,7 @@ function enterPrototype() {
   resetEnemyHud();
   resetPlayerHud();
   resetScoreHud();
+  resetItemHud();
 
   try {
     renderContext = new RenderContext(sceneContainer);
@@ -519,15 +574,20 @@ function enterPrototype() {
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,
       onGameStateChange: handleGameStateChange,
+      onItemCollected: handleItemCollected,
+      onItemStateChange: updateItemState,
       onWaveChange: updateWaveState,
       onPlayerHealthChange: updatePlayerState,
       onScoreChange: updateScoreState,
       onShot: handleShot,
+      onSpecialAmmoChange: updateSpecialAmmoState,
     });
     updateEnemyState(gameSession.enemyState);
     updateWaveState(gameSession.waveState);
     updatePlayerState(gameSession.playerState);
     updateScoreState(gameSession.scoreState);
+    updateItemState(gameSession.itemState);
+    updateSpecialAmmoState(gameSession.specialAmmoState);
     handleGameStateChange(gameSession.gameState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
@@ -582,6 +642,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   resetEnemyHud();
   resetPlayerHud();
   resetScoreHud();
+  resetItemHud();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

@@ -262,6 +262,14 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
     update: (delta) => calls.push(['feedback.update', delta]),
     dispose: () => calls.push(['feedback.dispose']),
   };
+  const itemSystem = {
+    radius: GAMEPLAY_CONFIG.items.radius,
+    state: { active: false },
+    trySpawn: () => false,
+    clear: () => false,
+    update: (delta) => calls.push(['items.update', delta]),
+    dispose: () => calls.push(['items.dispose']),
+  };
   const playerHealthSystem = {
     state: {
       health: 100,
@@ -274,6 +282,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
   const session = new GameSession({
     enemySystem,
     impactFeedbackSystem,
+    itemSystem,
     playerHealthSystem,
     projectileSystem,
     slingshotSystem,
@@ -287,6 +296,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
     ['slingshot.update', 0.016],
     ['enemy.update', 0.016],
     ['feedback.update', 0.016],
+    ['items.update', 0.016],
     ['projectiles.update', 0.016],
     ['enemy.resolveContact'],
     ['slingshot.dispose'],
@@ -294,6 +304,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
     ['enemy.dispose'],
     ['player.dispose'],
     ['feedback.dispose'],
+    ['items.dispose'],
   ]);
 });
 

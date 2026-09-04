@@ -283,3 +283,24 @@ gameplay. A interface mostra nome normalizado do jogador, resultado, pontuação
 cenário. O replay descarta a aplicação atual e constrói uma nova sessão; não
 ressuscita nem reinicializa parcialmente o estado encerrado. Persistência,
 ranking e duração da partida continuam fora deste incremento.
+
+## ADR-019 — Um coletável ativo e força armazenada no projétil
+
+**Status:** aceita em 4 de setembro de 2026.
+
+A Fase 16 cria um `ItemSystem` responsável por sorteio, posição, visual,
+expiração e desfecho do coletável. Existe no máximo um item ativo. Cada encontro
+normal tenta um spawn usando as chances configuradas de 12%, 20%, 30% e 40% nas
+quatro ondas. O item expira em 12 segundos e é removido antes do chefão. Isso
+mantém o primeiro recorte legível e evita uma coleção de entidades sem necessidade.
+
+Os dois efeitos do MVP são cura de 20, limitada à vida máxima, e três disparos
+especiais de força 2, acumuláveis até seis. A carga especial é consumida quando o
+projétil é lançado, inclusive em um erro. A força e o tipo de munição pertencem a
+cada projétil, impedindo que um tiro normal já em voo seja promovido por uma
+coleta posterior.
+
+`GameSession` compara o tempo normalizado das colisões com item e inimigo e
+resolve somente a primeira para cada projétil. Assim, uma bola de neve não coleta
+um item e atinge o monstro no mesmo frame. Não foi adicionada biblioteca de
+física, pontuação por item, poder temporário nem spawn de item no chefão.

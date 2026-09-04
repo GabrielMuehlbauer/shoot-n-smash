@@ -7,12 +7,12 @@ test('descreve API online sem MySQL configurado', () => {
   assert.deepEqual(
     describeApiHealth(200, {
       status: 'ok',
-      phase: 15,
+      phase: 16,
       database: { status: 'not-configured' },
     }),
     {
       state: 'success',
-      message: 'API online. Fase 15. MySQL ainda não configurado, como esperado nesta etapa.',
+      message: 'API online. Fase 16. MySQL ainda não configurado, como esperado nesta etapa.',
     },
   );
 });
@@ -21,12 +21,12 @@ test('distingue API online de MySQL indisponível', () => {
   assert.deepEqual(
     describeApiHealth(503, {
       status: 'degraded',
-      phase: 15,
+      phase: 16,
       database: { status: 'unavailable' },
     }),
     {
       state: 'warning',
-      message: 'API online. Fase 15. O MySQL está indisponível. Verifique a configuração do banco.',
+      message: 'API online. Fase 16. O MySQL está indisponível. Verifique a configuração do banco.',
     },
   );
 });
