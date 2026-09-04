@@ -4,8 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 17 — interface**. O HUD reúne vida, pontuação, itens,
-> onda, inimigo e tensão com feedback acessível e layout responsivo.
+> Status atual: **Fase 18 — API**. Partidas concluídas podem ser validadas,
+> registradas de forma idempotente e consultadas em um ranking temporário.
 
 ## Equipe
 
@@ -45,7 +45,7 @@ já exista:
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Não é necessário preencher `DATABASE_URL` para executar a Fase 17.
+Não é necessário preencher `DATABASE_URL` para executar a Fase 18.
 
 ## Execução em desenvolvimento
 
@@ -96,7 +96,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 17](docs/phases/phase-17-interface.md).
+[guia da Fase 18](docs/phases/phase-18-api.md).
 
 ## Build e execução de produção
 
@@ -125,7 +125,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 17](docs/phases/phase-17-interface.md#como-testar-manualmente).
+[guia de teste da Fase 18](docs/phases/phase-18-api.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -175,10 +175,11 @@ entre frames.
 ## Gameplay planejado
 
 - poderes temporários adicionais;
-- persistência MySQL e ranking.
+- persistência MySQL e integração do ranking na interface.
 
-Nenhum desses sistemas adicionais faz parte da Fase 17. Nome e resultado existem
-somente na sessão local e ainda não são enviados à API.
+Nenhum desses sistemas adicionais faz parte da Fase 18. A API já aceita partidas,
+mas o jogo ainda não envia automaticamente o resultado antes da integração da
+fase 20.
 
 ### Realidade virtual
 
@@ -186,7 +187,7 @@ somente na sessão local e ainda não são enviados à API.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 17.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 18.
 
 ## Modo VR
 
@@ -206,7 +207,7 @@ shoot-n-smash/
 │       ├── input/   # adaptadores desktop de mira e disparo
 │       ├── utils/   # resize e cálculos testáveis
 │       └── world/   # composição visual do cenário de neve
-├── server/       # API Express e futura integração MySQL
+├── server/       # API Express, partidas e futura integração MySQL
 ├── docs/         # arquitetura, fases e instruções técnicas
 ├── .env.example
 └── package.json  # scripts e workspaces
@@ -228,16 +229,19 @@ A estrutura crescerá somente quando cada sistema for implementado.
   mesma entidade é reutilizada em cada tentativa contra o chefão;
 - existe no máximo um item ativo; ele expira após 12 segundos e novos itens não
   são sorteados durante o chefão;
-- a pontuação existe apenas na sessão local e ainda não é persistida;
-- o nome do jogador existe apenas no cliente e a duração da partida não é medida;
+- o jogo ainda não envia automaticamente nome, resultado ou pontuação à API;
+- partidas enviadas diretamente à API ficam somente em memória e somem ao reiniciar;
+- a duração da partida ainda não é medida pelo cliente;
 - MySQL ainda não possui migration ou tabelas;
-- ranking e WebXR ainda não estão implementados;
+- o endpoint de ranking existe, mas sua tela e a persistência ainda não;
+- WebXR ainda não está implementado;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 17: revisar e finalizar o HUD convencional antes de iniciar o back-end de
-partidas. Persistência, ranking e WebXR continuam em incrementos posteriores.
+Fase 19: criar as tabelas MySQL e substituir o repositório temporário por
+persistência. Integração visual do ranking e WebXR continuam em incrementos
+posteriores.
 
 Consulte também:
 
@@ -262,3 +266,4 @@ Consulte também:
 - [Guia da Fase 15](docs/phases/phase-15-vitoria-derrota.md)
 - [Guia da Fase 16](docs/phases/phase-16-itens.md)
 - [Guia da Fase 17](docs/phases/phase-17-interface.md)
+- [Guia da Fase 18](docs/phases/phase-18-api.md)

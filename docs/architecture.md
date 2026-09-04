@@ -497,6 +497,24 @@ espaço é limitado e as instruções do estilingue são reduzidas apenas em tel
 muito estreitas ou baixas. Nenhum objeto Three.js ou sistema de partida foi
 alterado nesta fase.
 
+## Recorte executável da Fase 18
+
+```text
+POST /api/partidas ──> validação ──> MatchService ──> repositório em memória
+                                             │
+GET /api/ranking <── apresentação <── seleção do melhor resultado
+```
+
+As rotas Express conhecem somente os métodos `submit()` e `ranking()` do
+serviço. `MatchService` depende de um repositório com `findBySubmissionId()`,
+`create()` e `list()`. Essa fronteira permite trocar a implementação em memória
+por MySQL na fase 19 sem mudar o contrato HTTP.
+
+Validação, regra de idempotência, escolha do melhor resultado e apresentação do
+ranking ficam fora de `app.js`. O aplicativo apenas compõe dependências, registra
+rotas e transforma `ApiError` em respostas JSON controladas. A data de conclusão
+é criada pelo servidor, nunca aceita do navegador.
+
 ## Servidor
 
 O servidor é um monólito modular Express:

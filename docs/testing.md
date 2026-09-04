@@ -590,6 +590,38 @@ O roteiro completo está em [Fase 16 — Itens](phases/phase-16-itens.md).
 
 O roteiro completo está em [Fase 17 — Interface](phases/phase-17-interface.md).
 
+## Fase 18
+
+### Cobertura automatizada adicionada
+
+- normalização e validação do payload de partida;
+- UUID obrigatório e rejeição de campos desconhecidos;
+- limites de nome, pontuação e duração;
+- cenário e resultado controlados;
+- criação de jogador e partida com data do servidor;
+- repetição idempotente e conflito de submissão;
+- reutilização da identidade normalizada do jogador;
+- melhor resultado por jogador;
+- ordenação decrescente, desempates e posições compartilhadas;
+- filtros `cenario`, `fase` e `limite`;
+- respostas HTTP `201`, `200`, `400` e `409`;
+- ranking vazio ou preenchido sem dependência do MySQL;
+- regressão dos erros gerais e do diagnóstico da API;
+- metadados atualizados para a Fase 18.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev`.
+2. Confirme `phase: 18` em `/api/health`.
+3. Envie uma partida válida e confirme `201`.
+4. Repita o body e confirme `200` sem novo ID.
+5. Reutilize o UUID com outra pontuação e confirme `409`.
+6. Consulte `/api/ranking?fase=neve` e confira ordenação e campos.
+7. Envie dados inválidos e confira `400` com detalhes sem stack trace.
+8. Reinicie o servidor e confirme que o ranking temporário volta a ficar vazio.
+
+O roteiro completo está em [Fase 18 — API](phases/phase-18-api.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;

@@ -3,9 +3,13 @@
 ## Estado atual
 
 MySQL foi aprovado como banco do projeto. A conexão opcional e o diagnóstico
-foram preparados na Fase 1; até a Fase 17 ainda não existe schema nem migration.
+foram preparados na Fase 1; até a Fase 18 ainda não existe schema nem migration.
 Isso evita antecipar tabelas antes do contrato definitivo da pontuação e das
 ondas.
+
+A Fase 18 usa um `InMemoryMatchRepository` temporário para validar os contratos
+da API. Seus dados são apagados ao reiniciar e não representam persistência. A
+fase 19 substituirá essa implementação por um repositório MySQL.
 
 ## Configuração local
 

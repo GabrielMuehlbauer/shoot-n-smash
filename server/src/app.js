@@ -4,8 +4,15 @@ import path from 'node:path';
 import express from 'express';
 
 import { readDatabaseStatus } from './database/pool.js';
+import { ApiError } from './matches/errors.js';
+import { MatchService } from './matches/MatchService.js';
+import { createMatchesRouter } from './routes/matches.js';
 
-export function createApp({ databasePool = null, clientDistPath = null } = {}) {
+export function createApp({
+  databasePool = null,
+  clientDistPath = null,
+  matchService = new MatchService(),
+} = {}) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -19,13 +26,15 @@ export function createApp({ databasePool = null, clientDistPath = null } = {}) {
       response.status(databaseUnavailable ? 503 : 200).json({
         status: databaseUnavailable ? 'degraded' : 'ok',
         service: 'shoot-n-smash-api',
-        phase: 17,
+        phase: 18,
         database,
       });
     } catch (error) {
       next(error);
     }
   });
+
+  app.use('/api', createMatchesRouter({ matchService }));
 
   app.use('/api', (_request, response) => {
     response.status(404).json({
@@ -55,6 +64,20 @@ export function createApp({ databasePool = null, clientDistPath = null } = {}) {
 
     if (error instanceof SyntaxError && 'body' in error) {
       response.status(400).json({ error: 'JSON inválido.' });
+      return;
+    }
+
+    if (error instanceof ApiError) {
+      const body = {
+        error: error.message,
+        code: error.code,
+      };
+
+      if (error.details !== undefined) {
+        body.details = error.details;
+      }
+
+      response.status(error.status).json(body);
       return;
     }
 

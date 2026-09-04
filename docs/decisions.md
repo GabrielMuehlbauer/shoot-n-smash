@@ -324,3 +324,24 @@ As mensagens já anunciadas por `shot-status` e `item-status` foram preservadas.
 O estado do inimigo não se tornou outra live region, evitando anúncios
 concorrentes a cada impacto. HUD imersivo, personalização visual e telemetria
 continuam fora desta decisão.
+
+## ADR-021 — Contrato idempotente antes da persistência
+
+**Status:** aceita em 4 de setembro de 2026.
+
+A Fase 18 introduz `POST /api/partidas` e `GET /api/ranking` sobre um repositório
+em memória. Essa implementação é temporária, mas respeita a mesma fronteira que
+o repositório MySQL usará: localizar submissão, criar partida e listar partidas.
+Assim, a API pode ser testada antes de existir schema sem misturar armazenamento
+às rotas.
+
+Cada envio exige um UUID `submissionId`. Repetir os mesmos dados devolve a
+partida original; reutilizar o UUID com dados diferentes retorna `409`. A data é
+produzida pelo servidor. Nome, pontuação, cenário, resultado e duração são
+validados antes de qualquer escrita.
+
+O ranking apresenta o melhor resultado por identidade normalizada de jogador,
+em ordem decrescente, com posições compartilhadas nos empates. O teto de 14.000
+é derivado do balanceamento atual e serve apenas como validação de sanidade. O
+jogo não envia resultados nesta fase; essa integração continua reservada para a
+fase 20, depois da persistência.

@@ -1,6 +1,6 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "description": "Protótipo 3D no navegador com ondas, itens coletáveis, chefão e resultados.",
   "type": "module",

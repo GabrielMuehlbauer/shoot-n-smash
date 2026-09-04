@@ -8,8 +8,8 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 17 e prepara o HUD consolidado', () => {
-  assert.match(indexHtml, /Fase 17 concluída/);
+test('marca a interface estática como Fase 18 e preserva o HUD consolidado', () => {
+  assert.match(indexHtml, /Fase 18 concluída/);
   assert.match(indexHtml, /class="status-hud"/);
   assert.match(indexHtml, /id="score-label">Pontuação/);
   assert.match(indexHtml, /id="score-value"[^>]*>0/);
