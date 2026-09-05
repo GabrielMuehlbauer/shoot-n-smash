@@ -4,8 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 20 — ranking global**. Partidas concluídas são enviadas
-> automaticamente à API e o menu apresenta os melhores resultados persistidos.
+> Status atual: **Fase 21 — estilingue completo**. O modelo 3D reage à tensão,
+> mostra a força do tiro e prevê a trajetória usando a mesma balística da bola.
 
 ## Equipe
 
@@ -69,8 +69,9 @@ e o servidor. Para testar o recorte jogável:
 2. confirme a barra horizontal em **100 / 100**, observe no outro HUD qual tipo
    foi sorteado e localize o único monstro de gelo;
 3. pressione **Ativar mira** e mova o mouse para apontar;
-4. mantenha o botão esquerdo pressionado para acumular tensão e solte para
-   disparar;
+4. mantenha o botão esquerdo pressionado: confirme o projétil sendo puxado nos
+   elásticos, a força aumentando de 10 a 24 u/s e a trajetória pontilhada; solte
+   para disparar pela origem do modelo;
 5. confirme que cada impacto válido cria um burst branco, consome o projétil e
    reduz a resistência em um acerto; o tipo Fraco exige 1, o Médio 2 e o
    Resistente 3 impactos;
@@ -99,7 +100,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 20](docs/phases/phase-20-ranking.md).
+[guia da Fase 21](docs/phases/phase-21-estilingue-completo.md).
 
 ## Build e execução de produção
 
@@ -128,7 +129,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 20](docs/phases/phase-20-ranking.md#como-testar-manualmente).
+[guia de teste da Fase 21](docs/phases/phase-21-estilingue-completo.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -179,6 +180,8 @@ nos diagnósticos públicos.
 - **Segurar o botão esquerdo**: acumula tensão por até 1,2 segundo;
 - **Soltar o botão esquerdo**: cria um projétil na direção da mira, com
   velocidade proporcional à tensão;
+- durante a carga, o estilingue 3D puxa bolsa, projétil e elásticos, enquanto o
+  HUD mostra a força e pontos na arena antecipam a parábola do disparo;
 - **Acertar um item**: coleta vida ou munição especial; não é necessário um
   comando separado;
 - **Jogar novamente**: após vitória ou derrota, descarta a partida encerrada e
@@ -196,7 +199,7 @@ entre frames.
 ## Gameplay planejado
 
 - poderes temporários adicionais;
-- estilingue com representação visual e trajetória aprimorada.
+- controles imersivos com interação de duas mãos.
 
 ### Realidade virtual
 
@@ -204,7 +207,7 @@ entre frames.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 20.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 21.
 
 ## Modo VR
 
@@ -250,12 +253,14 @@ A estrutura crescerá somente quando cada sistema for implementado.
 - sem `DATABASE_URL`, partidas ficam em memória e somem ao reiniciar;
 - a API valida limites e contratos, mas ainda não reconstrói a pontuação a partir
   de um log autoritativo de eventos;
+- a previsão balística indica gravidade e alcance, mas não antecipa colisões com
+  monstros, itens ou elementos decorativos;
 - WebXR ainda não está implementado;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 21: aprimorar o estilingue, incluindo visual, tensão, força e trajetória.
+Fase 22: integrar WebXR, controles de duas mãos e entrada em `immersive-vr`.
 
 Consulte também:
 
@@ -283,3 +288,4 @@ Consulte também:
 - [Guia da Fase 18](docs/phases/phase-18-api.md)
 - [Guia da Fase 19](docs/phases/phase-19-banco-dados.md)
 - [Guia da Fase 20](docs/phases/phase-20-ranking.md)
+- [Guia da Fase 21](docs/phases/phase-21-estilingue-completo.md)

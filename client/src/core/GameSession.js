@@ -138,6 +138,7 @@ export class GameSession {
         slingshotSystem ??
         new SlingshotSystem({
           camera,
+          scene,
           projectileSystem: this.projectileSystem,
           config,
           onChargeChange,
@@ -319,7 +320,9 @@ export class GameSession {
       return false;
     }
 
-    return this.slingshotSystem.beginCharge();
+    return this.slingshotSystem.beginCharge({
+      ammoType: this.specialAmmoRemainingShots > 0 ? 'special' : 'normal',
+    });
   }
 
   releaseShot() {

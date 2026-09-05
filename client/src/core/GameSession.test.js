@@ -146,17 +146,17 @@ test('carrega de 0 a 1 e dispara na direção mundial da câmera', () => {
   assert.equal(shot.speed, GAMEPLAY_CONFIG.projectile.maxSpeed);
   assert.equal(shot.activeProjectileCount, 1);
   assert.deepEqual(shots, [shot]);
-  assertAlmostEqual(spawn.origin.x, 1);
-  assertAlmostEqual(spawn.origin.y, 1.65);
-  assertAlmostEqual(
-    spawn.origin.z,
-    2 - GAMEPLAY_CONFIG.projectile.spawnDistance,
-  );
+  assertAlmostEqual(spawn.origin.x, 1 + GAMEPLAY_CONFIG.projectile.spawnOffset.x);
+  assertAlmostEqual(spawn.origin.y, 1.65 + GAMEPLAY_CONFIG.projectile.spawnOffset.y);
+  assertAlmostEqual(spawn.origin.z, 2 + GAMEPLAY_CONFIG.projectile.spawnOffset.z);
   assertAlmostEqual(spawn.direction.x, 0);
   assertAlmostEqual(spawn.direction.y, 0);
   assertAlmostEqual(spawn.direction.z, -1);
   assert.equal(spawn.charge, 1);
-  assert.deepEqual(chargeStates.at(-1), { charging: false, ratio: 0 });
+  assert.deepEqual(
+    (({ charging, ratio }) => ({ charging, ratio }))(chargeStates.at(-1)),
+    { charging: false, ratio: 0 },
+  );
   session.dispose();
 });
 
@@ -180,7 +180,10 @@ test('clique rápido usa velocidade mínima e cancelamento não dispara', () => 
   session.update(0.3);
   assert.equal(session.cancelCharge(), true);
   assert.equal(projectileSystem.spawnCalls.length, 1);
-  assert.deepEqual(chargeStates.at(-1), { charging: false, ratio: 0 });
+  assert.deepEqual(
+    (({ charging, ratio }) => ({ charging, ratio }))(chargeStates.at(-1)),
+    { charging: false, ratio: 0 },
+  );
   session.dispose();
 });
 

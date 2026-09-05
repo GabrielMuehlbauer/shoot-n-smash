@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Shoot 'n' Smash — Fase 20 com partidas e ranking global integrados."
+      content="Shoot 'n' Smash — Fase 21 com estilingue 3D e trajetória prevista."
     />
     <meta name="theme-color" content="#07172f" />
     <title>Shoot 'n' Smash</title>
@@ -19,7 +19,7 @@
 
     <main id="main-content" class="shell" data-landing>
       <header class="hero" aria-labelledby="game-title">
-        <div class="phase-badge"><span></span> Fase 20 concluída</div>
+        <div class="phase-badge"><span></span> Fase 21 concluída</div>
         <p class="eyebrow">Ilha de Gelo · Sobreviva até o fim</p>
         <h1 id="game-title">Shoot <em>'n'</em> Smash</h1>
         <p class="hero-copy">
@@ -47,7 +47,7 @@
         <div class="hero-actions">
           <button id="start-scene-button" class="primary-action" type="button">
             Iniciar partida
-            <small>Ranking global · Fase 20</small>
+            <small>Estilingue completo · Fase 21</small>
           </button>
           <button id="api-status-button" class="secondary-action" type="button">
             Verificar API
@@ -144,7 +144,7 @@
 
       <div class="scene-topbar">
         <div class="scene-heading">
-          <span class="scene-phase">Fase 20 · Ranking global</span>
+          <span class="scene-phase">Fase 21 · Estilingue completo</span>
           <h2 id="scene-title">Arena de neve</h2>
         </div>
         <button id="exit-scene-button" class="exit-scene-button" type="button">
@@ -293,6 +293,16 @@
         >
           0%
         </progress>
+        <div class="shot-telemetry" aria-label="Informações do disparo preparado">
+          <span>
+            Força
+            <output id="slingshot-speed-value">10,0 u/s</output>
+          </span>
+          <span>
+            Trajetória
+            <output id="slingshot-trajectory-value">Segure para prever</output>
+          </span>
+        </div>
         <p id="shot-status" class="shot-status" role="status" aria-live="polite" aria-atomic="true">
           Ative a mira para preparar o estilingue.
         </p>

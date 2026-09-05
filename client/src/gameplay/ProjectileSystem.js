@@ -7,6 +7,7 @@ import {
 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
+import { integrateBallisticStep } from './Ballistics.js';
 
 function assertFiniteVector(name, value) {
   if (
@@ -172,8 +173,6 @@ export class ProjectileSystem {
       return true;
     }
 
-    const accelerationY = this.config.gravity;
-    const halfAccelerationStep = 0.5 * accelerationY * delta * delta;
     const horizontalLimitSquared = this.config.horizontalLimit ** 2;
 
     for (let index = this.projectiles.length - 1; index >= 0; index -= 1) {
@@ -181,9 +180,12 @@ export class ProjectileSystem {
       const { mesh, velocity } = projectile;
 
       projectile.previousPosition.copy(mesh.position);
-      mesh.position.addScaledVector(velocity, delta);
-      mesh.position.y += halfAccelerationStep;
-      velocity.y += accelerationY * delta;
+      integrateBallisticStep({
+        position: mesh.position,
+        velocity,
+        gravity: this.config.gravity,
+        deltaSeconds: delta,
+      });
       projectile.ageSeconds += delta;
 
       const consumed =

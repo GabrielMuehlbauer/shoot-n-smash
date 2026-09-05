@@ -61,10 +61,11 @@ test('carrega de 0 a 1 sem ultrapassar a duração configurada', () => {
   fixture.slingshot.update(10);
 
   assert.equal(fixture.slingshot.isCharging, true);
+  assert.equal(Object.isFrozen(fixture.chargeStates[0]), true);
   assert.deepEqual(fixture.chargeStates, [
-    { charging: true, ratio: 0 },
-    { charging: true, ratio: 0.5 },
-    { charging: true, ratio: 1 },
+    { charging: true, ratio: 0, speed: 10, maxSpeed: 24, ammoType: 'normal' },
+    { charging: true, ratio: 0.5, speed: 17, maxSpeed: 24, ammoType: 'normal' },
+    { charging: true, ratio: 1, speed: 24, maxSpeed: 24, ammoType: 'normal' },
   ]);
 });
 
@@ -85,12 +86,9 @@ test('dispara na direção mundial da câmera com velocidade proporcional', () =
   );
   assert.equal(shot.activeProjectileCount, 1);
   assert.deepEqual(fixture.shots, [shot]);
-  assertAlmostEqual(spawn.origin.x, 1);
-  assertAlmostEqual(spawn.origin.y, 1.65);
-  assertAlmostEqual(
-    spawn.origin.z,
-    2 - GAMEPLAY_CONFIG.projectile.spawnDistance,
-  );
+  assertAlmostEqual(spawn.origin.x, 1 + GAMEPLAY_CONFIG.projectile.spawnOffset.x);
+  assertAlmostEqual(spawn.origin.y, 1.65 + GAMEPLAY_CONFIG.projectile.spawnOffset.y);
+  assertAlmostEqual(spawn.origin.z, 2 + GAMEPLAY_CONFIG.projectile.spawnOffset.z);
   assertAlmostEqual(spawn.direction.x, 0);
   assertAlmostEqual(spawn.direction.y, 0);
   assertAlmostEqual(spawn.direction.z, -1);
@@ -100,6 +98,9 @@ test('dispara na direção mundial da câmera com velocidade proporcional', () =
   assert.deepEqual(fixture.chargeStates.at(-1), {
     charging: false,
     ratio: 0,
+    speed: 10,
+    maxSpeed: 24,
+    ammoType: 'normal',
   });
 });
 
@@ -143,6 +144,9 @@ test('cancelamento zera a carga sem criar projétil', () => {
   assert.deepEqual(fixture.chargeStates.at(-1), {
     charging: false,
     ratio: 0,
+    speed: 10,
+    maxSpeed: 24,
+    ammoType: 'normal',
   });
 });
 
@@ -161,6 +165,45 @@ test('rejeita propriedades inválidas antes de criar o projétil', () => {
     /tipo de munição/i,
   );
   fixture.slingshot.cancelCharge();
+});
+
+test('rejeita velocidades invertidas e origem local inválida', () => {
+  const fixture = createFixture();
+  const baseOptions = {
+    camera: fixture.camera,
+    projectileSystem: fixture.projectileSystem,
+  };
+
+  assert.throws(
+    () =>
+      new SlingshotSystem({
+        ...baseOptions,
+        config: {
+          ...GAMEPLAY_CONFIG,
+          projectile: {
+            ...GAMEPLAY_CONFIG.projectile,
+            minSpeed: 25,
+            maxSpeed: 24,
+          },
+        },
+      }),
+    /velocidades.*crescentes/,
+  );
+  assert.throws(
+    () =>
+      new SlingshotSystem({
+        ...baseOptions,
+        config: {
+          ...GAMEPLAY_CONFIG,
+          projectile: {
+            ...GAMEPLAY_CONFIG.projectile,
+            spawnOffset: { x: Number.NaN, y: 0, z: 0 },
+          },
+        },
+      }),
+    /origem local/,
+  );
+  fixture.slingshot.dispose();
 });
 
 test('ignora deltas inválidos e dispose é idempotente', () => {

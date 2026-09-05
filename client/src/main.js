@@ -44,6 +44,10 @@ const slingshotTension = document.querySelector('#slingshot-tension');
 const slingshotTensionValue = document.querySelector(
   '#slingshot-tension-value',
 );
+const slingshotSpeedValue = document.querySelector('#slingshot-speed-value');
+const slingshotTrajectoryValue = document.querySelector(
+  '#slingshot-trajectory-value',
+);
 const shotStatus = document.querySelector('#shot-status');
 const enemyHud = document.querySelector('#enemy-hud');
 const enemyResistance = document.querySelector('#enemy-resistance');
@@ -260,6 +264,12 @@ function resetSlingshotHud(state = 'ready') {
   slingshotTension.textContent = '0%';
   slingshotTension.setAttribute('aria-valuetext', '0% de tensão');
   slingshotTensionValue.textContent = '0%';
+  slingshotSpeedValue.textContent =
+    `${GAMEPLAY_CONFIG.projectile.minSpeed.toLocaleString('pt-BR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} u/s`;
+  slingshotTrajectoryValue.textContent = 'Segure para prever';
   slingshotHud.dataset.state = state;
   announcedChargeStage = -1;
 }
@@ -555,7 +565,7 @@ function updateWaveState(state) {
   showEncounterOutcome();
 }
 
-function updateChargeState({ charging, ratio }) {
+function updateChargeState({ charging, ratio, speed, ammoType = 'normal' }) {
   const normalizedRatio = Math.min(Math.max(Number(ratio) || 0, 0), 1);
   const percent = Math.round(normalizedRatio * 100);
 
@@ -566,6 +576,20 @@ function updateChargeState({ charging, ratio }) {
     `${percent}% de tensão`,
   );
   slingshotTensionValue.textContent = `${percent}%`;
+  const safeSpeed = Number.isFinite(speed)
+    ? speed
+    : GAMEPLAY_CONFIG.projectile.minSpeed +
+      (GAMEPLAY_CONFIG.projectile.maxSpeed - GAMEPLAY_CONFIG.projectile.minSpeed) *
+        normalizedRatio;
+  slingshotSpeedValue.textContent = `${safeSpeed.toLocaleString('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })} u/s`;
+  slingshotTrajectoryValue.textContent = charging
+    ? ammoType === 'special'
+      ? 'Dourada prevista'
+      : 'Prevista na arena'
+    : 'Segure para prever';
 
   if (!charging) {
     resetSlingshotHud(pointerLocked ? 'ready' : 'idle');

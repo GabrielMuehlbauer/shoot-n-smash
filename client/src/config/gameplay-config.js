@@ -89,6 +89,46 @@ export const GAMEPLAY_CONFIG = freeze({
   charge: freeze({
     durationSeconds: 1.2,
   }),
+  slingshotVisual: freeze({
+    position: freeze({ x: 0.32, y: -0.32, z: -0.72 }),
+    handle: freeze({
+      length: 0.34,
+      radius: 0.048,
+    }),
+    fork: freeze({
+      tipX: 0.17,
+      tipY: 0.26,
+      radius: 0.032,
+    }),
+    pouch: freeze({
+      y: 0.1,
+      radius: 0.085,
+      restZ: 0.015,
+      pullDistance: 0.42,
+    }),
+    loadedBall: freeze({
+      radius: 0.105,
+    }),
+    band: freeze({
+      width: 1,
+    }),
+    trajectory: freeze({
+      pointCount: 22,
+      stepSeconds: 0.075,
+      pointSize: 0.075,
+    }),
+    colors: freeze({
+      wood: 0x8a4f2a,
+      pouch: 0x352117,
+      band: 0xf1c27d,
+      snowball: 0xf4fbff,
+      snowballEmissive: 0x173845,
+      specialBall: 0xffc857,
+      specialBallEmissive: 0x8f4f00,
+      trajectory: 0xc8f4ff,
+      specialTrajectory: 0xffd978,
+    }),
+  }),
   projectile: freeze({
     radius: 0.18,
     widthSegments: 16,
@@ -102,7 +142,7 @@ export const GAMEPLAY_CONFIG = freeze({
     roughness: 0.92,
     minSpeed: 10,
     maxSpeed: 24,
-    spawnDistance: 0.72,
+    spawnOffset: freeze({ x: 0.32, y: -0.22, z: -0.72 }),
     gravity: -9.8,
     groundY: 0.18,
     lifetimeSeconds: 5,
