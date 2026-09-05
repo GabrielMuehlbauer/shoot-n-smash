@@ -3,10 +3,10 @@ import test from 'node:test';
 
 import { PROJECT_INFO } from './project-info.js';
 
-test('mantém os metadados aprovados da fase com persistência MySQL', () => {
+test('mantém os metadados aprovados da fase com ranking global', () => {
   assert.equal(PROJECT_INFO.name, "Shoot 'n' Smash");
-  assert.equal(PROJECT_INFO.version, '0.19.0');
-  assert.equal(PROJECT_INFO.phase, 19);
+  assert.equal(PROJECT_INFO.version, '0.20.0');
+  assert.equal(PROJECT_INFO.phase, 20);
   assert.equal(PROJECT_INFO.scenario, 'Neve');
   assert.equal(PROJECT_INFO.team.length, 4);
 });

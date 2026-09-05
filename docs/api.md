@@ -16,7 +16,7 @@ Resposta sem banco configurado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 19,
+    "phase": 20,
   "database": {
     "status": "not-configured"
   },
@@ -32,7 +32,7 @@ Resposta com banco conectado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-  "phase": 19,
+    "phase": 20,
   "database": {
     "status": "connected"
   },
@@ -49,7 +49,7 @@ Resposta quando existe configuração, mas o banco está indisponível —
 {
   "status": "degraded",
   "service": "shoot-n-smash-api",
-  "phase": 19,
+    "phase": 20,
   "database": {
     "status": "unavailable"
   },
@@ -169,8 +169,9 @@ Possíveis erros: `400` e `500`.
 Erros de validação incluem `code` e uma lista `details` com campo e mensagem. O
 servidor nunca inclui stack trace, segredo ou entrada bruta na resposta.
 
-## Estado da fase 19
+## Estado da fase 20
 
-Os contratos HTTP e a persistência estão prontos. Sem `DATABASE_URL`, os dados
-ainda desaparecem ao reiniciar. O jogo não envia resultados automaticamente e
-não exibe o ranking; essas integrações entram na fase 20.
+O cliente envia automaticamente cada vitória ou derrota concluída, usando um
+UUID criado no início da sessão. Em caso de falha, a tela final permite repetir
+o mesmo envio sem duplicar a partida. O menu consulta este endpoint e apresenta
+os dez melhores resultados do cenário de neve.

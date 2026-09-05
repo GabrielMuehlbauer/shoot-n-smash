@@ -655,6 +655,37 @@ O roteiro completo está em [Fase 18 — API](phases/phase-18-api.md).
 O roteiro completo está em
 [Fase 19 — Banco de dados](phases/phase-19-banco-dados.md).
 
+## Fase 20
+
+### Cobertura automatizada adicionada
+
+- geração de UUID v4 nativo e fallback criptográfico;
+- consolidação imutável de nome, pontos, cenário, resultado e duração;
+- validação de tempos e duração mínima positiva;
+- contrato de `POST /api/partidas` e repetição idempotente;
+- propagação controlada de status, código e detalhes de erro da API;
+- contrato e validação estrutural de `GET /api/ranking`;
+- formatação brasileira de pontos, duração e data;
+- ranking acessível com estado vazio e atualização manual;
+- nomes escritos no DOM com `textContent`;
+- bloqueio de envios simultâneos para o mesmo UUID;
+- feedback de salvamento, sucesso, falha e retry na tela final;
+- atualização dos metadados e do diagnóstico para a Fase 20;
+- regressão completa do gameplay, API, banco e migrations.
+
+### Verificação manual resumida
+
+1. Execute `npm run dev` e confirme **Fase 20 concluída**.
+2. Confira o ranking no menu e use **Atualizar ranking**.
+3. Termine uma partida e confirme duração e estado de registro na tela final.
+4. Volte ao menu e confira a pontuação na classificação.
+5. Simule uma falha de rede, restaure a conexão e use o retry.
+6. Confirme que repetir o envio preserva uma única partida.
+7. Faça um replay durante uma resposta lenta e verifique isolamento dos dados.
+8. Confira o layout do ranking em 320 px e a navegação por teclado.
+
+O roteiro completo está em [Fase 20 — Ranking global](phases/phase-20-ranking.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;

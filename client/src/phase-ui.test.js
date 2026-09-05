@@ -8,8 +8,8 @@ const [indexHtml, mainSource, stylesCss] = await Promise.all([
   readFile(new URL('./styles.css', import.meta.url), 'utf8'),
 ]);
 
-test('marca a interface estática como Fase 19 e preserva o HUD consolidado', () => {
-  assert.match(indexHtml, /Fase 19 concluída/);
+test('marca a interface estática como Fase 20 e preserva o HUD consolidado', () => {
+  assert.match(indexHtml, /Fase 20 concluída/);
   assert.match(indexHtml, /class="status-hud"/);
   assert.match(indexHtml, /id="score-label">Pontuação/);
   assert.match(indexHtml, /id="score-value"[^>]*>0/);
@@ -156,7 +156,7 @@ test('prepara nome e tela final acessivel com todos os dados obrigatorios', () =
 test('conecta estado terminal, pausa real e replay com uma sessao nova', () => {
   assert.match(mainSource, /onGameStateChange:\s*handleGameStateChange/);
   assert.match(mainSource, /gameApp\?\.stop\(\)/);
-  assert.match(mainSource, /showResultScreen\(state\)/);
+  assert.match(mainSource, /showResultScreen\(state, completedMatch\)/);
   assert.match(mainSource, /replayButton\.focus/);
   assert.match(
     mainSource,

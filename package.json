@@ -1,8 +1,8 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "private": true,
-  "description": "Jogo 3D no navegador com ondas, itens, API e persistência MySQL.",
+  "description": "Jogo 3D no navegador com ondas, itens, partidas e ranking global.",
   "type": "module",
   "workspaces": [
     "client",

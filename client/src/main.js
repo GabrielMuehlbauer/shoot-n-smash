@@ -1,4 +1,11 @@
 import { describeApiHealth } from './api-health.js';
+import {
+  MatchApiClient,
+  createMatchSubmission,
+  createSubmissionId,
+  formatMatchDuration,
+  formatRankingDate,
+} from './api/match-api.js';
 import { GAMEPLAY_CONFIG } from './config/gameplay-config.js';
 import { GameApp } from './core/GameApp.js';
 import { GameSession } from './core/GameSession.js';
@@ -19,6 +26,9 @@ import './styles.css';
 const teamList = document.querySelector('#team-list');
 const apiButton = document.querySelector('#api-status-button');
 const apiStatus = document.querySelector('#api-status');
+const rankingRefreshButton = document.querySelector('#ranking-refresh-button');
+const rankingBody = document.querySelector('#ranking-body');
+const rankingStatus = document.querySelector('#ranking-status');
 const projectVersion = document.querySelector('#project-version');
 const landing = document.querySelector('[data-landing]');
 const startSceneButton = document.querySelector('#start-scene-button');
@@ -67,6 +77,10 @@ const resultPlayerName = document.querySelector('#result-player-name');
 const resultOutcome = document.querySelector('#result-outcome');
 const resultScore = document.querySelector('#result-score');
 const resultScenario = document.querySelector('#result-scenario');
+const resultDuration = document.querySelector('#result-duration');
+const resultSync = document.querySelector('.result-sync');
+const resultSyncStatus = document.querySelector('#result-sync-status');
+const resultRetryButton = document.querySelector('#result-retry-button');
 const replayButton = document.querySelector('#replay-button');
 const resultMenuButton = document.querySelector('#result-menu-button');
 
@@ -77,6 +91,11 @@ let gameSession = null;
 let pointerLocked = false;
 let announcedChargeStage = -1;
 let currentPlayerName = normalizePlayerName('');
+let activeMatch = null;
+let lastCompletedMatch = null;
+let rankingRequestId = 0;
+const savingSubmissionIds = new Set();
+const matchApi = new MatchApiClient();
 
 for (const member of PROJECT_INFO.team) {
   const item = document.createElement('li');
@@ -85,6 +104,150 @@ for (const member of PROJECT_INFO.team) {
 }
 
 projectVersion.textContent = `${PROJECT_INFO.name} · v${PROJECT_INFO.version}`;
+
+function setResultSyncState(state, message, { retry = false } = {}) {
+  resultSync.dataset.state = state;
+  resultSyncStatus.textContent = message;
+  resultRetryButton.hidden = !retry;
+  resultRetryButton.disabled = state === 'saving';
+}
+
+function renderRanking({ ranking }) {
+  const fragment = document.createDocumentFragment();
+
+  if (ranking.length === 0) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.className = 'ranking-empty';
+    cell.colSpan = 5;
+    cell.textContent = 'Ainda não há partidas registradas. Seja o primeiro!';
+    row.append(cell);
+    fragment.append(row);
+  } else {
+    for (const entry of ranking) {
+      const row = document.createElement('tr');
+      const position = document.createElement('th');
+      position.scope = 'row';
+      position.textContent = `${entry.posicao}º`;
+      row.append(position);
+
+      for (const [value, className = ''] of [
+        [entry.nome],
+        [entry.pontuacao.toLocaleString('pt-BR'), 'ranking-score'],
+        [entry.cenario.charAt(0).toLocaleUpperCase('pt-BR') + entry.cenario.slice(1)],
+        [formatRankingDate(entry.data)],
+      ]) {
+        const cell = document.createElement('td');
+        cell.className = className;
+        cell.textContent = value;
+        row.append(cell);
+      }
+
+      fragment.append(row);
+    }
+  }
+
+  rankingBody.replaceChildren(fragment);
+}
+
+async function loadRanking() {
+  const requestId = ++rankingRequestId;
+  rankingRefreshButton.disabled = true;
+  rankingStatus.dataset.state = 'loading';
+  rankingStatus.textContent = 'Consultando os melhores resultados…';
+
+  try {
+    const result = await matchApi.getRanking({ scenario: 'neve', limit: 10 });
+
+    if (requestId !== rankingRequestId) {
+      return false;
+    }
+
+    renderRanking(result);
+    rankingStatus.dataset.state = 'success';
+    rankingStatus.textContent = result.total === 0
+      ? 'Ranking pronto para receber a primeira partida.'
+      : `Mostrando ${result.ranking.length} de ${result.total} jogadores classificados.`;
+    return true;
+  } catch (error) {
+    if (requestId !== rankingRequestId) {
+      return false;
+    }
+
+    rankingStatus.dataset.state = 'error';
+    rankingStatus.textContent =
+      'Não foi possível carregar o ranking. Verifique a API e tente novamente.';
+    console.error('Falha ao consultar o ranking.', error);
+    return false;
+  } finally {
+    if (requestId === rankingRequestId) {
+      rankingRefreshButton.disabled = false;
+    }
+  }
+}
+
+function completeActiveMatch(state) {
+  if (activeMatch?.submission) {
+    return activeMatch.submission;
+  }
+
+  if (!activeMatch) {
+    throw new Error('Não existe uma partida ativa para encerrar.');
+  }
+
+  const submission = createMatchSubmission({
+    submissionId: activeMatch.submissionId,
+    playerName: currentPlayerName,
+    score: gameSession.scoreState.score,
+    scenario: PROJECT_INFO.scenario,
+    result: state.result,
+    startedAt: activeMatch.startedAt,
+    completedAt: performance.now(),
+  });
+
+  activeMatch.submission = submission;
+  lastCompletedMatch = submission;
+  return submission;
+}
+
+async function submitCompletedMatch(match) {
+  if (!match || savingSubmissionIds.has(match.submissionId)) {
+    return false;
+  }
+
+  savingSubmissionIds.add(match.submissionId);
+  if (lastCompletedMatch?.submissionId === match.submissionId) {
+    setResultSyncState('saving', 'Registrando partida no ranking global…');
+  }
+
+  try {
+    const result = await matchApi.submitMatch(match);
+
+    if (lastCompletedMatch?.submissionId === match.submissionId) {
+      setResultSyncState(
+        'success',
+        result.duplicate
+          ? 'Partida já registrada. Nenhuma pontuação foi duplicada.'
+          : 'Partida registrada no ranking global.',
+      );
+    }
+
+    void loadRanking();
+    return true;
+  } catch (error) {
+    if (lastCompletedMatch?.submissionId === match.submissionId) {
+      setResultSyncState(
+        'error',
+        'Não foi possível registrar agora. Sua tela de resultado continua aberta para tentar novamente.',
+        { retry: true },
+      );
+    }
+    console.error('Falha ao registrar a partida.', error);
+    return false;
+  } finally {
+    savingSubmissionIds.delete(match.submissionId);
+  }
+}
 
 function setShotStatus(state, message) {
   slingshotHud.dataset.state = state;
@@ -235,14 +398,16 @@ function resetResultScreen() {
   resultOutcome.textContent = '';
   resultScore.textContent = '0';
   resultScenario.textContent = PROJECT_INFO.scenario;
+  resultDuration.textContent = '00:00';
+  setResultSyncState('idle', 'Preparando registro da partida…');
 }
 
-function showResultScreen(state) {
+function showResultScreen(state, match) {
   const result = describeMatchResult({
     gameState: state,
-    playerName: currentPlayerName,
+    playerName: match.nome,
     scenario: PROJECT_INFO.scenario,
-    score: gameSession.scoreState.score,
+    score: match.pontuacao,
   });
 
   resultScreen.dataset.result = result.kind;
@@ -253,6 +418,8 @@ function showResultScreen(state) {
   resultOutcome.textContent = result.resultText;
   resultScore.textContent = result.scoreText;
   resultScenario.textContent = result.scenario;
+  resultDuration.textContent = formatMatchDuration(match.duracaoMs);
+  resultScreen.dataset.submissionId = match.submissionId;
 
   if (!resultScreen.open && !resultScreen.hasAttribute('open')) {
     if (typeof resultScreen.showModal === 'function') {
@@ -285,7 +452,9 @@ function handleGameStateChange(state) {
       ? 'Partida concluída com vitória.'
       : 'Partida encerrada: a vida chegou a zero.',
   );
-  showResultScreen(state);
+  const completedMatch = completeActiveMatch(state);
+  showResultScreen(state, completedMatch);
+  void submitCompletedMatch(completedMatch);
   return true;
 }
 
@@ -565,6 +734,12 @@ function enterPrototype() {
   resetItemHud();
 
   try {
+    activeMatch = {
+      submissionId: createSubmissionId(),
+      startedAt: performance.now(),
+      submission: null,
+    };
+    lastCompletedMatch = null;
     renderContext = new RenderContext(sceneContainer);
     lookController = new DesktopLookController({
       camera: renderContext.camera,
@@ -622,6 +797,8 @@ function enterPrototype() {
     fireController = null;
     gameSession = null;
     lookController = null;
+    activeMatch = null;
+    lastCompletedMatch = null;
     sceneContainer.replaceChildren();
     sceneError.hidden = false;
     console.error('Falha ao iniciar a cena Three.js.', error);
@@ -644,6 +821,8 @@ function exitPrototype({ focusMenu = true } = {}) {
   gameSession = null;
   lookController = null;
   pointerLocked = false;
+  activeMatch = null;
+  lastCompletedMatch = null;
   prototypeView.dataset.gameState = 'PLAYING';
   resetSlingshotHud('idle');
   resetEnemyHud();
@@ -708,13 +887,19 @@ function handleResultCancel(event) {
   exitPrototype();
 }
 
+function retryResultSubmission() {
+  void submitCompletedMatch(lastCompletedMatch);
+}
+
 startSceneButton.addEventListener('click', enterPrototype);
 exitSceneButton.addEventListener('click', exitPrototype);
 pointerLockButton.addEventListener('click', requestPointerLock);
 replayButton.addEventListener('click', replayPrototype);
 resultMenuButton.addEventListener('click', exitPrototype);
+resultRetryButton.addEventListener('click', retryResultSubmission);
 resultScreen.addEventListener('cancel', handleResultCancel);
 document.addEventListener('keydown', handleSceneKeyboard);
+rankingRefreshButton.addEventListener('click', loadRanking);
 
 apiButton.addEventListener('click', async () => {
   apiButton.disabled = true;
@@ -742,6 +927,8 @@ apiButton.addEventListener('click', async () => {
   }
 });
 
+void loadRanking();
+
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     gameApp?.dispose();
@@ -750,7 +937,9 @@ if (import.meta.hot) {
     pointerLockButton.removeEventListener('click', requestPointerLock);
     replayButton.removeEventListener('click', replayPrototype);
     resultMenuButton.removeEventListener('click', exitPrototype);
+    resultRetryButton.removeEventListener('click', retryResultSubmission);
     resultScreen.removeEventListener('cancel', handleResultCancel);
     document.removeEventListener('keydown', handleSceneKeyboard);
+    rankingRefreshButton.removeEventListener('click', loadRanking);
   });
 }

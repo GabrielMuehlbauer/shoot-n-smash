@@ -104,7 +104,11 @@ WaveManager ──> GameStateManager / ScoreManager / ItemSystem
   gameplay não consulta nem altera elementos do DOM. Cancelamentos e desfechos
   informam motivos semânticos, sem transformar mensagens de interface em regra
   de jogo. A tela de resultados observa o estado global e recebe nome, resultado,
-  pontuação e cenário já consolidados.
+  pontuação, cenário e duração já consolidados. Na Fase 20, ela também expõe o
+  andamento do registro e uma ação de nova tentativa.
+- `MatchApiClient` isola os contratos HTTP de partidas e ranking. O controlador
+  DOM cria um UUID por sessão, captura um snapshot terminal imutável e reutiliza
+  esse mesmo UUID em tentativas posteriores, preservando a idempotência da API.
 - `GAMEPLAY_CONFIG`, em `config/gameplay-config.js`, centraliza tempos, velocidades,
   gravidade, dimensões, vida máxima, chances e efeitos dos itens e dano de cada tipo para evitar números
   mágicos.
@@ -544,6 +548,33 @@ tabela de controle, usa `GET_LOCK` contra execuções concorrentes e compara
 checksums antes de aplicar arquivos pendentes. A API não altera schema durante o
 boot.
 
+## Recorte executável da Fase 20
+
+```text
+início da sessão ──> UUID + instante inicial
+                            │
+VICTORY | GAME_OVER ──> snapshot terminal imutável
+                            │
+                            v
+                  POST /api/partidas ──> MySQL | memória
+                            │
+                   sucesso ├──> atualiza ranking
+                            └──> falha ──> retry com o mesmo UUID
+
+menu ──> GET /api/ranking?cenario=neve&limite=10 ──> tabela acessível
+```
+
+O snapshot é criado antes do trabalho assíncrono e não consulta a próxima
+`GameSession`. Assim, sair da tela ou iniciar um replay não troca nome,
+pontuação, resultado ou duração do envio em andamento. Um `Set` local impede
+dois requests simultâneos para a mesma submissão; a restrição única do servidor
+continua sendo a garantia definitiva contra duplicatas.
+
+O ranking escreve nomes com `textContent`, valida a estrutura da resposta e
+formata pontuação e data apenas na apresentação. Requisições recebem uma versão
+incremental para impedir que uma resposta antiga sobrescreva uma atualização
+mais recente.
+
 ## Servidor
 
 O servidor é um monólito modular Express:
@@ -556,8 +587,9 @@ Em desenvolvimento, Vite encaminha `/api` para o Express. Em produção, o Expre
 serve o build estático do cliente e a API na mesma origem, eliminando a necessidade
 de CORS aberto.
 
-O servidor será a autoridade para o cálculo da pontuação persistida. O cliente
-enviará um resumo validável da partida, não apenas o número final.
+O servidor valida limites e o contrato da pontuação persistida. Torná-lo
+autoridade sobre o cálculo exigirá, em uma etapa futura, enviar e validar um
+resumo dos eventos da partida, não apenas o número final.
 
 ## Banco de dados
 

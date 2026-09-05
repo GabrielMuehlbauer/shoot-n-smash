@@ -365,3 +365,17 @@ Migrations são explícitas por `npm run db:migrate`, não automáticas no boot.
 executor usa trava nomeada e checksum para impedir concorrência e alteração do
 histórico. O banco precisa existir antes do comando; criar banco ou usuário
 automaticamente exigiria privilégios excessivos da conta da aplicação.
+
+## ADR-023 — Snapshot terminal e retry idempotente no cliente
+
+**Status:** aceita em 4 de setembro de 2026.
+
+A Fase 20 cria o UUID e registra o instante inicial junto com cada nova sessão.
+Quando `GameStateManager` publica vitória ou derrota, o cliente consolida nome,
+pontuação, cenário, resultado e duração em um objeto imutável antes de iniciar o
+request. Replays não podem, portanto, alterar uma submissão ainda em trânsito.
+
+Uma falha mantém o resultado na tela e libera nova tentativa com o mesmo UUID.
+O cliente evita requests simultâneos do mesmo ID; a API e o índice único do
+banco garantem idempotência mesmo após perda de resposta ou repetição manual.
+O ranking permanece derivado de `matches`, sem cache ou nova tabela nesta fase.

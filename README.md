@@ -4,8 +4,8 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 19 — banco de dados**. A API persiste jogadores e partidas
-> no MySQL quando configurado e mantém um fallback em memória para desenvolvimento.
+> Status atual: **Fase 20 — ranking global**. Partidas concluídas são enviadas
+> automaticamente à API e o menu apresenta os melhores resultados persistidos.
 
 ## Equipe
 
@@ -45,7 +45,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 Sem `DATABASE_URL`, o jogo e a API continuam executando com armazenamento
-temporário. Para validar a persistência da Fase 19, configure o MySQL e aplique
+temporário. Para validar a persistência do ranking, configure o MySQL e aplique
 as migrations conforme a seção abaixo.
 
 ## Execução em desenvolvimento
@@ -84,9 +84,11 @@ e o servidor. Para testar o recorte jogável:
    resistência completa e sem conceder pontos;
 9. acompanhe no HUD os pontos por eliminação e os bônus de 500 por onda; ao
    eliminar o chefão, confirme mais 2.000 pontos e 1.000 pela fase concluída;
-10. confirme a tela de vitória com nome, resultado, pontuação e cenário, e use
-   **Jogar novamente** para iniciar uma sessão limpa. Para validar a derrota,
-   permita contatos até a vida chegar a zero.
+10. confirme a tela de vitória com nome, resultado, pontuação, cenário, duração e
+    o estado **Partida registrada no ranking global**;
+11. volte ao menu e confirme o resultado no ranking. Use **Jogar novamente** para
+    iniciar uma sessão limpa. Para validar a derrota, permita contatos até a vida
+    chegar a zero; derrotas válidas também são registradas.
 
 Os HUDs identificam pontuação, vida, item disponível, munição especial, etapa da
 partida, inimigo atual, resistência e tensão de 0% a 100%. Em telas estreitas,
@@ -97,7 +99,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 19](docs/phases/phase-19-banco-dados.md).
+[guia da Fase 20](docs/phases/phase-20-ranking.md).
 
 ## Build e execução de produção
 
@@ -126,7 +128,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 19](docs/phases/phase-19-banco-dados.md#como-testar-manualmente).
+[guia de teste da Fase 20](docs/phases/phase-20-ranking.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -194,10 +196,7 @@ entre frames.
 ## Gameplay planejado
 
 - poderes temporários adicionais;
-- integração do resultado e do ranking na interface.
-
-Essa integração não faz parte da Fase 19. A API e o banco já aceitam partidas,
-mas o jogo ainda não envia automaticamente o resultado antes da fase 20.
+- estilingue com representação visual e trajetória aprimorada.
 
 ### Realidade virtual
 
@@ -205,7 +204,7 @@ mas o jogo ainda não envia automaticamente o resultado antes da fase 20.
 - mão dominante: puxar e soltar o projétil.
 
 Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 19.
+Controles XR e HUD imersivo ainda não fazem parte da Fase 20.
 
 ## Modo VR
 
@@ -219,6 +218,7 @@ Testes no Meta Quest 3 exigirão uma URL HTTPS acessível pelo headset.
 shoot-n-smash/
 ├── client/
 │   └── src/
+│       ├── api/     # cliente HTTP, snapshot de partida e ranking
 │       ├── config/  # valores do renderer, arena e gameplay
 │       ├── core/    # GameApp, GameSession e RenderContext
 │       ├── gameplay/ # partida, ondas, estado, combate e pontuação
@@ -247,17 +247,15 @@ A estrutura crescerá somente quando cada sistema for implementado.
   mesma entidade é reutilizada em cada tentativa contra o chefão;
 - existe no máximo um item ativo; ele expira após 12 segundos e novos itens não
   são sorteados durante o chefão;
-- o jogo ainda não envia automaticamente nome, resultado ou pontuação à API;
 - sem `DATABASE_URL`, partidas ficam em memória e somem ao reiniciar;
-- a duração da partida ainda não é medida pelo cliente;
-- o endpoint de ranking existe e persiste no MySQL, mas sua tela ainda não;
+- a API valida limites e contratos, mas ainda não reconstrói a pontuação a partir
+  de um log autoritativo de eventos;
 - WebXR ainda não está implementado;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 20: enviar partidas concluídas pelo cliente e apresentar o ranking global.
-WebXR continua em incremento posterior.
+Fase 21: aprimorar o estilingue, incluindo visual, tensão, força e trajetória.
 
 Consulte também:
 
@@ -284,3 +282,4 @@ Consulte também:
 - [Guia da Fase 17](docs/phases/phase-17-interface.md)
 - [Guia da Fase 18](docs/phases/phase-18-api.md)
 - [Guia da Fase 19](docs/phases/phase-19-banco-dados.md)
+- [Guia da Fase 20](docs/phases/phase-20-ranking.md)
