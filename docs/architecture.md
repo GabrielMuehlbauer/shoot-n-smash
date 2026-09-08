@@ -630,6 +630,21 @@ O diagnóstico pertence ao ciclo XR, mas não ao estado da partida. Entrar em VR
 zera as métricas; sair produz um relatório final. Os dados permanecem locais e
 a versão do projeto continua `0.22.0` até o teste físico concluir a Fase 23.
 
+### Interface e mira imersivas
+
+O HUD HTML continua sendo a fonte visual do desktop. No modo imersivo,
+`XRHudSystem` converte os mesmos snapshots de jogador, inimigo, onda e pontuação
+em uma única `CanvasTexture` aplicada a um plano 3D. O plano acompanha a pose da
+câmera XR em posição inferior ao centro da visão e somente a textura muda quando
+um estado de jogo muda.
+
+`XRSlingshotController` é responsável pela representação específica das mãos. O
+garfo completo é orientado pela direção entre os controles; sua origem de tiro é
+o ponto médio das pontas. Um marcador permanece alinhado a essa direção e, durante
+a carga, pontos calculados por `Ballistics` exibem a mesma queda gravitacional do
+projétil real. O desktop e o XR compartilham física e estado, mas possuem
+apresentações adequadas a cada meio.
+
 ## Servidor
 
 O servidor é um monólito modular Express:

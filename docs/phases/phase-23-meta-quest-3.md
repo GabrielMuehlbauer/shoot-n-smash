@@ -2,8 +2,9 @@
 
 ## Estado da etapa
 
-**Em validação.** A instrumentação automatizada está pronta, mas a fase não pode
-ser considerada concluída sem executar o jogo em um Meta Quest 3 real.
+**Em validação.** O primeiro teste real revelou problemas bloqueadores. As
+correções estão prontas, mas a fase não pode ser considerada concluída sem um
+reteste aprovado no Meta Quest 3.
 
 A versão permanece `0.22.0` até a matriz física ser aprovada.
 
@@ -29,6 +30,29 @@ Cada sessão `immersive-vr` agora mede:
 O painel **Diagnóstico Quest 3** aparece no espelho do navegador durante a sessão
 e preserva o resumo depois que o usuário sai do VR. As métricas são locais, não
 são enviadas à API nem gravadas no banco.
+
+## Primeiro ensaio físico e correções
+
+O primeiro ensaio no Meta Quest identificou três problemas bloqueadores:
+
+- o estilingue XR era representado apenas por uma haste vertical e não orientava
+  o garfo pela linha formada entre as mãos;
+- vida do jogador, resistência do inimigo e progresso da onda existiam apenas no
+  HUD HTML do navegador, que não é renderizado em uma sessão imersiva;
+- a retícula HTML e a previsão desktop também não estavam presentes no headset.
+
+As correções implementadas para o reteste são:
+
+- estilingue XR completo, com cabo, dois braços, elásticos independentes e origem
+  do disparo no centro do garfo;
+- orientação estável do garfo pela direção entre a munição e o controle do
+  estilingue;
+- marcador de mira visível quando os dois controles possuem uma pose válida;
+- trajetória balística pontilhada durante a carga, incluindo munição especial;
+- HUD 3D no campo de visão com vida, resistência, onda, inimigo e pontuação.
+
+O HUD usa uma única textura de canvas e só é redesenhado quando o estado muda.
+Isso evita criar texto ou geometria em cada frame no Quest 3.
 
 ## Arquivos envolvidos
 
@@ -103,16 +127,16 @@ Preencha uma linha para cada execução:
 |---|---|
 | Data e versão do navegador | Pendente |
 | Duração | Pendente |
-| Controles detectados | Pendente |
+| Controles detectados | Detectados; reteste funcional pendente |
 | FPS médio / mínimo | Pendente |
 | Pior frame / frames acima de 20 ms | Pendente |
 | Draw calls / triângulos | Pendente |
 | Chão e escala corretos | Pendente |
-| Mira curta, média e máxima | Pendente |
+| Mira curta, média e máxima | Reprovada no primeiro ensaio; correção pronta para reteste |
 | Conforto após 10 minutos | Pendente |
-| Ondas, itens e chefão | Pendente |
+| Ondas, itens e chefão | HUD ausente no primeiro ensaio; correção pronta para reteste |
 | Vitória, derrota e ranking | Pendente |
-| Problemas encontrados | Pendente |
+| Problemas encontrados | Estilingue, HUD e mira XR; corrigidos em código, reteste pendente |
 
 ## Critério para concluir a fase
 

@@ -6,8 +6,9 @@ para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
 > Status atual: **Fase 23 — validação no Meta Quest 3 em andamento**. O WebXR e
 > os controles de duas mãos estão implementados. A instrumentação de FPS, tempo
-> de frame, draw calls, triângulos e controles está pronta; falta executar e
-> registrar o ensaio no headset real.
+> de frame, draw calls, triângulos e controles está pronta. O primeiro ensaio
+> encontrou problemas no estilingue, HUD e mira; as correções estão prontas e
+> aguardam reteste no headset real.
 
 ## Equipe
 

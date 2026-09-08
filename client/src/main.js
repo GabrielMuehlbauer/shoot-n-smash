@@ -22,6 +22,7 @@ import {
 import { describeScoreState } from './score-hud.js';
 import { describeWaveState } from './wave-hud.js';
 import { XRPerformanceMonitor } from './xr/XRPerformanceMonitor.js';
+import { XRHudSystem } from './xr/XRHudSystem.js';
 import { XRSessionManager } from './xr/XRSessionManager.js';
 import { XRSlingshotController } from './xr/XRSlingshotController.js';
 import './styles.css';
@@ -113,6 +114,7 @@ let fireController = null;
 let gameSession = null;
 let xrSessionManager = null;
 let xrSlingshotController = null;
+let xrHudSystem = null;
 let xrPerformanceMonitor = null;
 let xrActive = false;
 let pointerLocked = false;
@@ -300,6 +302,8 @@ function resetSlingshotHud(state = 'ready') {
 function updateEnemyState(state) {
   const description = describeEnemyState(state);
 
+  xrHudSystem?.setEnemyState(state);
+
   enemyHud.dataset.enemyState = description.hudState;
   enemyHud.dataset.enemyType = description.typeId;
   enemyHud.style.setProperty(
@@ -332,6 +336,8 @@ function resetEnemyHud() {
 function updatePlayerState(state) {
   const description = describePlayerHealth(state);
 
+  xrHudSystem?.setPlayerState(state);
+
   playerHud.dataset.playerState = description.hudState;
   playerHud.style.setProperty('--player-health', String(description.percent));
   playerHealthValue.textContent = description.valueText;
@@ -350,6 +356,8 @@ function resetPlayerHud() {
 
 function updateScoreState(state) {
   const description = describeScoreState(state);
+
+  xrHudSystem?.setScoreState(state);
 
   scoreHud.dataset.scoreEvent = description.eventType;
   scoreValue.textContent = description.valueText;
@@ -550,6 +558,8 @@ function updateWaveState(state) {
     bossReturning: gameSession?.enemyState?.type?.id === 'boss',
   });
 
+  xrHudSystem?.setWaveState(state);
+
   prototypeView.dataset.waveState = state.status;
   waveHud.dataset.waveState = description.hudState;
   waveLabel.textContent = description.label;
@@ -593,6 +603,8 @@ function updateWaveState(state) {
 function updateChargeState({ charging, ratio, speed, ammoType = 'normal' }) {
   const normalizedRatio = Math.min(Math.max(Number(ratio) || 0, 0), 1);
   const percent = Math.round(normalizedRatio * 100);
+
+  xrSlingshotController?.setChargeState({ ammoType });
 
   slingshotTension.value = percent;
   slingshotTension.textContent = `${percent}%`;
@@ -821,6 +833,7 @@ function setXRActive(active) {
   xrActive = nextActive;
   prototypeView.dataset.inputMode = nextActive ? 'xr' : 'desktop';
   gameSession?.setDesktopSlingshotVisible(!nextActive);
+  xrHudSystem?.setActive(nextActive);
 
   if (nextActive) {
     fireController?.cancelCharge?.('xr-session-started');
@@ -950,6 +963,11 @@ function enterPrototype() {
     };
     lastCompletedMatch = null;
     renderContext = new RenderContext(sceneContainer);
+    xrHudSystem = new XRHudSystem({
+      renderer: renderContext.renderer,
+      scene: renderContext.scene,
+      camera: renderContext.camera,
+    });
     lookController = new DesktopLookController({
       camera: renderContext.camera,
       domElement: renderContext.renderer.domElement,
@@ -990,6 +1008,7 @@ function enterPrototype() {
       renderer: renderContext.renderer,
       scene: renderContext.scene,
       config: GAMEPLAY_CONFIG.xr,
+      projectileConfig: GAMEPLAY_CONFIG.projectile,
       onChargeStart: ({ mode }) => gameSession.beginCharge({ mode }),
       onChargeChange: (ratio) => gameSession.setChargeRatio(ratio),
       onChargeRelease: (pose) => gameSession.releaseShot(pose),
@@ -1009,6 +1028,7 @@ function enterPrototype() {
       lookController,
       fireController,
       xrController: xrSlingshotController,
+      xrHud: xrHudSystem,
       performanceMonitor: xrPerformanceMonitor,
       gameSession,
     });
@@ -1019,6 +1039,7 @@ function enterPrototype() {
       gameApp.dispose();
     } else {
       xrSlingshotController?.dispose();
+      xrHudSystem?.dispose();
       xrPerformanceMonitor?.dispose();
       fireController?.dispose();
       gameSession?.dispose();
@@ -1032,6 +1053,7 @@ function enterPrototype() {
     xrSessionManager?.dispose();
     xrSessionManager = null;
     xrSlingshotController = null;
+    xrHudSystem = null;
     xrPerformanceMonitor = null;
     xrActive = false;
     activeMatch = null;
@@ -1060,6 +1082,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   lookController = null;
   xrSessionManager = null;
   xrSlingshotController = null;
+  xrHudSystem = null;
   xrPerformanceMonitor = null;
   xrActive = false;
   pointerLocked = false;
