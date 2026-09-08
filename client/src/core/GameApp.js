@@ -6,6 +6,7 @@ export class GameApp {
     lookController = null,
     fireController = null,
     xrController = null,
+    xrHud = null,
     performanceMonitor = null,
     gameSession = null,
     documentRef = document,
@@ -19,6 +20,7 @@ export class GameApp {
     this.lookController = lookController;
     this.fireController = fireController;
     this.xrController = xrController;
+    this.xrHud = xrHud;
     this.performanceMonitor = performanceMonitor;
     this.gameSession = gameSession;
     this.documentRef = documentRef;
@@ -169,6 +171,7 @@ export class GameApp {
     this.xrController?.update?.(deltaSeconds);
     this.gameSession?.update?.(deltaSeconds);
     this.renderContext.update(deltaSeconds);
+    this.xrHud?.update?.(deltaSeconds);
     this.renderContext.render();
     this.performanceMonitor?.sample?.(frameDeltaSeconds);
   }
@@ -199,6 +202,7 @@ export class GameApp {
     cleanup(() => this.stop());
     cleanup(() => this.fireController?.dispose?.());
     cleanup(() => this.xrController?.dispose?.());
+    cleanup(() => this.xrHud?.dispose?.());
     cleanup(() => this.performanceMonitor?.dispose?.());
     cleanup(() => this.gameSession?.dispose?.());
     cleanup(() => this.lookController?.dispose?.());

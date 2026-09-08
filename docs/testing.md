@@ -726,6 +726,10 @@ O roteiro completo está em [Fase 22 — WebXR](phases/phase-22-webxr.md).
 - identificação local do dispositivo e dos controles;
 - relatório imutável ao encerrar ou descartar a sessão;
 - painel de diagnóstico no espelho desktop;
+- estilingue com garfo completo orientado pela pose das duas mãos;
+- marcador de mira e trajetória balística dentro da cena XR;
+- HUD 3D com vida do jogador, resistência, onda e pontuação;
+- atualização do HUD antes da renderização e descarte junto com a aplicação;
 - regressão dos ciclos desktop, XR e descarte de recursos.
 
 ### Validação física pendente
@@ -733,6 +737,10 @@ O roteiro completo está em [Fase 22 — WebXR](phases/phase-22-webxr.md).
 A automação não substitui o ensaio no Meta Quest 3. Escala do chão, ergonomia,
 conforto, percepção de mira, legibilidade e desempenho térmico precisam ser
 observados no dispositivo durante uma partida completa.
+
+O primeiro ensaio físico encontrou ausência de HUD e mira no headset, além de um
+visual incorreto do estilingue. Há cobertura automatizada para as correções, mas
+o resultado permanece pendente até um novo ensaio no Quest 3.
 
 O roteiro e a tabela de registro estão em
 [Fase 23 — Validação no Meta Quest 3](phases/phase-23-meta-quest-3.md).

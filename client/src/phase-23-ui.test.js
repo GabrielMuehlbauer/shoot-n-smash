@@ -19,13 +19,19 @@ test('apresenta as métricas necessárias para o ensaio no Quest 3', () => {
   }
 
   assert.match(mainSource, /new XRPerformanceMonitor/);
+  assert.match(mainSource, /new XRHudSystem/);
   assert.match(mainSource, /xrPerformanceMonitor\?\.start/);
   assert.match(mainSource, /xrPerformanceMonitor\?\.stop/);
+  assert.match(mainSource, /xrHudSystem\?\.setActive\(nextActive\)/);
+  assert.match(mainSource, /xrHudSystem\?\.setPlayerState\(state\)/);
+  assert.match(mainSource, /xrHudSystem\?\.setEnemyState\(state\)/);
+  assert.match(mainSource, /xrHudSystem\?\.setWaveState\(state\)/);
+  assert.match(mainSource, /xrSlingshotController\?\.setChargeState/);
   assert.match(stylesCss, /\.xr-diagnostics\[data-state='complete'\]/);
   assert.match(stylesCss, /\.xr-diagnostics\[hidden\]/);
 });
 
 test('mantém a fase 23 como validação pendente do dispositivo real', () => {
-  assert.match(indexHtml, /Fase 22 concluída/);
+  assert.match(indexHtml, /Fase 23 em validação/);
   assert.doesNotMatch(indexHtml, /Fase 23 concluída/);
 });

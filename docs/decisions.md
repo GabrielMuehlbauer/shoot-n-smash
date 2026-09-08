@@ -421,3 +421,17 @@ coleta de dados do jogador.
 
 A instrumentação não autoriza promover a Fase 23. Conforto, escala, mira e
 legibilidade permanecem critérios físicos obrigatórios no Meta Quest 3.
+
+## ADR-026 — HUD e mira devem existir dentro da cena XR
+
+**Status:** aceita em 8 de setembro de 2026 após o primeiro ensaio no Quest 3.
+
+Elementos HTML sobre o canvas não são uma interface válida dentro de uma sessão
+`immersive-vr`. Vida, resistência, onda e pontos passam a ser desenhados em uma
+única textura de canvas sobre um plano 3D. A textura só é invalidada por mudanças
+de estado, reduzindo custo de CPU e upload para a GPU.
+
+A mira XR segue as mãos, não o centro da tela: um anel indica a direção entre a
+munição e o garfo, enquanto a trajetória de carga reutiliza a função balística do
+projétil. O estilingue também passa a ter garfo completo e origem no ponto médio
+das pontas. Assim, visual, previsão e disparo compartilham a mesma pose física.

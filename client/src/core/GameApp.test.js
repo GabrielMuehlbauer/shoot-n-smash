@@ -230,6 +230,32 @@ test('coleta métricas depois de renderizar o frame', () => {
   app.dispose();
 });
 
+test('atualiza e descarta o HUD XR junto com o loop principal', () => {
+  const fixture = createFixture();
+  const updates = [];
+  let disposeCalls = 0;
+  const xrHud = {
+    update(deltaSeconds) {
+      updates.push(deltaSeconds);
+      fixture.frameOrder.push('xr-hud');
+    },
+    dispose() {
+      disposeCalls += 1;
+    },
+  };
+  const app = new GameApp({ ...fixture, xrHud });
+
+  app.start();
+  fixture.animationLoops[0](1000);
+
+  assert.deepEqual(updates, [0]);
+  assert.ok(
+    fixture.frameOrder.indexOf('xr-hud') < fixture.frameOrder.indexOf('render'),
+  );
+  app.dispose();
+  assert.equal(disposeCalls, 1);
+});
+
 test('não atualiza a cena enquanto o documento está oculto', () => {
   const fixture = createFixture();
   const app = new GameApp(fixture);
