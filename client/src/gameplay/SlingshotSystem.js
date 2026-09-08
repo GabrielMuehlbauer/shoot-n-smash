@@ -65,6 +65,7 @@ export class SlingshotSystem {
     this.onShot = onShot;
     this.chargeElapsedSeconds = 0;
     this.charge = 0;
+    this.chargeMode = 'time';
     this.charging = false;
     this.preparedAmmoType = 'normal';
     this.disposed = false;
@@ -93,7 +94,7 @@ export class SlingshotSystem {
     return this.charging;
   }
 
-  beginCharge({ ammoType = 'normal' } = {}) {
+  beginCharge({ ammoType = 'normal', mode = 'time' } = {}) {
     this.assertNotDisposed();
 
     if (this.charging) {
@@ -104,7 +105,12 @@ export class SlingshotSystem {
       throw new TypeError('O tipo de munição preparado deve ser normal ou special.');
     }
 
+    if (!['time', 'manual'].includes(mode)) {
+      throw new TypeError('O modo de carga deve ser time ou manual.');
+    }
+
     this.charging = true;
+    this.chargeMode = mode;
     this.preparedAmmoType = ammoType;
     this.chargeElapsedSeconds = 0;
     this.charge = 0;
@@ -116,6 +122,8 @@ export class SlingshotSystem {
   releaseShot({
     hitStrength = this.config.projectile.hitStrength,
     ammoType = this.preparedAmmoType,
+    origin = null,
+    direction = null,
   } = {}) {
     this.assertNotDisposed();
 
@@ -131,18 +139,40 @@ export class SlingshotSystem {
       throw new TypeError('O tipo de munição do disparo deve ser normal ou special.');
     }
 
+    const usesExternalPose = origin !== null || direction !== null;
+
+    if (
+      usesExternalPose &&
+      (!origin?.isVector3 ||
+        !direction?.isVector3 ||
+        !Number.isFinite(origin.x) ||
+        !Number.isFinite(origin.y) ||
+        !Number.isFinite(origin.z) ||
+        !Number.isFinite(direction.x) ||
+        !Number.isFinite(direction.y) ||
+        !Number.isFinite(direction.z) ||
+        direction.lengthSq() <= Number.EPSILON)
+    ) {
+      throw new TypeError('A pose externa do disparo requer origem e direção válidas.');
+    }
+
     const ratio = this.charge;
     const projectileConfig = this.config.projectile;
     const speed = this.calculateSpeed(ratio);
 
-    this.camera.updateWorldMatrix?.(true, false);
-    this.camera.getWorldDirection(this.shotDirection).normalize();
-    this.camera.getWorldPosition(this.spawnOrigin);
-    this.camera.getWorldQuaternion(this.cameraQuaternion);
-    this.worldSpawnOffset
-      .copy(this.localSpawnOffset)
-      .applyQuaternion(this.cameraQuaternion);
-    this.spawnOrigin.add(this.worldSpawnOffset);
+    if (usesExternalPose) {
+      this.spawnOrigin.copy(origin);
+      this.shotDirection.copy(direction).normalize();
+    } else {
+      this.camera.updateWorldMatrix?.(true, false);
+      this.camera.getWorldDirection(this.shotDirection).normalize();
+      this.camera.getWorldPosition(this.spawnOrigin);
+      this.camera.getWorldQuaternion(this.cameraQuaternion);
+      this.worldSpawnOffset
+        .copy(this.localSpawnOffset)
+        .applyQuaternion(this.cameraQuaternion);
+      this.spawnOrigin.add(this.worldSpawnOffset);
+    }
 
     this.projectileSystem.spawn({
       origin: this.spawnOrigin,
@@ -187,6 +217,11 @@ export class SlingshotSystem {
       return false;
     }
 
+    if (this.chargeMode === 'manual') {
+      this.syncVisual();
+      return true;
+    }
+
     const delta = Math.max(0, Number(deltaSeconds) || 0);
     this.chargeElapsedSeconds += delta;
     const nextCharge = Math.min(
@@ -208,6 +243,7 @@ export class SlingshotSystem {
     this.charging = false;
     this.chargeElapsedSeconds = 0;
     this.charge = 0;
+    this.chargeMode = 'time';
     this.preparedAmmoType = 'normal';
     this.emitChargeChange();
   }
@@ -218,6 +254,39 @@ export class SlingshotSystem {
       projectileConfig.minSpeed +
       (projectileConfig.maxSpeed - projectileConfig.minSpeed) * ratio
     );
+  }
+
+  setChargeRatio(ratio) {
+    this.assertNotDisposed();
+
+    if (!this.charging || this.chargeMode !== 'manual') {
+      return false;
+    }
+
+    const numericRatio = Number(ratio);
+
+    if (!Number.isFinite(numericRatio)) {
+      throw new TypeError('A tensão manual deve ser finita.');
+    }
+
+    const nextCharge = Math.min(Math.max(numericRatio, 0), 1);
+
+    if (nextCharge === this.charge) {
+      this.syncVisual();
+      return false;
+    }
+
+    this.charge = nextCharge;
+    this.emitChargeChange();
+    return true;
+  }
+
+  setVisualVisible(visible) {
+    if (this.disposed) {
+      return false;
+    }
+
+    return this.visualSystem?.setVisible?.(Boolean(visible)) ?? false;
   }
 
   syncVisual() {

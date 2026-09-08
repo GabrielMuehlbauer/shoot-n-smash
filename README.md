@@ -4,8 +4,9 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 21 — estilingue completo**. O modelo 3D reage à tensão,
-> mostra a força do tiro e prevê a trajetória usando a mesma balística da bola.
+> Status atual: **Fase 22 — WebXR**. O jogo detecta `immersive-vr`, entra e sai
+> de uma sessão imersiva e usa dois controles rastreados para tensionar e
+> disparar o mesmo sistema balístico disponível no navegador.
 
 ## Equipe
 
@@ -100,7 +101,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 21](docs/phases/phase-21-estilingue-completo.md).
+[guia da Fase 22](docs/phases/phase-22-webxr.md).
 
 ## Build e execução de produção
 
@@ -129,7 +130,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 21](docs/phases/phase-21-estilingue-completo.md#como-testar-manualmente).
+[guia de teste da Fase 22](docs/phases/phase-22-webxr.md#como-testar-manualmente).
 
 ## Scripts
 
@@ -180,6 +181,11 @@ nos diagnósticos públicos.
 - **Segurar o botão esquerdo**: acumula tensão por até 1,2 segundo;
 - **Soltar o botão esquerdo**: cria um projétil na direção da mira, com
   velocidade proporcional à tensão;
+- **Entrar em VR**: aparece habilitado somente quando o navegador confirma
+  suporte a `immersive-vr`;
+- **Controle esquerdo em VR**: sustenta a origem do estilingue;
+- **Gatilho do controle direito em VR**: segure, afaste a mão para aumentar a
+  tensão e solte; a direção vai da mão direita em direção ao estilingue;
 - durante a carga, o estilingue 3D puxa bolsa, projétil e elásticos, enquanto o
   HUD mostra a força e pontos na arena antecipam a parábola do disparo;
 - **Acertar um item**: coleta vida ou munição especial; não é necessário um
@@ -199,21 +205,29 @@ entre frames.
 ## Gameplay planejado
 
 - poderes temporários adicionais;
-- controles imersivos com interação de duas mãos.
+- HUD 3D dedicado ao headset;
+- opção de inverter as mãos do estilingue.
 
 ### Realidade virtual
 
-- mão não dominante: segurar o estilingue;
-- mão dominante: puxar e soltar o projétil.
+- mão esquerda: segurar o estilingue;
+- mão direita: puxar e soltar o projétil;
+- distância entre as mãos: controla força, velocidade e alcance;
+- separação de 12 cm corresponde à tensão mínima e 72 cm à tensão máxima.
 
-Observação, mira, tensão e disparo estão ativos somente no modo convencional.
-Controles XR e HUD imersivo ainda não fazem parte da Fase 21.
+Observação, mira, tensão e disparo usam o rastreamento do headset e dos dois
+controles durante a sessão. Ao sair do VR, mouse, Pointer Lock e o estilingue em
+primeira pessoa voltam a ser ativados sem reiniciar a partida.
 
 ## Modo VR
 
-WebXR será integrado depois que o núcleo convencional estiver estável. O modo
-convencional permanecerá disponível quando `immersive-vr` não for suportado.
-Testes no Meta Quest 3 exigirão uma URL HTTPS acessível pelo headset.
+O botão **Entrar em VR** somente é liberado após
+`navigator.xr.isSessionSupported('immersive-vr')` retornar suporte. Falhas de
+detecção, permissão ou início da sessão não bloqueiam o modo convencional.
+
+Em desenvolvimento, WebXR funciona em contexto seguro. `localhost` é aceito no
+computador; para abrir no Meta Quest 3, use uma URL HTTPS acessível pelo headset.
+A validação física de conforto, escala e ergonomia no Quest 3 pertence à Fase 23.
 
 ## Estrutura atual
 
@@ -226,6 +240,7 @@ shoot-n-smash/
 │       ├── core/    # GameApp, GameSession e RenderContext
 │       ├── gameplay/ # partida, ondas, estado, combate e pontuação
 │       ├── input/   # adaptadores desktop de mira e disparo
+│       ├── xr/      # sessão immersive-vr e estilingue com dois controles
 │       ├── utils/   # resize e cálculos testáveis
 │       └── world/   # composição visual do cenário de neve
 ├── server/       # API Express, migrations e repositórios de partidas
@@ -244,7 +259,7 @@ A estrutura crescerá somente quando cada sistema for implementado.
 ## Limitações conhecidas
 
 - o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
-- mira e disparo são exclusivos do navegador desktop e requerem Pointer Lock e mouse;
+- o modo convencional requer Pointer Lock e mouse para mira e disparo;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
 - existe somente um inimigo hostil ativo por vez; depois das quatro ondas, a
   mesma entidade é reutilizada em cada tentativa contra o chefão;
@@ -255,12 +270,16 @@ A estrutura crescerá somente quando cada sistema for implementado.
   de um log autoritativo de eventos;
 - a previsão balística indica gravidade e alcance, mas não antecipa colisões com
   monstros, itens ou elementos decorativos;
-- WebXR ainda não está implementado;
+- a interface HTML continua visível no monitor, mas ainda não existe um HUD 3D
+  dedicado dentro do headset;
+- o fluxo XR possui testes automatizados com controles simulados, porém ainda
+  precisa da validação física no Meta Quest 3;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Fase 22: integrar WebXR, controles de duas mãos e entrada em `immersive-vr`.
+Fase 23: testar no Meta Quest 3 e ajustar escala, conforto, mira, desempenho e
+ergonomia dos controles com evidência obtida no dispositivo real.
 
 Consulte também:
 
@@ -289,3 +308,4 @@ Consulte também:
 - [Guia da Fase 19](docs/phases/phase-19-banco-dados.md)
 - [Guia da Fase 20](docs/phases/phase-20-ranking.md)
 - [Guia da Fase 21](docs/phases/phase-21-estilingue-completo.md)
+- [Guia da Fase 22](docs/phases/phase-22-webxr.md)

@@ -130,6 +130,23 @@ test('um clique rápido usa a velocidade mínima', () => {
   assert.equal(fixture.spawnCalls.length, 1);
 });
 
+test('carga manual usa tensão e pose fornecidas pelos controles XR', () => {
+  const fixture = createFixture();
+  const origin = fixture.camera.position.clone().set(2, 1.2, -0.5);
+  const direction = fixture.camera.position.clone().set(-2, 0.4, -3);
+
+  fixture.slingshot.beginCharge({ mode: 'manual' });
+  fixture.slingshot.update(10);
+  assert.equal(fixture.slingshot.setChargeRatio(0.75), true);
+  assert.equal(fixture.slingshot.setChargeRatio(0.75), false);
+  const shot = fixture.slingshot.releaseShot({ origin, direction });
+
+  assert.equal(shot.ratio, 0.75);
+  assert.deepEqual(fixture.spawnCalls[0].origin.toArray(), origin.toArray());
+  assert.ok(Math.abs(fixture.spawnCalls[0].direction.length() - 1) < 1e-10);
+  assert.equal(fixture.spawnCalls[0].speed, 20.5);
+});
+
 test('cancelamento zera a carga sem criar projétil', () => {
   const fixture = createFixture();
 

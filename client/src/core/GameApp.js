@@ -5,6 +5,7 @@ export class GameApp {
     renderContext,
     lookController = null,
     fireController = null,
+    xrController = null,
     gameSession = null,
     documentRef = document,
     maxDeltaSeconds = RENDER_CONFIG.loop.maxDeltaSeconds,
@@ -16,6 +17,7 @@ export class GameApp {
     this.renderContext = renderContext;
     this.lookController = lookController;
     this.fireController = fireController;
+    this.xrController = xrController;
     this.gameSession = gameSession;
     this.documentRef = documentRef;
     this.maxDeltaSeconds = maxDeltaSeconds;
@@ -42,11 +44,13 @@ export class GameApp {
 
     let connectedLookController = false;
     let connectedFireController = false;
+    let connectedXRController = false;
     let animationLoopInstalled = false;
 
     try {
       connectedLookController = this.lookController?.connect?.() ?? false;
       connectedFireController = this.fireController?.connect?.() ?? false;
+      connectedXRController = this.xrController?.connect?.() ?? false;
       this.previousTimestamp = null;
       this.renderContext.setAnimationLoop(this.animationFrame);
       animationLoopInstalled = true;
@@ -76,6 +80,14 @@ export class GameApp {
       if (connectedFireController) {
         try {
           this.fireController?.disconnect?.();
+        } catch {
+          // A limpeza é best-effort; o erro original de inicialização prevalece.
+        }
+      }
+
+      if (connectedXRController) {
+        try {
+          this.xrController?.disconnect?.();
         } catch {
           // A limpeza é best-effort; o erro original de inicialização prevalece.
         }
@@ -113,6 +125,7 @@ export class GameApp {
 
     cleanup(() => this.renderContext.setAnimationLoop(null));
     cleanup(() => this.fireController?.disconnect?.());
+    cleanup(() => this.xrController?.disconnect?.());
     cleanup(() => this.gameSession?.cancelCharge?.());
     cleanup(() => this.lookController?.disconnect?.());
     cleanup(() =>
@@ -136,7 +149,7 @@ export class GameApp {
       return;
     }
 
-    if (this.documentRef?.hidden) {
+    if (this.documentRef?.hidden && !this.renderContext.isXRPresenting) {
       this.previousTimestamp = null;
       this.fireController?.cancelCharge?.('document-hidden');
       this.gameSession?.cancelCharge?.();
@@ -153,13 +166,14 @@ export class GameApp {
           );
 
     this.previousTimestamp = timestamp;
+    this.xrController?.update?.(deltaSeconds);
     this.gameSession?.update?.(deltaSeconds);
     this.renderContext.update(deltaSeconds);
     this.renderContext.render();
   }
 
   handleVisibilityChange() {
-    if (this.documentRef?.hidden) {
+    if (this.documentRef?.hidden && !this.renderContext.isXRPresenting) {
       this.previousTimestamp = null;
       this.fireController?.cancelCharge?.('document-hidden');
       this.gameSession?.cancelCharge?.();
@@ -183,6 +197,7 @@ export class GameApp {
 
     cleanup(() => this.stop());
     cleanup(() => this.fireController?.dispose?.());
+    cleanup(() => this.xrController?.dispose?.());
     cleanup(() => this.gameSession?.dispose?.());
     cleanup(() => this.lookController?.dispose?.());
     cleanup(() => this.renderContext.dispose());

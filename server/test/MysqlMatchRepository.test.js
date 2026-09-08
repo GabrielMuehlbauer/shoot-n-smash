@@ -120,7 +120,7 @@ test('cria jogador e partida em uma transação parametrizada', async () => {
     'neve',
     'victory',
     120_000,
-    '0.21.0',
+    '0.22.0',
   ]);
 });
 

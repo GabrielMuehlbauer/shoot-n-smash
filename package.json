@@ -1,6 +1,6 @@
 {
   "name": "shoot-n-smash",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "private": true,
   "description": "Jogo 3D no navegador com estilingue, ondas, itens e ranking global.",
   "type": "module",

@@ -21,6 +21,8 @@ import {
 } from './result-screen.js';
 import { describeScoreState } from './score-hud.js';
 import { describeWaveState } from './wave-hud.js';
+import { XRSessionManager } from './xr/XRSessionManager.js';
+import { XRSlingshotController } from './xr/XRSlingshotController.js';
 import './styles.css';
 
 const teamList = document.querySelector('#team-list');
@@ -39,6 +41,8 @@ const sceneError = document.querySelector('#scene-error');
 const exitSceneButton = document.querySelector('#exit-scene-button');
 const pointerLockButton = document.querySelector('#pointer-lock-button');
 const pointerLockStatus = document.querySelector('#pointer-lock-status');
+const xrButton = document.querySelector('#xr-button');
+const xrStatus = document.querySelector('#xr-status');
 const slingshotHud = document.querySelector('#slingshot-hud');
 const slingshotTension = document.querySelector('#slingshot-tension');
 const slingshotTensionValue = document.querySelector(
@@ -92,6 +96,9 @@ let gameApp = null;
 let lookController = null;
 let fireController = null;
 let gameSession = null;
+let xrSessionManager = null;
+let xrSlingshotController = null;
+let xrActive = false;
 let pointerLocked = false;
 let announcedChargeStage = -1;
 let currentPlayerName = normalizePlayerName('');
@@ -449,6 +456,8 @@ function handleGameStateChange(state) {
     return false;
   }
 
+  void xrSessionManager?.endSession();
+
   try {
     gameApp?.stop();
   } catch (error) {
@@ -542,7 +551,7 @@ function updateWaveState(state) {
   if (state.status === 'boss') {
     updateEnemyState(gameSession.enemyState);
     setShotStatus(
-      pointerLocked ? 'ready' : 'idle',
+      pointerLocked || xrActive ? 'ready' : 'idle',
       'Chefão de gelo ativo. Acerte-o dez vezes antes do contato.',
     );
     return;
@@ -556,7 +565,7 @@ function updateWaveState(state) {
   if (state.status === 'active') {
     updateEnemyState(gameSession.enemyState);
     setShotStatus(
-      pointerLocked ? 'ready' : 'idle',
+      pointerLocked || xrActive ? 'ready' : 'idle',
       `Onda ${state.wave}. Inimigo ${state.enemy} de ${state.enemiesInWave}: localize-o em 360°.`,
     );
     return;
@@ -592,7 +601,7 @@ function updateChargeState({ charging, ratio, speed, ammoType = 'normal' }) {
     : 'Segure para prever';
 
   if (!charging) {
-    resetSlingshotHud(pointerLocked ? 'ready' : 'idle');
+    resetSlingshotHud(pointerLocked || xrActive ? 'ready' : 'idle');
     showEncounterOutcome();
     return;
   }
@@ -661,12 +670,15 @@ function handleEnemyHit({ maxResistance, outcome, resistance, type }) {
 
 function handleChargeCancel({ reason = 'manual' } = {}) {
   gameSession?.cancelCharge();
-  resetSlingshotHud('idle');
+  resetSlingshotHud(xrActive ? 'ready' : 'idle');
 
   const messages = {
     'document-hidden': 'Carga cancelada porque a página ficou oculta.',
     'pointer-lock-lost': 'Carga cancelada. Ative a mira para tentar novamente.',
     'window-blur': 'Carga cancelada porque a janela perdeu o foco.',
+    'controller-disconnected': 'Carga cancelada porque um controle XR foi desconectado.',
+    'invalid-controller-pose': 'Carga cancelada porque o rastreamento das mãos foi perdido.',
+    'xr-session-ended': 'Carga cancelada ao sair do modo VR.',
   };
 
   if (!showEncounterOutcome()) {
@@ -689,6 +701,10 @@ function updateLookState({ locked, supported }) {
     : supported
       ? 'Cursor livre. Ative a mira para olhar e usar o estilingue.'
       : 'Pointer Lock não está disponível neste navegador.';
+
+  if (xrActive) {
+    return;
+  }
 
   if (locked) {
     resetSlingshotHud('ready');
@@ -718,6 +734,104 @@ function updateLookState({ locked, supported }) {
     !gameSession?.isTerminal
   ) {
     pointerLockButton.focus({ preventScroll: true });
+  }
+}
+
+function updateXRInputState({ active, ready }) {
+  if (!active) {
+    return;
+  }
+
+  setShotStatus(
+    ready ? 'ready' : 'idle',
+    ready
+      ? 'Controles XR prontos. Puxe a bola com a mão direita e solte para disparar.'
+      : 'Conecte os dois controles: esquerda para o estilingue e direita para a munição.',
+  );
+}
+
+function setXRActive(active) {
+  const nextActive = Boolean(active);
+
+  if (xrActive === nextActive) {
+    return false;
+  }
+
+  xrActive = nextActive;
+  prototypeView.dataset.inputMode = nextActive ? 'xr' : 'desktop';
+  gameSession?.setDesktopSlingshotVisible(!nextActive);
+
+  if (nextActive) {
+    fireController?.cancelCharge?.('xr-session-started');
+    fireController?.disconnect?.();
+    lookController?.unlock?.();
+    lookController?.disconnect?.();
+    pointerLocked = false;
+    resetSlingshotHud('ready');
+    xrSlingshotController?.setActive(true);
+  } else if (gameApp?.isRunning) {
+    xrSlingshotController?.setActive(false);
+    lookController?.connect?.();
+    fireController?.connect?.();
+    resetSlingshotHud('idle');
+    setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
+  } else {
+    xrSlingshotController?.setActive(false);
+  }
+
+  return true;
+}
+
+function updateXRState({ state, supported, presenting }) {
+  xrButton.disabled = ['checking', 'starting'].includes(state);
+  xrButton.setAttribute('aria-pressed', String(presenting));
+  prototypeView.dataset.xrState = state;
+
+  if (state === 'checking') {
+    xrButton.textContent = 'Verificando VR…';
+    xrStatus.textContent = 'Consultando o suporte WebXR deste dispositivo.';
+    return;
+  }
+
+  if (state === 'starting') {
+    xrButton.textContent = 'Entrando em VR…';
+    xrStatus.textContent = 'Autorize o acesso ao headset e aos controles.';
+    return;
+  }
+
+  if (state === 'presenting') {
+    setXRActive(true);
+    xrButton.textContent = 'Sair do VR';
+    xrStatus.textContent = 'Modo imersivo ativo com estilingue de duas mãos.';
+    return;
+  }
+
+  setXRActive(false);
+
+  if (state === 'ready' && supported) {
+    xrButton.disabled = false;
+    xrButton.textContent = 'Entrar em VR';
+    xrStatus.textContent = 'WebXR disponível. Use dois controles rastreados.';
+    return;
+  }
+
+  xrButton.disabled = true;
+  xrButton.textContent = 'VR indisponível';
+  xrStatus.textContent =
+    state === 'error'
+      ? 'Não foi possível iniciar o modo imersivo. O modo convencional continua disponível.'
+      : 'Este navegador ou dispositivo não oferece immersive-vr.';
+}
+
+async function toggleXRSession() {
+  if (!xrSessionManager || gameSession?.isTerminal) {
+    return;
+  }
+
+  if (xrSessionManager.isPresenting) {
+    await xrSessionManager.endSession();
+  } else {
+    await xrSessionManager.startSession();
   }
 }
 
@@ -801,17 +915,34 @@ function enterPrototype() {
       onChargeRelease: () => gameSession.releaseShot(),
       onChargeCancel: handleChargeCancel,
     });
+    xrSlingshotController = new XRSlingshotController({
+      renderer: renderContext.renderer,
+      scene: renderContext.scene,
+      config: GAMEPLAY_CONFIG.xr,
+      onChargeStart: ({ mode }) => gameSession.beginCharge({ mode }),
+      onChargeChange: (ratio) => gameSession.setChargeRatio(ratio),
+      onChargeRelease: (pose) => gameSession.releaseShot(pose),
+      onChargeCancel: handleChargeCancel,
+      onInputStateChange: updateXRInputState,
+    });
+    xrSessionManager = new XRSessionManager({
+      renderer: renderContext.renderer,
+      onStateChange: updateXRState,
+    });
     gameApp = new GameApp({
       renderContext,
       lookController,
       fireController,
+      xrController: xrSlingshotController,
       gameSession,
     });
     gameApp.start();
+    void xrSessionManager.checkSupport();
   } catch (error) {
     if (gameApp) {
       gameApp.dispose();
     } else {
+      xrSlingshotController?.dispose();
       fireController?.dispose();
       gameSession?.dispose();
       lookController?.dispose();
@@ -821,6 +952,10 @@ function enterPrototype() {
     fireController = null;
     gameSession = null;
     lookController = null;
+    xrSessionManager?.dispose();
+    xrSessionManager = null;
+    xrSlingshotController = null;
+    xrActive = false;
     activeMatch = null;
     lastCompletedMatch = null;
     sceneContainer.replaceChildren();
@@ -839,15 +974,21 @@ function enterPrototype() {
 
 function exitPrototype({ focusMenu = true } = {}) {
   closeResultScreen();
+  xrSessionManager?.dispose();
   gameApp?.dispose();
   gameApp = null;
   fireController = null;
   gameSession = null;
   lookController = null;
+  xrSessionManager = null;
+  xrSlingshotController = null;
+  xrActive = false;
   pointerLocked = false;
   activeMatch = null;
   lastCompletedMatch = null;
   prototypeView.dataset.gameState = 'PLAYING';
+  prototypeView.dataset.inputMode = 'desktop';
+  prototypeView.dataset.xrState = 'checking';
   resetSlingshotHud('idle');
   resetEnemyHud();
   resetPlayerHud();
@@ -892,7 +1033,7 @@ function handleSceneKeyboard(event) {
 }
 
 function requestPointerLock() {
-  if (!lookController || gameSession?.isTerminal) {
+  if (!lookController || gameSession?.isTerminal || xrActive) {
     return;
   }
 
@@ -918,6 +1059,7 @@ function retryResultSubmission() {
 startSceneButton.addEventListener('click', enterPrototype);
 exitSceneButton.addEventListener('click', exitPrototype);
 pointerLockButton.addEventListener('click', requestPointerLock);
+xrButton.addEventListener('click', toggleXRSession);
 replayButton.addEventListener('click', replayPrototype);
 resultMenuButton.addEventListener('click', exitPrototype);
 resultRetryButton.addEventListener('click', retryResultSubmission);
@@ -959,6 +1101,7 @@ if (import.meta.hot) {
     startSceneButton.removeEventListener('click', enterPrototype);
     exitSceneButton.removeEventListener('click', exitPrototype);
     pointerLockButton.removeEventListener('click', requestPointerLock);
+    xrButton.removeEventListener('click', toggleXRSession);
     replayButton.removeEventListener('click', replayPrototype);
     resultMenuButton.removeEventListener('click', exitPrototype);
     resultRetryButton.removeEventListener('click', retryResultSubmission);

@@ -46,6 +46,7 @@ export class RenderContext {
 
     try {
       this.renderer = this.createRenderer();
+      this.configureXR();
       this.container.append(this.renderer.domElement);
 
       this.createLights();
@@ -111,6 +112,22 @@ export class RenderContext {
     directionalLight.position.set(-4, 8, 2);
 
     this.scene.add(hemisphereLight, directionalLight);
+  }
+
+  configureXR() {
+    if (!this.renderer.xr) {
+      return false;
+    }
+
+    this.renderer.xr.enabled = true;
+    this.renderer.xr.setReferenceSpaceType?.(
+      RENDER_CONFIG.xr?.referenceSpaceType ?? 'local-floor',
+    );
+    return true;
+  }
+
+  get isXRPresenting() {
+    return Boolean(this.renderer?.xr?.isPresenting);
   }
 
   createGround() {

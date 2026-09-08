@@ -1,4 +1,7 @@
 export const RENDER_CONFIG = Object.freeze({
+  xr: Object.freeze({
+    referenceSpaceType: 'local-floor',
+  }),
   camera: Object.freeze({
     fov: 65,
     near: 0.1,

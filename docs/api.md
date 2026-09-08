@@ -16,7 +16,7 @@ Resposta sem banco configurado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-    "phase": 21,
+    "phase": 22,
   "database": {
     "status": "not-configured"
   },
@@ -32,7 +32,7 @@ Resposta com banco conectado — `200 OK`:
 {
   "status": "ok",
   "service": "shoot-n-smash-api",
-    "phase": 21,
+    "phase": 22,
   "database": {
     "status": "connected"
   },
@@ -49,7 +49,7 @@ Resposta quando existe configuração, mas o banco está indisponível —
 {
   "status": "degraded",
   "service": "shoot-n-smash-api",
-    "phase": 21,
+    "phase": 22,
   "database": {
     "status": "unavailable"
   },
@@ -169,13 +169,13 @@ Possíveis erros: `400` e `500`.
 Erros de validação incluem `code` e uma lista `details` com campo e mensagem. O
 servidor nunca inclui stack trace, segredo ou entrada bruta na resposta.
 
-## Estado da fase 21
+## Estado da fase 22
 
 O cliente envia automaticamente cada vitória ou derrota concluída, usando um
 UUID criado no início da sessão. Em caso de falha, a tela final permite repetir
 o mesmo envio sem duplicar a partida. O menu consulta este endpoint e apresenta
 os dez melhores resultados do cenário de neve.
 
-A Fase 21 não altera os bodies nem as respostas da API. O diagnóstico muda
-somente o campo `phase`; partidas da versão `0.21.0` continuam usando os mesmos
+A Fase 22 não altera os bodies nem as respostas da API. O diagnóstico muda
+somente o campo `phase`; partidas da versão `0.22.0` continuam usando os mesmos
 contratos idempotentes.

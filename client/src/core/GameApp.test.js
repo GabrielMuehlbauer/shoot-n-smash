@@ -24,6 +24,12 @@ function createFixture() {
     dispose: 0,
     unlock: 0,
   };
+  const xrCalls = {
+    connect: 0,
+    disconnect: 0,
+    dispose: 0,
+    updates: [],
+  };
   const documentCalls = {
     add: 0,
     remove: 0,
@@ -32,6 +38,7 @@ function createFixture() {
   const renderContext = {
     disposeCalls: 0,
     renderCalls: 0,
+    isXRPresenting: false,
     setAnimationLoop: (callback) => animationLoops.push(callback),
     update: (deltaSeconds) => {
       updates.push(deltaSeconds);
@@ -95,6 +102,24 @@ function createFixture() {
       return true;
     },
   };
+  const xrController = {
+    connect: () => {
+      xrCalls.connect += 1;
+      return true;
+    },
+    disconnect: () => {
+      xrCalls.disconnect += 1;
+      return true;
+    },
+    update: (deltaSeconds) => {
+      xrCalls.updates.push(deltaSeconds);
+      frameOrder.push('xr');
+    },
+    dispose: () => {
+      xrCalls.dispose += 1;
+      return true;
+    },
+  };
   const documentRef = {
     hidden: false,
     addEventListener: (name, listener) => {
@@ -123,6 +148,8 @@ function createFixture() {
     lookController,
     renderContext,
     updates,
+    xrCalls,
+    xrController,
   };
 }
 
@@ -151,14 +178,31 @@ test('limita o delta após uma pausa longa', () => {
   assert.deepEqual(fixture.updates, [0, 0.05]);
   assert.deepEqual(fixture.gameSessionCalls.updates, [0, 0.05]);
   assert.deepEqual(fixture.frameOrder, [
+    'xr',
     'gameplay',
     'world',
     'render',
+    'xr',
     'gameplay',
     'world',
     'render',
   ]);
   assert.equal(fixture.renderContext.renderCalls, 2);
+});
+
+test('mantém o loop ativo quando o headset está apresentando', () => {
+  const fixture = createFixture();
+  const app = new GameApp(fixture);
+
+  app.start();
+  fixture.documentRef.hidden = true;
+  fixture.renderContext.isXRPresenting = true;
+  fixture.animationLoops[0](1000);
+
+  assert.deepEqual(fixture.xrCalls.updates, [0]);
+  assert.deepEqual(fixture.gameSessionCalls.updates, [0]);
+  assert.equal(fixture.renderContext.renderCalls, 1);
+  app.dispose();
 });
 
 test('não atualiza a cena enquanto o documento está oculto', () => {
@@ -214,6 +258,9 @@ test('stop e dispose removem loop e listeners sem duplicação', () => {
   assert.equal(fixture.fireCalls.dispose, 1);
   assert.equal(fixture.gameSessionCalls.cancelCharge, 1);
   assert.equal(fixture.gameSessionCalls.dispose, 1);
+  assert.equal(fixture.xrCalls.connect, 1);
+  assert.equal(fixture.xrCalls.disconnect, 1);
+  assert.equal(fixture.xrCalls.dispose, 1);
   assert.throws(() => app.start(), /GameApp descartada/);
 });
 

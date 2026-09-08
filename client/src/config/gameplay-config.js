@@ -89,6 +89,13 @@ export const GAMEPLAY_CONFIG = freeze({
   charge: freeze({
     durationSeconds: 1.2,
   }),
+  xr: freeze({
+    referenceSpaceType: 'local-floor',
+    pullDistance: freeze({
+      minimum: 0.12,
+      maximum: 0.72,
+    }),
+  }),
   slingshotVisual: freeze({
     position: freeze({ x: 0.32, y: -0.32, z: -0.72 }),
     handle: freeze({
