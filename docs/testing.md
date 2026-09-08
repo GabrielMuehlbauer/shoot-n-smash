@@ -686,11 +686,62 @@ O roteiro completo está em
 
 O roteiro completo está em [Fase 20 — Ranking global](phases/phase-20-ranking.md).
 
+## Fase 22
+
+### Cobertura automatizada adicionada
+
+- detecção de suporte a `immersive-vr` e fallback sem `navigator.xr`;
+- opções `local-floor` e `bounded-floor` na solicitação da sessão;
+- início, término, repetição e descarte do ciclo XR;
+- seleção dos controles esquerdo e direito por `handedness`;
+- normalização da distância física para tensão entre 0 e 1;
+- pose do disparo calculada entre as duas mãos;
+- carga manual sem avanço por tempo;
+- pose externa validada e normalizada antes do projétil;
+- continuidade do game loop quando o headset apresenta com a página oculta;
+- alternância entre entradas desktop e XR sem trocar a `GameSession`;
+- regressão completa do gameplay, API, banco e interface.
+
+### Verificação manual resumida
+
+1. Em um navegador sem WebXR, confirme o botão desabilitado e jogue com mouse.
+2. Em uma origem HTTPS compatível, confirme **Entrar em VR** após a detecção.
+3. Inicie a sessão com dois controles e confirme o espaço `local-floor`.
+4. Segure o gatilho direito, varie a distância entre as mãos e solte.
+5. Confirme direção, força, colisões, itens, inimigos e pontuação.
+6. Saia do VR e continue a mesma partida com Pointer Lock.
+7. Encerre a partida e confirme resultado e ranking no monitor.
+
+O roteiro completo está em [Fase 22 — WebXR](phases/phase-22-webxr.md).
+
+## Fase 23 — em validação
+
+### Cobertura automatizada adicionada
+
+- coleta somente durante uma sessão XR ativa;
+- intervalo real de frame separado do delta limitado do gameplay;
+- FPS médio, FPS mínimo por janela e pior frame;
+- percentual de frames acima do limite de 20 ms;
+- picos de draw calls e triângulos do renderer;
+- identificação local do dispositivo e dos controles;
+- relatório imutável ao encerrar ou descartar a sessão;
+- painel de diagnóstico no espelho desktop;
+- regressão dos ciclos desktop, XR e descarte de recursos.
+
+### Validação física pendente
+
+A automação não substitui o ensaio no Meta Quest 3. Escala do chão, ergonomia,
+conforto, percepção de mira, legibilidade e desempenho térmico precisam ser
+observados no dispositivo durante uma partida completa.
+
+O roteiro e a tabela de registro estão em
+[Fase 23 — Validação no Meta Quest 3](phases/phase-23-meta-quest-3.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;
 - testes de API e migrations com um banco MySQL isolado;
 - E2E convencional em navegador para menu, partida completa, ranking e replay;
-- mocks WebXR apenas para lógica de entrada;
+- testes automatizados adicionais para eventos reais dos perfis de controle;
 - checklist manual obrigatório no Meta Quest 3;
 - profiling e testes de reinício prolongados para detectar vazamentos.

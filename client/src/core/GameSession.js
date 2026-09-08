@@ -313,7 +313,7 @@ export class GameSession {
     return this.gameStateManager.isTerminal;
   }
 
-  beginCharge() {
+  beginCharge({ mode = 'time' } = {}) {
     this.assertNotDisposed();
 
     if (this.isTerminal) {
@@ -322,10 +322,11 @@ export class GameSession {
 
     return this.slingshotSystem.beginCharge({
       ammoType: this.specialAmmoRemainingShots > 0 ? 'special' : 'normal',
+      mode,
     });
   }
 
-  releaseShot() {
+  releaseShot({ origin = null, direction = null } = {}) {
     this.assertNotDisposed();
 
     if (this.isTerminal) {
@@ -339,7 +340,27 @@ export class GameSession {
         ? this.specialAmmoConfig.hitStrength
         : this.config.projectile.hitStrength,
       ammoType: special ? 'special' : 'normal',
+      origin,
+      direction,
     });
+  }
+
+  setChargeRatio(ratio) {
+    this.assertNotDisposed();
+
+    if (this.isTerminal) {
+      return false;
+    }
+
+    return this.slingshotSystem.setChargeRatio(ratio);
+  }
+
+  setDesktopSlingshotVisible(visible) {
+    if (this.disposed) {
+      return false;
+    }
+
+    return this.slingshotSystem.setVisualVisible(visible);
   }
 
   cancelCharge() {

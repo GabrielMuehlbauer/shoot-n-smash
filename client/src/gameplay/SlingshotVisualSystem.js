@@ -364,6 +364,22 @@ export class SlingshotVisualSystem {
     return true;
   }
 
+  setVisible(visible) {
+    if (this.disposed) {
+      return false;
+    }
+
+    const nextVisible = Boolean(visible);
+
+    if (this.root.visible === nextVisible) {
+      return false;
+    }
+
+    this.root.visible = nextVisible;
+    this.trajectory.visible = nextVisible;
+    return true;
+  }
+
   updateBand(band, start, end) {
     const positions = band.geometry.getAttribute('position');
     positions.setXYZ(0, start.x, start.y, start.z);

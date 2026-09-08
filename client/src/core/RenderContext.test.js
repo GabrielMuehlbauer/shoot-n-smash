@@ -15,6 +15,7 @@ function createFixture() {
     observerDisconnect: 0,
     observerObserve: 0,
     rendererDispose: 0,
+    xrReferenceSpaceTypes: [],
     worldUpdates: [],
     windowAdd: 0,
     windowRemove: 0,
@@ -34,6 +35,11 @@ function createFixture() {
     setAnimationLoop: (callback) => counters.animationLoops.push(callback),
     setPixelRatio() {},
     setSize() {},
+    xr: {
+      enabled: false,
+      isPresenting: false,
+      setReferenceSpaceType: (type) => counters.xrReferenceSpaceTypes.push(type),
+    },
   };
   const container = {
     append: () => {
@@ -121,6 +127,9 @@ test('repassa o delta ao cenário e ao farol de gelo', () => {
 
   assert.deepEqual(fixture.counters.worldUpdates, [0.5]);
   assert.ok(context.iceBeacon.rotation.y > 0);
+  assert.equal(fixture.renderer.xr.enabled, true);
+  assert.deepEqual(fixture.counters.xrReferenceSpaceTypes, ['local-floor']);
+  assert.equal(context.isXRPresenting, false);
   context.dispose();
 });
 

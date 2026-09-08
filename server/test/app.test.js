@@ -46,7 +46,7 @@ test('GET /api/health funciona sem MySQL configurado', async (testContext) => {
 
   assert.equal(response.status, 200);
   assert.equal(body.status, 'ok');
-  assert.equal(body.phase, 21);
+  assert.equal(body.phase, 22);
   assert.equal(body.database.status, 'not-configured');
   assert.equal(body.storage.matches, 'memory');
 });
@@ -72,7 +72,7 @@ test('health informa indisponibilidade quando o MySQL configurado falha', async 
 
   assert.equal(response.status, 503);
   assert.equal(body.status, 'degraded');
-  assert.equal(body.phase, 21);
+  assert.equal(body.phase, 22);
   assert.equal(body.database.status, 'unavailable');
   assert.equal(body.storage.matches, 'mysql');
 });

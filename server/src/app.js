@@ -26,7 +26,7 @@ export function createApp({
       response.status(databaseUnavailable ? 503 : 200).json({
         status: databaseUnavailable ? 'degraded' : 'ok',
         service: 'shoot-n-smash-api',
-        phase: 21,
+        phase: 22,
         database,
         storage: {
           matches: databasePool ? 'mysql' : 'memory',

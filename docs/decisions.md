@@ -379,3 +379,45 @@ Uma falha mantém o resultado na tela e libera nova tentativa com o mesmo UUID.
 O cliente evita requests simultâneos do mesmo ID; a API e o índice único do
 banco garantem idempotência mesmo após perda de resposta ou repetição manual.
 O ranking permanece derivado de `matches`, sem cache ou nova tabela nesta fase.
+
+## ADR-024 — WebXR como adaptador da mesma sessão de jogo
+
+**Status:** aceita em 8 de setembro de 2026.
+
+A Fase 22 não cria uma variante XR do gameplay. `XRSessionManager` controla
+somente suporte, permissão e ciclo de `immersive-vr`; `XRSlingshotController`
+traduz os dois controles em tensão, origem e direção. O resultado entra na mesma
+`GameSession` e no mesmo `ProjectileSystem` do modo convencional.
+
+A carga por tempo continua sendo o padrão desktop. A carga manual XR normaliza
+a distância entre 0,12 m e 0,72 m, e a direção aponta da mão que puxou para a
+mão que sustenta o estilingue. Essas medidas ficam centralizadas na configuração
+e deverão ser revistas durante o teste físico da Fase 23.
+
+O espaço `local-floor` é obrigatório para manter a escala em metros e a altura
+do jogador. `bounded-floor` é apenas opcional, pois o jogador permanece no
+centro e o jogo não depende de uma área física delimitada. Nenhuma biblioteca de
+física ou pacote de modelos de controle foi adicionado; os indicadores visuais
+usam primitivas Three.js locais.
+
+O modo desktop permanece disponível quando WebXR não existe, é negado ou termina.
+HUD 3D, configuração para canhotos e ajustes específicos do Meta Quest 3 não são
+assumidos sem validação no dispositivo.
+
+## ADR-025 — Telemetria local antes de otimizar para o Quest 3
+
+**Status:** aceita em 8 de setembro de 2026.
+
+A Fase 23 adiciona `XRPerformanceMonitor` antes de alterar qualidade visual ou
+balanceamento. O monitor observa o intervalo bruto entre frames e os contadores
+já mantidos pelo renderer. O gameplay continua usando delta limitado; misturar
+os dois valores faria uma queda longa parecer artificialmente curta no relatório.
+
+São mantidos apenas agregados: FPS médio e mínimo por janela, pior frame,
+percentual acima de 20 ms, picos de draw calls e triângulos, duração e descrição
+dos controles. Não há histórico por frame, persistência, fingerprint remoto ou
+novo endpoint. Isso limita memória e evita transformar diagnóstico local em
+coleta de dados do jogador.
+
+A instrumentação não autoriza promover a Fase 23. Conforto, escala, mira e
+legibilidade permanecem critérios físicos obrigatórios no Meta Quest 3.

@@ -56,7 +56,7 @@ async function findBySubmissionId(client, submissionId) {
 }
 
 export class MysqlMatchRepository {
-  constructor({ pool, configVersion = '0.21.0' } = {}) {
+  constructor({ pool, configVersion = '0.22.0' } = {}) {
     requireDatabaseClient(pool, 'execute');
     requireDatabaseClient(pool, 'getConnection');
 

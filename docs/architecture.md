@@ -575,6 +575,61 @@ formata pontuação e data apenas na apresentação. Requisições recebem uma v
 incremental para impedir que uma resposta antiga sobrescreva uma atualização
 mais recente.
 
+## Recorte executável da Fase 22
+
+```text
+navigator.xr.isSessionSupported('immersive-vr')
+                     │
+          XRSessionManager ──> renderer.xr.setSession()
+                     │
+     controles esquerdo + direito
+                     │
+          XRSlingshotController
+                     │ pose + tensão manual
+                     v
+GameSession ──> SlingshotSystem ──> ProjectileSystem ──> colisões e pontuação
+     ▲
+     └──────── DesktopFireController + câmera (fallback preservado)
+```
+
+A sessão XR e o estado causal do jogo são ciclos independentes. Entrar ou sair
+do headset troca apenas os adaptadores de entrada e a representação do
+estilingue; ondas, vida, itens, pontos e resultado permanecem na mesma
+`GameSession`.
+
+O renderer usa `local-floor` e continua com um único `setAnimationLoop`, que
+serve tanto frames convencionais quanto frames do headset. Durante a sessão
+imersiva, a ocultação do documento não pausa o loop, pois o headset passa a ser
+a superfície de apresentação ativa.
+
+O `SlingshotSystem` possui dois modos de carga. `time` acumula tensão pelo tempo
+do botão no desktop; `manual` recebe a razão normalizada pelo rastreamento XR.
+Ambos convergem antes da criação do projétil, evitando duas implementações de
+balística ou colisão.
+
+## Instrumentação da Fase 23
+
+```text
+timestamp XR real ──> GameApp ──> XRPerformanceMonitor
+                         │                 │
+                         │                 ├── FPS e tempo de frame
+renderer.info.render ────┘                 ├── draw calls e triângulos
+session.inputSources ──────────────────────└── controles e perfis
+                                           │
+                                           v
+                               painel no espelho desktop
+```
+
+O delta causal do gameplay continua limitado para impedir saltos de física. O
+monitor recebe separadamente o intervalo bruto entre frames, pois limitar esse
+valor esconderia travamentos reais. A leitura de `renderer.info.render` ocorre
+depois do render e registra somente picos; nenhuma amostra cria objetos Three.js
+ou envia dados pela rede.
+
+O diagnóstico pertence ao ciclo XR, mas não ao estado da partida. Entrar em VR
+zera as métricas; sair produz um relatório final. Os dados permanecem locais e
+a versão do projeto continua `0.22.0` até o teste físico concluir a Fase 23.
+
 ## Servidor
 
 O servidor é um monólito modular Express:
