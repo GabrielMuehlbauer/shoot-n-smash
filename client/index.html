@@ -293,6 +293,32 @@
       </div>
 
       <section
+        id="xr-diagnostics"
+        class="xr-diagnostics"
+        data-state="idle"
+        aria-labelledby="xr-diagnostics-title"
+        hidden
+      >
+        <div class="xr-diagnostics-heading">
+          <strong id="xr-diagnostics-title">Diagnóstico Quest 3</strong>
+          <span id="xr-diagnostics-state">Aguardando sessão</span>
+        </div>
+        <dl>
+          <div><dt>FPS médio</dt><dd id="xr-diagnostics-fps">—</dd></div>
+          <div><dt>Pior frame</dt><dd id="xr-diagnostics-frame">—</dd></div>
+          <div><dt>Draw calls</dt><dd id="xr-diagnostics-draw-calls">—</dd></div>
+          <div><dt>Triângulos</dt><dd id="xr-diagnostics-triangles">—</dd></div>
+          <div class="xr-diagnostics-wide">
+            <dt>Controles</dt>
+            <dd id="xr-diagnostics-controllers">—</dd>
+          </div>
+        </dl>
+        <p id="xr-diagnostics-status">
+          As métricas aparecerão quando uma sessão immersive-vr for iniciada.
+        </p>
+      </section>
+
+      <section
         id="slingshot-hud"
         class="slingshot-hud"
         aria-labelledby="slingshot-hud-title"

@@ -21,6 +21,7 @@ import {
 } from './result-screen.js';
 import { describeScoreState } from './score-hud.js';
 import { describeWaveState } from './wave-hud.js';
+import { XRPerformanceMonitor } from './xr/XRPerformanceMonitor.js';
 import { XRSessionManager } from './xr/XRSessionManager.js';
 import { XRSlingshotController } from './xr/XRSlingshotController.js';
 import './styles.css';
@@ -43,6 +44,20 @@ const pointerLockButton = document.querySelector('#pointer-lock-button');
 const pointerLockStatus = document.querySelector('#pointer-lock-status');
 const xrButton = document.querySelector('#xr-button');
 const xrStatus = document.querySelector('#xr-status');
+const xrDiagnostics = document.querySelector('#xr-diagnostics');
+const xrDiagnosticsState = document.querySelector('#xr-diagnostics-state');
+const xrDiagnosticsFps = document.querySelector('#xr-diagnostics-fps');
+const xrDiagnosticsFrame = document.querySelector('#xr-diagnostics-frame');
+const xrDiagnosticsDrawCalls = document.querySelector(
+  '#xr-diagnostics-draw-calls',
+);
+const xrDiagnosticsTriangles = document.querySelector(
+  '#xr-diagnostics-triangles',
+);
+const xrDiagnosticsControllers = document.querySelector(
+  '#xr-diagnostics-controllers',
+);
+const xrDiagnosticsStatus = document.querySelector('#xr-diagnostics-status');
 const slingshotHud = document.querySelector('#slingshot-hud');
 const slingshotTension = document.querySelector('#slingshot-tension');
 const slingshotTensionValue = document.querySelector(
@@ -98,6 +113,7 @@ let fireController = null;
 let gameSession = null;
 let xrSessionManager = null;
 let xrSlingshotController = null;
+let xrPerformanceMonitor = null;
 let xrActive = false;
 let pointerLocked = false;
 let announcedChargeStage = -1;
@@ -750,6 +766,51 @@ function updateXRInputState({ active, ready }) {
   );
 }
 
+function resetXRDiagnostics() {
+  xrDiagnostics.hidden = true;
+  xrDiagnostics.dataset.state = 'idle';
+  xrDiagnosticsState.textContent = 'Aguardando sessão';
+  xrDiagnosticsFps.textContent = '—';
+  xrDiagnosticsFrame.textContent = '—';
+  xrDiagnosticsDrawCalls.textContent = '—';
+  xrDiagnosticsTriangles.textContent = '—';
+  xrDiagnosticsControllers.textContent = '—';
+  xrDiagnosticsStatus.textContent =
+    'As métricas aparecerão quando uma sessão immersive-vr for iniciada.';
+}
+
+function updateXRDiagnostics(report) {
+  xrDiagnostics.hidden = false;
+  xrDiagnostics.dataset.state = report.state;
+  xrDiagnosticsState.textContent =
+    report.state === 'active' ? 'Medindo no headset' : 'Sessão encerrada';
+  xrDiagnosticsFps.textContent = report.averageFps
+    ? `${report.averageFps.toLocaleString('pt-BR')} FPS`
+    : 'Coletando…';
+  xrDiagnosticsFrame.textContent = report.maxFrameMs
+    ? `${report.maxFrameMs.toLocaleString('pt-BR')} ms máx.`
+    : 'Coletando…';
+  xrDiagnosticsDrawCalls.textContent =
+    report.maxDrawCalls.toLocaleString('pt-BR');
+  xrDiagnosticsTriangles.textContent =
+    report.maxTriangles.toLocaleString('pt-BR');
+  xrDiagnosticsControllers.textContent = report.controllers.length
+    ? report.controllers
+        .map(({ handedness }) =>
+          handedness === 'left'
+            ? 'esquerdo'
+            : handedness === 'right'
+              ? 'direito'
+              : 'sem mão',
+        )
+        .join(' + ')
+    : 'aguardando';
+  xrDiagnosticsStatus.textContent =
+    report.state === 'active'
+      ? `${report.device} · ${report.slowFramePercent.toLocaleString('pt-BR')}% dos frames acima de ${report.slowFrameThresholdMs} ms.`
+      : `${report.device} · ${report.durationSeconds.toLocaleString('pt-BR')} s medidos · mínimo de ${report.minimumFps.toLocaleString('pt-BR')} FPS.`;
+}
+
 function setXRActive(active) {
   const nextActive = Boolean(active);
 
@@ -800,10 +861,19 @@ function updateXRState({ state, supported, presenting }) {
   }
 
   if (state === 'presenting') {
+    xrPerformanceMonitor?.start({
+      session: xrSessionManager?.currentSession,
+    });
     setXRActive(true);
     xrButton.textContent = 'Sair do VR';
     xrStatus.textContent = 'Modo imersivo ativo com estilingue de duas mãos.';
     return;
+  }
+
+  if (xrActive) {
+    xrPerformanceMonitor?.stop({
+      reason: state === 'error' ? 'session-error' : 'session-ended',
+    });
   }
 
   setXRActive(false);
@@ -870,6 +940,7 @@ function enterPrototype() {
   resetPlayerHud();
   resetScoreHud();
   resetItemHud();
+  resetXRDiagnostics();
 
   try {
     activeMatch = {
@@ -929,11 +1000,16 @@ function enterPrototype() {
       renderer: renderContext.renderer,
       onStateChange: updateXRState,
     });
+    xrPerformanceMonitor = new XRPerformanceMonitor({
+      renderer: renderContext.renderer,
+      onUpdate: updateXRDiagnostics,
+    });
     gameApp = new GameApp({
       renderContext,
       lookController,
       fireController,
       xrController: xrSlingshotController,
+      performanceMonitor: xrPerformanceMonitor,
       gameSession,
     });
     gameApp.start();
@@ -943,6 +1019,7 @@ function enterPrototype() {
       gameApp.dispose();
     } else {
       xrSlingshotController?.dispose();
+      xrPerformanceMonitor?.dispose();
       fireController?.dispose();
       gameSession?.dispose();
       lookController?.dispose();
@@ -955,6 +1032,7 @@ function enterPrototype() {
     xrSessionManager?.dispose();
     xrSessionManager = null;
     xrSlingshotController = null;
+    xrPerformanceMonitor = null;
     xrActive = false;
     activeMatch = null;
     lastCompletedMatch = null;
@@ -982,6 +1060,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   lookController = null;
   xrSessionManager = null;
   xrSlingshotController = null;
+  xrPerformanceMonitor = null;
   xrActive = false;
   pointerLocked = false;
   activeMatch = null;
@@ -994,6 +1073,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   resetPlayerHud();
   resetScoreHud();
   resetItemHud();
+  resetXRDiagnostics();
   setShotStatus('idle', 'Ative a mira para preparar o estilingue.');
   sceneContainer.replaceChildren();
   prototypeView.hidden = true;

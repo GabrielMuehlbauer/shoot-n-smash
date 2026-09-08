@@ -607,6 +607,29 @@ do botão no desktop; `manual` recebe a razão normalizada pelo rastreamento XR.
 Ambos convergem antes da criação do projétil, evitando duas implementações de
 balística ou colisão.
 
+## Instrumentação da Fase 23
+
+```text
+timestamp XR real ──> GameApp ──> XRPerformanceMonitor
+                         │                 │
+                         │                 ├── FPS e tempo de frame
+renderer.info.render ────┘                 ├── draw calls e triângulos
+session.inputSources ──────────────────────└── controles e perfis
+                                           │
+                                           v
+                               painel no espelho desktop
+```
+
+O delta causal do gameplay continua limitado para impedir saltos de física. O
+monitor recebe separadamente o intervalo bruto entre frames, pois limitar esse
+valor esconderia travamentos reais. A leitura de `renderer.info.render` ocorre
+depois do render e registra somente picos; nenhuma amostra cria objetos Three.js
+ou envia dados pela rede.
+
+O diagnóstico pertence ao ciclo XR, mas não ao estado da partida. Entrar em VR
+zera as métricas; sair produz um relatório final. Os dados permanecem locais e
+a versão do projeto continua `0.22.0` até o teste físico concluir a Fase 23.
+
 ## Servidor
 
 O servidor é um monólito modular Express:

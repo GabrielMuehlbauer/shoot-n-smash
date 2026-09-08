@@ -4,9 +4,10 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 22 — WebXR**. O jogo detecta `immersive-vr`, entra e sai
-> de uma sessão imersiva e usa dois controles rastreados para tensionar e
-> disparar o mesmo sistema balístico disponível no navegador.
+> Status atual: **Fase 23 — validação no Meta Quest 3 em andamento**. O WebXR e
+> os controles de duas mãos estão implementados. A instrumentação de FPS, tempo
+> de frame, draw calls, triângulos e controles está pronta; falta executar e
+> registrar o ensaio no headset real.
 
 ## Equipe
 
@@ -101,7 +102,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 22](docs/phases/phase-22-webxr.md).
+[guia da Fase 23](docs/phases/phase-23-meta-quest-3.md).
 
 ## Build e execução de produção
 
@@ -130,7 +131,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 22](docs/phases/phase-22-webxr.md#como-testar-manualmente).
+[guia de teste da Fase 23](docs/phases/phase-23-meta-quest-3.md#matriz-de-teste-físico).
 
 ## Scripts
 
@@ -278,8 +279,8 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Próxima etapa
 
-Fase 23: testar no Meta Quest 3 e ajustar escala, conforto, mira, desempenho e
-ergonomia dos controles com evidência obtida no dispositivo real.
+Executar a matriz da Fase 23 no Meta Quest 3. A Fase 24 só começa depois de
+escala, conforto, mira, desempenho, interface, chefão e tamanhos serem aprovados.
 
 Consulte também:
 
@@ -309,3 +310,4 @@ Consulte também:
 - [Guia da Fase 20](docs/phases/phase-20-ranking.md)
 - [Guia da Fase 21](docs/phases/phase-21-estilingue-completo.md)
 - [Guia da Fase 22](docs/phases/phase-22-webxr.md)
+- [Guia da Fase 23](docs/phases/phase-23-meta-quest-3.md)

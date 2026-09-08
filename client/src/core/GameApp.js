@@ -6,6 +6,7 @@ export class GameApp {
     lookController = null,
     fireController = null,
     xrController = null,
+    performanceMonitor = null,
     gameSession = null,
     documentRef = document,
     maxDeltaSeconds = RENDER_CONFIG.loop.maxDeltaSeconds,
@@ -18,6 +19,7 @@ export class GameApp {
     this.lookController = lookController;
     this.fireController = fireController;
     this.xrController = xrController;
+    this.performanceMonitor = performanceMonitor;
     this.gameSession = gameSession;
     this.documentRef = documentRef;
     this.maxDeltaSeconds = maxDeltaSeconds;
@@ -157,19 +159,18 @@ export class GameApp {
       return;
     }
 
-    const deltaSeconds =
+    const frameDeltaSeconds =
       this.previousTimestamp === null
         ? 0
-        : Math.min(
-            Math.max((timestamp - this.previousTimestamp) / 1000, 0),
-            this.maxDeltaSeconds,
-          );
+        : Math.max((timestamp - this.previousTimestamp) / 1000, 0);
+    const deltaSeconds = Math.min(frameDeltaSeconds, this.maxDeltaSeconds);
 
     this.previousTimestamp = timestamp;
     this.xrController?.update?.(deltaSeconds);
     this.gameSession?.update?.(deltaSeconds);
     this.renderContext.update(deltaSeconds);
     this.renderContext.render();
+    this.performanceMonitor?.sample?.(frameDeltaSeconds);
   }
 
   handleVisibilityChange() {
@@ -198,6 +199,7 @@ export class GameApp {
     cleanup(() => this.stop());
     cleanup(() => this.fireController?.dispose?.());
     cleanup(() => this.xrController?.dispose?.());
+    cleanup(() => this.performanceMonitor?.dispose?.());
     cleanup(() => this.gameSession?.dispose?.());
     cleanup(() => this.lookController?.dispose?.());
     cleanup(() => this.renderContext.dispose());

@@ -403,3 +403,21 @@ usam primitivas Three.js locais.
 O modo desktop permanece disponível quando WebXR não existe, é negado ou termina.
 HUD 3D, configuração para canhotos e ajustes específicos do Meta Quest 3 não são
 assumidos sem validação no dispositivo.
+
+## ADR-025 — Telemetria local antes de otimizar para o Quest 3
+
+**Status:** aceita em 8 de setembro de 2026.
+
+A Fase 23 adiciona `XRPerformanceMonitor` antes de alterar qualidade visual ou
+balanceamento. O monitor observa o intervalo bruto entre frames e os contadores
+já mantidos pelo renderer. O gameplay continua usando delta limitado; misturar
+os dois valores faria uma queda longa parecer artificialmente curta no relatório.
+
+São mantidos apenas agregados: FPS médio e mínimo por janela, pior frame,
+percentual acima de 20 ms, picos de draw calls e triângulos, duração e descrição
+dos controles. Não há histórico por frame, persistência, fingerprint remoto ou
+novo endpoint. Isso limita memória e evita transformar diagnóstico local em
+coleta de dados do jogador.
+
+A instrumentação não autoriza promover a Fase 23. Conforto, escala, mira e
+legibilidade permanecem critérios físicos obrigatórios no Meta Quest 3.

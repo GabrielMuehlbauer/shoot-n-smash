@@ -205,6 +205,31 @@ test('mantém o loop ativo quando o headset está apresentando', () => {
   app.dispose();
 });
 
+test('coleta métricas depois de renderizar o frame', () => {
+  const fixture = createFixture();
+  const samples = [];
+  const performanceMonitor = {
+    sample(deltaSeconds) {
+      samples.push({
+        deltaSeconds,
+        renderCalls: fixture.renderContext.renderCalls,
+      });
+    },
+    dispose() {},
+  };
+  const app = new GameApp({ ...fixture, performanceMonitor });
+
+  app.start();
+  fixture.animationLoops[0](1000);
+  fixture.animationLoops[0](2000);
+
+  assert.deepEqual(samples, [
+    { deltaSeconds: 0, renderCalls: 1 },
+    { deltaSeconds: 1, renderCalls: 2 },
+  ]);
+  app.dispose();
+});
+
 test('não atualiza a cena enquanto o documento está oculto', () => {
   const fixture = createFixture();
   const app = new GameApp(fixture);

@@ -714,6 +714,29 @@ O roteiro completo está em [Fase 20 — Ranking global](phases/phase-20-ranking
 
 O roteiro completo está em [Fase 22 — WebXR](phases/phase-22-webxr.md).
 
+## Fase 23 — em validação
+
+### Cobertura automatizada adicionada
+
+- coleta somente durante uma sessão XR ativa;
+- intervalo real de frame separado do delta limitado do gameplay;
+- FPS médio, FPS mínimo por janela e pior frame;
+- percentual de frames acima do limite de 20 ms;
+- picos de draw calls e triângulos do renderer;
+- identificação local do dispositivo e dos controles;
+- relatório imutável ao encerrar ou descartar a sessão;
+- painel de diagnóstico no espelho desktop;
+- regressão dos ciclos desktop, XR e descarte de recursos.
+
+### Validação física pendente
+
+A automação não substitui o ensaio no Meta Quest 3. Escala do chão, ergonomia,
+conforto, percepção de mira, legibilidade e desempenho térmico precisam ser
+observados no dispositivo durante uma partida completa.
+
+O roteiro e a tabela de registro estão em
+[Fase 23 — Validação no Meta Quest 3](phases/phase-23-meta-quest-3.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;

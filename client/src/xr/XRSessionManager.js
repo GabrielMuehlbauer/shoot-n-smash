@@ -41,6 +41,10 @@ export class XRSessionManager {
     return Boolean(this.session);
   }
 
+  get currentSession() {
+    return this.session;
+  }
+
   publish(state, details = {}) {
     const snapshot = frozenState(state, {
       supported: this.supported,
