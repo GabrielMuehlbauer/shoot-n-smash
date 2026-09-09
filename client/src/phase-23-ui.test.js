@@ -13,6 +13,7 @@ test('apresenta as métricas necessárias para o ensaio no Quest 3', () => {
     'xr-diagnostics-frame',
     'xr-diagnostics-draw-calls',
     'xr-diagnostics-triangles',
+    'xr-diagnostics-memory',
     'xr-diagnostics-controllers',
   ]) {
     assert.match(indexHtml, new RegExp(`id="${id}"`));
@@ -31,7 +32,7 @@ test('apresenta as métricas necessárias para o ensaio no Quest 3', () => {
   assert.match(stylesCss, /\.xr-diagnostics\[hidden\]/);
 });
 
-test('mantém a fase 23 como validação pendente do dispositivo real', () => {
-  assert.match(indexHtml, /Fase 24 em validação/);
-  assert.doesNotMatch(indexHtml, /Fase 23 concluída/);
+test('preserva as métricas da fase 23 após a aprovação no dispositivo real', () => {
+  assert.match(indexHtml, /Fase 25 em validação/);
+  assert.doesNotMatch(indexHtml, /Fase 23 em validação/);
 });

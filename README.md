@@ -4,11 +4,10 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 24 — assets finais em validação**. Texturas autorais,
-> modelos low-poly por classe, sons procedurais, reação animada aos impactos e
-> partículas estão implementados. As correções de estilingue, HUD e mira da
-> Fase 23 ainda aguardam reteste no Meta Quest 3; por isso a versão permanece
-> `0.22.0` até a validação física.
+> Status atual: **Fase 25 — testes e otimização em validação**. As Fases 23 e 24
+> foram aprovadas no Meta Quest 3. A versão estável `0.24.0` deu origem à
+> candidata `0.25.0-beta.1`. O cenário agora usa instâncias, o motor 3D é carregado sob demanda e
+> o diagnóstico XR também acompanha geometrias e texturas na memória da GPU.
 
 ## Equipe
 
@@ -103,7 +102,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 24](docs/phases/phase-24-assets-finais.md).
+[guia da Fase 25](docs/phases/phase-25-testes-otimizacao.md).
 
 ## Build e execução de produção
 
@@ -131,8 +130,8 @@ Também é possível executar somente os testes:
 npm test
 ```
 
-O procedimento visual completo está no
-[guia de teste da Fase 24](docs/phases/phase-24-assets-finais.md#matriz-de-validação-manual).
+O procedimento completo está no
+[guia de teste da Fase 25](docs/phases/phase-25-testes-otimizacao.md#matriz-de-validação-manual).
 
 ## Scripts
 
@@ -143,9 +142,10 @@ O procedimento visual completo está no
 | `npm run dev:server` | Inicia somente a API com reload |
 | `npm run db:migrate` | Aplica migrations pendentes no MySQL configurado |
 | `npm run build` | Gera o build do cliente |
+| `npm run check:bundle` | Verifica os orçamentos do build já gerado |
 | `npm start` | Inicia o servidor de produção |
 | `npm test` | Executa testes do cliente e servidor |
-| `npm run check` | Executa testes e build |
+| `npm run check` | Executa testes, build e orçamentos do pacote |
 
 ## Configuração do MySQL
 
@@ -274,17 +274,14 @@ A estrutura crescerá somente quando cada sistema for implementado.
   de um log autoritativo de eventos;
 - a previsão balística indica gravidade e alcance, mas não antecipa colisões com
   monstros, itens ou elementos decorativos;
-- o HUD 3D acompanha a câmera no headset e ainda precisa de validação física de
-  distância e legibilidade após as correções da Fase 23;
-- o fluxo XR possui testes automatizados com controles simulados, porém ainda
-  precisa da validação física no Meta Quest 3;
+- o HUD 3D e o fluxo XR foram aprovados no Quest 3, mas as otimizações da Fase 25
+  ainda precisam de um teste curto de regressão no dispositivo;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Executar as matrizes das Fases 23 e 24 no Meta Quest 3. Depois de aprovar escala,
-conforto, mira, desempenho, interface, assets e áudio, promover as versões e
-iniciar a Fase 25 de testes e otimização.
+Executar a matriz da Fase 25 em desktop e um teste curto de regressão no Quest 3,
+registrando os novos picos de memória GPU, draw calls, triângulos e FPS.
 
 Consulte também:
 
@@ -316,3 +313,4 @@ Consulte também:
 - [Guia da Fase 22](docs/phases/phase-22-webxr.md)
 - [Guia da Fase 23](docs/phases/phase-23-meta-quest-3.md)
 - [Guia da Fase 24](docs/phases/phase-24-assets-finais.md)
+- [Guia da Fase 25](docs/phases/phase-25-testes-otimizacao.md)

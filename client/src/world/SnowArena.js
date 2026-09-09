@@ -5,8 +5,10 @@ import {
   DodecahedronGeometry,
   Float32BufferAttribute,
   Group,
+  InstancedMesh,
   Mesh,
   MeshStandardMaterial,
+  Object3D,
   Points,
   PointsMaterial,
 } from 'three';
@@ -113,17 +115,29 @@ export class SnowArena extends Group {
       roughness: 0.24,
     });
 
-    for (const patch of this.config.icePatches) {
-      const mesh = new Mesh(geometry, this.icePatchMaterial);
-      mesh.position.set(patch.x, 0.175, patch.z);
-      mesh.rotation.y = patch.rotation;
-      mesh.scale.set(
+    const instances = new InstancedMesh(
+      geometry,
+      this.icePatchMaterial,
+      this.config.icePatches.length,
+    );
+    instances.name = 'ice-patch-instances';
+    const transform = new Object3D();
+
+    this.config.icePatches.forEach((patch, index) => {
+      transform.position.set(patch.x, 0.175, patch.z);
+      transform.rotation.set(0, patch.rotation, 0);
+      transform.scale.set(
         patch.radius * patch.scaleX,
         1,
         patch.radius * patch.scaleZ,
       );
-      group.add(mesh);
-    }
+      transform.updateMatrix();
+      instances.setMatrixAt(index, transform.matrix);
+    });
+
+    instances.instanceMatrix.needsUpdate = true;
+    instances.computeBoundingSphere();
+    group.add(instances);
 
     return group;
   }
@@ -139,13 +153,29 @@ export class SnowArena extends Group {
       roughness: 0.86,
     });
 
-    for (const rock of this.config.rocks) {
-      const mesh = new Mesh(geometry, this.rockMaterial);
-      mesh.position.set(rock.x, rock.scale * 0.62, rock.z);
-      mesh.rotation.set(rock.rotation * 0.45, rock.rotation, rock.rotation * 0.2);
-      mesh.scale.set(rock.scale, rock.scale * 0.72, rock.scale * 1.18);
-      group.add(mesh);
-    }
+    const instances = new InstancedMesh(
+      geometry,
+      this.rockMaterial,
+      this.config.rocks.length,
+    );
+    instances.name = 'rock-instances';
+    const transform = new Object3D();
+
+    this.config.rocks.forEach((rock, index) => {
+      transform.position.set(rock.x, rock.scale * 0.62, rock.z);
+      transform.rotation.set(
+        rock.rotation * 0.45,
+        rock.rotation,
+        rock.rotation * 0.2,
+      );
+      transform.scale.set(rock.scale, rock.scale * 0.72, rock.scale * 1.18);
+      transform.updateMatrix();
+      instances.setMatrixAt(index, transform.matrix);
+    });
+
+    instances.instanceMatrix.needsUpdate = true;
+    instances.computeBoundingSphere();
+    group.add(instances);
 
     return group;
   }
@@ -166,26 +196,51 @@ export class SnowArena extends Group {
       roughness: 0.95,
     });
 
-    for (const mountain of this.config.mountains) {
-      const peak = new Group();
-      peak.position.set(mountain.x, 0, mountain.z);
-      peak.rotation.y = mountain.rotation;
+    const mountainCount = this.config.mountains.length;
+    const bodies = new InstancedMesh(
+      geometry,
+      this.mountainRockMaterial,
+      mountainCount,
+    );
+    const snowCaps = new InstancedMesh(
+      geometry,
+      this.mountainSnowMaterial,
+      mountainCount,
+    );
+    bodies.name = 'mountain-body-instances';
+    snowCaps.name = 'mountain-snow-instances';
+    const transform = new Object3D();
 
-      const body = new Mesh(geometry, this.mountainRockMaterial);
-      body.scale.set(mountain.radius, mountain.height, mountain.radius);
-      body.position.y = mountain.height / 2 - 0.03;
+    this.config.mountains.forEach((mountain, index) => {
+      transform.position.set(
+        mountain.x,
+        mountain.height / 2 - 0.03,
+        mountain.z,
+      );
+      transform.rotation.set(0, mountain.rotation, 0);
+      transform.scale.set(mountain.radius, mountain.height, mountain.radius);
+      transform.updateMatrix();
+      bodies.setMatrixAt(index, transform.matrix);
 
-      const snowCap = new Mesh(geometry, this.mountainSnowMaterial);
-      snowCap.scale.set(
+      transform.position.set(
+        mountain.x,
+        mountain.height * 0.79,
+        mountain.z,
+      );
+      transform.scale.set(
         mountain.radius * 0.56,
         mountain.height * 0.34,
         mountain.radius * 0.56,
       );
-      snowCap.position.y = mountain.height * 0.79;
+      transform.updateMatrix();
+      snowCaps.setMatrixAt(index, transform.matrix);
+    });
 
-      peak.add(body, snowCap);
-      group.add(peak);
-    }
+    bodies.instanceMatrix.needsUpdate = true;
+    snowCaps.instanceMatrix.needsUpdate = true;
+    bodies.computeBoundingSphere();
+    snowCaps.computeBoundingSphere();
+    group.add(bodies, snowCaps);
 
     return group;
   }

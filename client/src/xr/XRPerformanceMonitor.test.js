@@ -9,6 +9,7 @@ function createFixture() {
   const renderer = {
     info: {
       render: { calls: 8, triangles: 1200 },
+      memory: { geometries: 14, textures: 4 },
     },
   };
   const session = {
@@ -56,6 +57,8 @@ test('mede frames, renderer e controles durante uma sessão XR', () => {
   fixture.monitor.sample(0.01);
   fixture.renderer.info.render.calls = 12;
   fixture.renderer.info.render.triangles = 1800;
+  fixture.renderer.info.memory.geometries = 16;
+  fixture.renderer.info.memory.textures = 5;
   fixture.monitor.sample(0.02);
   fixture.monitor.sample(0.03);
   fixture.advance(60);
@@ -71,6 +74,8 @@ test('mede frames, renderer e controles durante uma sessão XR', () => {
   assert.equal(report.slowFramePercent, 33.3);
   assert.equal(report.maxDrawCalls, 12);
   assert.equal(report.maxTriangles, 1800);
+  assert.equal(report.maxGeometries, 16);
+  assert.equal(report.maxTextures, 5);
   assert.equal(report.controllers.length, 2);
   assert.equal(report.controllers[0].handedness, 'left');
   assert.equal(Object.isFrozen(report.controllers), true);

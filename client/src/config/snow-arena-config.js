@@ -6,7 +6,7 @@ export const SNOW_ARENA_CONFIG = Object.freeze({
   playerClearanceRadius: 4,
   mountainClearanceRadius: 14,
   meshBudget: Object.freeze({
-    maximum: 30,
+    maximum: 10,
     outsideArena: 2,
   }),
   fog: Object.freeze({

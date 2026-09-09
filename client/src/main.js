@@ -7,13 +7,7 @@ import {
   formatRankingDate,
 } from './api/match-api.js';
 import { GAMEPLAY_CONFIG } from './config/gameplay-config.js';
-import { GameApp } from './core/GameApp.js';
-import { GameSession } from './core/GameSession.js';
-import { RenderContext } from './core/RenderContext.js';
-import { GameAudioSystem } from './audio/GameAudioSystem.js';
 import { describeEnemyState } from './enemy-hud.js';
-import { DesktopFireController } from './input/DesktopFireController.js';
-import { DesktopLookController } from './input/DesktopLookController.js';
 import { describePlayerHealth } from './player-hud.js';
 import { PROJECT_INFO } from './project-info.js';
 import {
@@ -22,10 +16,6 @@ import {
 } from './result-screen.js';
 import { describeScoreState } from './score-hud.js';
 import { describeWaveState } from './wave-hud.js';
-import { XRPerformanceMonitor } from './xr/XRPerformanceMonitor.js';
-import { XRHudSystem } from './xr/XRHudSystem.js';
-import { XRSessionManager } from './xr/XRSessionManager.js';
-import { XRSlingshotController } from './xr/XRSlingshotController.js';
 import './styles.css';
 
 const teamList = document.querySelector('#team-list');
@@ -56,6 +46,7 @@ const xrDiagnosticsDrawCalls = document.querySelector(
 const xrDiagnosticsTriangles = document.querySelector(
   '#xr-diagnostics-triangles',
 );
+const xrDiagnosticsMemory = document.querySelector('#xr-diagnostics-memory');
 const xrDiagnosticsControllers = document.querySelector(
   '#xr-diagnostics-controllers',
 );
@@ -125,8 +116,56 @@ let currentPlayerName = normalizePlayerName('');
 let activeMatch = null;
 let lastCompletedMatch = null;
 let rankingRequestId = 0;
+let prototypeLoadId = 0;
+let gameplayModulesPromise = null;
 const savingSubmissionIds = new Set();
 const matchApi = new MatchApiClient();
+
+function loadGameplayModules() {
+  if (!gameplayModulesPromise) {
+    gameplayModulesPromise = Promise.all([
+      import('./audio/GameAudioSystem.js'),
+      import('./core/GameApp.js'),
+      import('./core/GameSession.js'),
+      import('./core/RenderContext.js'),
+      import('./input/DesktopFireController.js'),
+      import('./input/DesktopLookController.js'),
+      import('./xr/XRPerformanceMonitor.js'),
+      import('./xr/XRHudSystem.js'),
+      import('./xr/XRSessionManager.js'),
+      import('./xr/XRSlingshotController.js'),
+    ])
+      .then(([
+        audioModule,
+        appModule,
+        sessionModule,
+        renderModule,
+        fireModule,
+        lookModule,
+        performanceModule,
+        hudModule,
+        xrSessionModule,
+        xrSlingshotModule,
+      ]) => Object.freeze({
+        GameAudioSystem: audioModule.GameAudioSystem,
+        GameApp: appModule.GameApp,
+        GameSession: sessionModule.GameSession,
+        RenderContext: renderModule.RenderContext,
+        DesktopFireController: fireModule.DesktopFireController,
+        DesktopLookController: lookModule.DesktopLookController,
+        XRPerformanceMonitor: performanceModule.XRPerformanceMonitor,
+        XRHudSystem: hudModule.XRHudSystem,
+        XRSessionManager: xrSessionModule.XRSessionManager,
+        XRSlingshotController: xrSlingshotModule.XRSlingshotController,
+      }))
+      .catch((error) => {
+        gameplayModulesPromise = null;
+        throw error;
+      });
+  }
+
+  return gameplayModulesPromise;
+}
 
 for (const member of PROJECT_INFO.team) {
   const item = document.createElement('li');
@@ -806,6 +845,7 @@ function resetXRDiagnostics() {
   xrDiagnosticsFrame.textContent = '—';
   xrDiagnosticsDrawCalls.textContent = '—';
   xrDiagnosticsTriangles.textContent = '—';
+  xrDiagnosticsMemory.textContent = '—';
   xrDiagnosticsControllers.textContent = '—';
   xrDiagnosticsStatus.textContent =
     'As métricas aparecerão quando uma sessão immersive-vr for iniciada.';
@@ -826,6 +866,9 @@ function updateXRDiagnostics(report) {
     report.maxDrawCalls.toLocaleString('pt-BR');
   xrDiagnosticsTriangles.textContent =
     report.maxTriangles.toLocaleString('pt-BR');
+  xrDiagnosticsMemory.textContent =
+    `${report.maxGeometries.toLocaleString('pt-BR')} geo · ` +
+    `${report.maxTextures.toLocaleString('pt-BR')} tex`;
   xrDiagnosticsControllers.textContent = report.controllers.length
     ? report.controllers
         .map(({ handedness }) =>
@@ -957,15 +1000,16 @@ function handleLookError({ message }) {
   }
 }
 
-function enterPrototype() {
+async function enterPrototype() {
   let renderContext = null;
+  const loadId = ++prototypeLoadId;
 
   startSceneButton.disabled = true;
   currentPlayerName = normalizePlayerName(playerNameInput.value);
   playerNameInput.value = currentPlayerName;
   landing.hidden = true;
   prototypeView.hidden = false;
-  prototypeView.dataset.gameState = 'PLAYING';
+  prototypeView.dataset.gameState = 'LOADING';
   sceneError.hidden = true;
   document.body.classList.add('scene-active');
   resetResultScreen();
@@ -974,8 +1018,27 @@ function enterPrototype() {
   resetScoreHud();
   resetItemHud();
   resetXRDiagnostics();
+  setShotStatus('idle', 'Carregando sistemas e assets da arena…');
 
   try {
+    const {
+      DesktopFireController,
+      DesktopLookController,
+      GameApp,
+      GameAudioSystem,
+      GameSession,
+      RenderContext,
+      XRHudSystem,
+      XRPerformanceMonitor,
+      XRSessionManager,
+      XRSlingshotController,
+    } = await loadGameplayModules();
+
+    if (loadId !== prototypeLoadId || prototypeView.hidden) {
+      return false;
+    }
+
+    prototypeView.dataset.gameState = 'PLAYING';
     gameAudioSystem = new GameAudioSystem();
     gameAudioSystem.unlock();
     activeMatch = {
@@ -1088,9 +1151,11 @@ function enterPrototype() {
     console.error('Falha ao iniciar a cena Three.js.', error);
   } finally {
     startSceneButton.disabled = false;
-    (gameApp && lookController?.isSupported
-      ? pointerLockButton
-      : exitSceneButton
+    (prototypeView.hidden
+      ? startSceneButton
+      : gameApp && lookController?.isSupported
+        ? pointerLockButton
+        : exitSceneButton
     ).focus({
       preventScroll: true,
     });
@@ -1098,6 +1163,7 @@ function enterPrototype() {
 }
 
 function exitPrototype({ focusMenu = true } = {}) {
+  prototypeLoadId += 1;
   closeResultScreen();
   xrSessionManager?.dispose();
   gameApp?.dispose();

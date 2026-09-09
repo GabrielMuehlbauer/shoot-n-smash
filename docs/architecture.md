@@ -627,8 +627,8 @@ depois do render e registra somente picos; nenhuma amostra cria objetos Three.js
 ou envia dados pela rede.
 
 O diagnóstico pertence ao ciclo XR, mas não ao estado da partida. Entrar em VR
-zera as métricas; sair produz um relatório final. Os dados permanecem locais e
-a versão do projeto continua `0.22.0` até o teste físico concluir a Fase 23.
+zera as métricas; sair produz um relatório final. Os dados permanecem locais. A
+validação foi aprovada e a versão estável avançou para `0.24.0`.
 
 ### Interface e mira imersivas
 
@@ -657,6 +657,12 @@ materiais. Grupos visuais alternáveis acrescentam cristais, armadura ou coroa d
 acordo com o tipo selecionado, sem criar outro collider ou outro fluxo de
 gameplay. Impactos usam uma geometria `Points` compartilhada, e a reação de
 escala é calculada pelo tempo do sistema.
+
+Na Fase 25, as 25 ocorrências repetidas de placas, rochas e partes das montanhas
+foram consolidadas em quatro `InstancedMesh`. A página inicial importa apenas a
+interface e a API; Three.js, renderer, gameplay e XR formam chunks carregados
+sob demanda depois de **Iniciar partida**. Um identificador invalida o resultado
+assíncrono quando o usuário volta ao menu durante esse carregamento.
 
 `GameAudioSystem` é um adaptador opcional de Web Audio. Ele cria o contexto sob
 a ação de início da partida, recebe somente nomes de eventos da composição em
