@@ -68,6 +68,7 @@ export class WaveManager {
     this.bossDelaySeconds = bossDelaySeconds;
     this.waveIndex = 0;
     this.enemyNumber = 1;
+    this.activeEnemyCount = 1;
     this.status = 'active';
     this.remainingDelaySeconds = 0;
   }
@@ -105,6 +106,16 @@ export class WaveManager {
     });
   }
 
+  get spawnCount() {
+    if (this.status === 'boss' || this.status === 'boss-pending') {
+      return 1;
+    }
+
+    const remainingEnemies =
+      this.currentWave.enemyCount - this.enemyNumber + 1;
+    return Math.min(this.currentWave.number, remainingEnemies);
+  }
+
   completeEnemy() {
     if (this.status === 'boss') {
       this.status = 'complete';
@@ -118,8 +129,15 @@ export class WaveManager {
 
     const wave = this.currentWave;
 
+    this.activeEnemyCount = Math.max(0, this.activeEnemyCount - 1);
+
     if (this.enemyNumber < wave.enemyCount) {
       this.enemyNumber += 1;
+
+      if (this.activeEnemyCount > 0) {
+        return true;
+      }
+
       this.status = 'between-enemies';
       this.remainingDelaySeconds = wave.spawnIntervalSeconds;
       return true;
@@ -128,12 +146,14 @@ export class WaveManager {
     if (this.waveIndex < this.config.definitions.length - 1) {
       this.waveIndex += 1;
       this.enemyNumber = 1;
+      this.activeEnemyCount = 0;
       this.status = 'between-waves';
       this.remainingDelaySeconds = this.config.interWaveDelaySeconds;
       return true;
     }
 
     this.status = 'boss-pending';
+    this.activeEnemyCount = 0;
     this.remainingDelaySeconds = this.bossDelaySeconds;
     return true;
   }
@@ -179,6 +199,7 @@ export class WaveManager {
 
     const spawnKind = this.status === 'boss-pending' ? 'boss' : 'enemy';
     this.status = spawnKind === 'boss' ? 'boss' : 'active';
+    this.activeEnemyCount = spawnKind === 'boss' ? 1 : this.spawnCount;
     return Object.freeze({
       enemyDelta: Math.max(0, numericDelta - remainingBeforeUpdate),
       spawnKind,
@@ -188,6 +209,7 @@ export class WaveManager {
   reset() {
     this.waveIndex = 0;
     this.enemyNumber = 1;
+    this.activeEnemyCount = 1;
     this.status = 'active';
     this.remainingDelaySeconds = 0;
     return true;

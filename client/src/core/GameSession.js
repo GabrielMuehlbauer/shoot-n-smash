@@ -70,6 +70,7 @@ export class GameSession {
       ['onEnemyHit', onEnemyHit],
       ['onEnemyPlayerContact', onEnemyPlayerContact],
       ['onEnemyEliminate', onEnemyEliminate],
+      ['onEnemyResistanceChange', onEnemyResistanceChange],
       ['onGameStateChange', onGameStateChange],
       ['onItemCollected', onItemCollected],
       ['onItemStateChange', onItemStateChange],
@@ -99,10 +100,14 @@ export class GameSession {
 
     validateBossConfig(config?.boss);
     this.config = config;
+    this.scene = scene;
+    this.enemyRandom = enemyRandom;
+    this.enemyTypeRandom = enemyTypeRandom;
     this.encounterActive = encounterActive;
     this.onEnemyHit = onEnemyHit;
     this.onEnemyEliminate = onEnemyEliminate;
     this.onEnemyPlayerContact = onEnemyPlayerContact;
+    this.onEnemyResistanceChange = onEnemyResistanceChange;
     this.onItemCollected = onItemCollected;
     this.onShot = onShot;
     this.onSpecialAmmoChange = onSpecialAmmoChange;
@@ -127,6 +132,9 @@ export class GameSession {
     this.projectileContactCenter = new Vector3();
     this.itemCenter = new Vector3();
     this.pendingProjectileImpacts = [];
+    this.enemySystems = [];
+    this.enemyEncounters = new Map();
+    this.lastResolvedEnemySystem = null;
     this.pendingObserverError = null;
     this.disposed = false;
 
@@ -161,19 +169,31 @@ export class GameSession {
         new GameStateManager({
           onStateChange: onGameStateChange,
         });
-      this.enemySystem =
-        enemySystem ??
-        new EnemySystem({
+      let primaryEnemySystem = enemySystem;
+
+      if (!primaryEnemySystem) {
+        primaryEnemySystem = new EnemySystem({
           scene,
           config: config.enemy,
           random: enemyRandom,
           typeRandom: enemyTypeRandom,
           typeIds: this.waveManager.spawnSettings.typeIds,
           moveSpeed: this.waveManager.spawnSettings.moveSpeed,
-          onEliminate: (state) => this.handleEnemyEliminate(state),
-          onPlayerContact: (state) => this.handleEnemyPlayerContact(state),
-          onResistanceChange: onEnemyResistanceChange,
+          onEliminate: (state) =>
+            this.handleEnemyEliminate(state, primaryEnemySystem),
+          onPlayerContact: (state) =>
+            this.handleEnemyPlayerContact(state, primaryEnemySystem),
+          onResistanceChange: (state) =>
+            this.handleEnemyResistanceChange(state, primaryEnemySystem),
         });
+      }
+
+      this.enemySystem = primaryEnemySystem;
+      this.enemySystems.push(primaryEnemySystem);
+      this.enemyEncounters.set(
+        primaryEnemySystem,
+        this.createEncounterIdentity('enemy', 1),
+      );
       this.impactFeedbackSystem =
         impactFeedbackSystem ??
         new ImpactFeedbackSystem({
@@ -273,7 +293,15 @@ export class GameSession {
   }
 
   get enemyState() {
-    return this.enemySystem.state;
+    return (
+      this.enemySystems.find((enemy) => enemy.active) ??
+      this.lastResolvedEnemySystem ??
+      this.enemySystem
+    ).state;
+  }
+
+  get activeEnemyCount() {
+    return this.enemySystems.filter((enemy) => enemy.active).length;
   }
 
   get playerState() {
@@ -386,6 +414,72 @@ export class GameSession {
     return true;
   }
 
+  createAdditionalEnemySystem() {
+    let enemySystem;
+    enemySystem = new EnemySystem({
+      scene: this.scene,
+      config: this.config.enemy,
+      random: this.enemyRandom,
+      typeRandom: this.enemyTypeRandom,
+      typeIds: this.waveManager.spawnSettings.typeIds,
+      moveSpeed: this.waveManager.spawnSettings.moveSpeed,
+      onEliminate: (state) => this.handleEnemyEliminate(state, enemySystem),
+      onPlayerContact: (state) =>
+        this.handleEnemyPlayerContact(state, enemySystem),
+      onResistanceChange: (state) =>
+        this.handleEnemyResistanceChange(state, enemySystem),
+    });
+    this.enemySystems.push(enemySystem);
+    return enemySystem;
+  }
+
+  ensureEnemyCapacity(count) {
+    while (this.enemySystems.length < count) {
+      this.createAdditionalEnemySystem();
+    }
+  }
+
+  spawnEnemyGroup(kind) {
+    const spawnCount = kind === 'boss' ? 1 : this.waveManager.spawnCount;
+    this.ensureEnemyCapacity(spawnCount);
+    const firstEnemyNumber = this.waveState.enemy;
+
+    for (const [index, enemySystem] of this.enemySystems.entries()) {
+      if (index >= spawnCount) {
+        continue;
+      }
+
+      if (kind === 'boss') {
+        const boss = this.config.boss;
+        enemySystem.reset({
+          enemyType: boss.type,
+          moveSpeed: boss.moveSpeed,
+          radius: boss.radius,
+          visualScale: boss.visualScale,
+          spawnHeight: boss.spawnHeight,
+        });
+      } else {
+        const { moveSpeed, typeIds } = this.waveManager.spawnSettings;
+        enemySystem.reset({
+          rerollType: true,
+          moveSpeed,
+          typeIds,
+          radius: this.config.enemy.radius,
+          visualScale: 1,
+          spawnHeight: this.config.enemy.spawn.height,
+        });
+      }
+
+      this.enemyEncounters.set(
+        enemySystem,
+        this.createEncounterIdentity(kind, firstEnemyNumber + index),
+      );
+    }
+
+    this.lastResolvedEnemySystem = null;
+    this.currentEncounter = this.enemyEncounters.get(this.enemySystem);
+  }
+
   update(deltaSeconds) {
     if (this.disposed || this.isTerminal) {
       return false;
@@ -411,21 +505,7 @@ export class GameSession {
           } catch (error) {
             this.queueObserverError(error);
           }
-          const boss = this.config.boss;
-          this.enemySystem.reset({
-            enemyType: boss.type,
-            moveSpeed: boss.moveSpeed,
-            radius: boss.radius,
-            visualScale: boss.visualScale,
-            spawnHeight: boss.spawnHeight,
-          });
         } else {
-          const { moveSpeed, typeIds } = this.waveManager.spawnSettings;
-          this.enemySystem.reset({
-            rerollType: true,
-            moveSpeed,
-            typeIds,
-          });
           try {
             this.itemSystem.trySpawn({ wave: this.waveState.wave });
           } catch (error) {
@@ -433,9 +513,7 @@ export class GameSession {
           }
         }
 
-        this.currentEncounter = this.createEncounterIdentity(
-          waveUpdate.spawnKind,
-        );
+        this.spawnEnemyGroup(waveUpdate.spawnKind);
         this.publishWaveChange();
 
         try {
@@ -445,7 +523,9 @@ export class GameSession {
         }
       }
 
-      this.enemySystem.update(waveUpdate.enemyDelta);
+      for (const enemySystem of this.enemySystems) {
+        enemySystem.update(waveUpdate.enemyDelta);
+      }
       this.impactFeedbackSystem.update(delta);
       try {
         this.itemSystem.update(delta);
@@ -456,10 +536,16 @@ export class GameSession {
       this.projectileSystem.update(delta, this.handleProjectileStep);
       this.resolveProjectileImpacts();
 
-      try {
-        this.enemySystem.resolvePlayerContact();
-      } catch (error) {
-        this.queueObserverError(error);
+      for (const enemySystem of this.enemySystems) {
+        if (this.isTerminal) {
+          break;
+        }
+
+        try {
+          enemySystem.resolvePlayerContact();
+        } catch (error) {
+          this.queueObserverError(error);
+        }
       }
     } catch (error) {
       updateError = error;
@@ -479,9 +565,12 @@ export class GameSession {
     return true;
   }
 
-  finishCurrentEncounter({ outcome = 'eliminated' } = {}) {
+  finishCurrentEncounter(
+    { outcome = 'eliminated' } = {},
+    encounterState = this.currentEncounter,
+  ) {
     if (
-      this.currentEncounter.kind === 'boss' &&
+      encounterState.kind === 'boss' &&
       outcome === 'player-contact'
     ) {
       return this.playerState.health > 0
@@ -500,24 +589,36 @@ export class GameSession {
     }
   }
 
-  createEncounterIdentity(kind) {
+  createEncounterIdentity(kind, enemyNumber = this.waveState.enemy) {
     const state = this.waveState;
 
     return Object.freeze({
       kind,
       wave: state.wave,
-      enemy: state.enemy,
+      enemy: enemyNumber,
       enemiesInWave: state.enemiesInWave,
     });
   }
 
-  handleEnemyEliminate(enemyState) {
-    const encounterState = this.currentEncounter;
-    this.finishCurrentEncounter({ outcome: enemyState.outcome });
+  handleEnemyResistanceChange(enemyState, enemySystem = this.enemySystem) {
+    this.lastResolvedEnemySystem = enemySystem;
+    this.onEnemyResistanceChange(enemyState);
+  }
+
+  handleEnemyEliminate(enemyState, enemySystem = this.enemySystem) {
+    const encounterState =
+      this.enemyEncounters.get(enemySystem) ?? this.currentEncounter;
+    this.lastResolvedEnemySystem = enemySystem;
+    const waveBeforeOutcome = this.waveState.wave;
+    this.finishCurrentEncounter({ outcome: enemyState.outcome }, encounterState);
+    const waveCompleted =
+      encounterState.kind !== 'boss' &&
+      (this.waveState.wave !== waveBeforeOutcome ||
+        this.waveState.status === 'boss-pending');
     let observerError = null;
 
     try {
-      this.recordScoreForOutcome(enemyState, encounterState);
+      this.recordScoreForOutcome(enemyState, encounterState, { waveCompleted });
     } catch (error) {
       observerError = error;
     }
@@ -550,10 +651,14 @@ export class GameSession {
   }) {
     let nearestImpact = null;
 
-    if (this.enemySystem.active) {
-      this.enemySystem.getPreviousCenter(this.enemyPreviousCenter);
-      this.enemySystem.getCenter(this.enemyCenter);
-      const contactRatio = this.enemySystem.playerContactFrameRatio;
+    for (const enemySystem of this.enemySystems) {
+      if (!enemySystem.active) {
+        continue;
+      }
+
+      enemySystem.getPreviousCenter(this.enemyPreviousCenter);
+      enemySystem.getCenter(this.enemyCenter);
+      const contactRatio = enemySystem.playerContactFrameRatio;
       const projectileEnd =
         contactRatio === null
           ? currentPosition
@@ -566,15 +671,21 @@ export class GameSession {
         radius,
         this.enemyPreviousCenter,
         this.enemyCenter,
-        this.enemySystem.radius,
+        enemySystem.radius,
       );
 
-      if (collision.hit) {
+      const impactRatio =
+        contactRatio === null ? collision.t : collision.t * contactRatio;
+
+      if (
+        collision.hit &&
+        (!nearestImpact || impactRatio < nearestImpact.impactRatio)
+      ) {
         nearestImpact = {
           kind: 'enemy',
           collision,
-          impactRatio:
-            contactRatio === null ? collision.t : collision.t * contactRatio,
+          enemySystem,
+          impactRatio,
           mesh,
           projectile,
         };
@@ -622,6 +733,7 @@ export class GameSession {
     for (const {
       kind,
       collision,
+      enemySystem,
       impactRatio,
       mesh,
       projectile,
@@ -631,26 +743,26 @@ export class GameSession {
         continue;
       }
 
-      if (!this.enemySystem.active) {
+      if (!enemySystem.active) {
         continue;
       }
 
-      const resistanceBeforeImpact = this.enemySystem.state.resistance;
+      const resistanceBeforeImpact = enemySystem.state.resistance;
       const hitStrength =
         projectile.hitStrength ?? this.config.projectile.hitStrength;
       const lethalImpact = resistanceBeforeImpact <= hitStrength;
       let hitApplied = false;
 
       if (lethalImpact) {
-        this.enemySystem.pauseAtFrameRatio(collision.t);
+        enemySystem.pauseAtFrameRatio(collision.t);
       }
 
       try {
-        hitApplied = this.enemySystem.applyHit(hitStrength);
+        hitApplied = enemySystem.applyHit(hitStrength);
       } catch (error) {
         this.queueObserverError(error);
         hitApplied =
-          this.enemySystem.state.resistance < resistanceBeforeImpact;
+          enemySystem.state.resistance < resistanceBeforeImpact;
       }
 
       if (!hitApplied) {
@@ -667,7 +779,7 @@ export class GameSession {
 
       try {
         this.onEnemyHit({
-          ...this.enemySystem.state,
+          ...enemySystem.state,
           hitStrength,
           impactPoint: collision.projectileCenter.clone(),
           impactRatio,
@@ -796,8 +908,11 @@ export class GameSession {
     }
   }
 
-  handleEnemyPlayerContact(enemyState) {
-    const encounterState = this.currentEncounter;
+  handleEnemyPlayerContact(enemyState, enemySystem = this.enemySystem) {
+    const encounterState =
+      this.enemyEncounters.get(enemySystem) ?? this.currentEncounter;
+    this.lastResolvedEnemySystem = enemySystem;
+    const waveBeforeOutcome = this.waveState.wave;
     let observerError = null;
 
     try {
@@ -806,10 +921,14 @@ export class GameSession {
       observerError = error;
     }
 
-    this.finishCurrentEncounter({ outcome: enemyState.outcome });
+    this.finishCurrentEncounter({ outcome: enemyState.outcome }, encounterState);
+    const waveCompleted =
+      encounterState.kind !== 'boss' &&
+      (this.waveState.wave !== waveBeforeOutcome ||
+        this.waveState.status === 'boss-pending');
 
     try {
-      this.recordScoreForOutcome(enemyState, encounterState);
+      this.recordScoreForOutcome(enemyState, encounterState, { waveCompleted });
     } catch (error) {
       observerError ??= error;
     }
@@ -833,7 +952,11 @@ export class GameSession {
     }
   }
 
-  recordScoreForOutcome(enemyState, encounterState) {
+  recordScoreForOutcome(
+    enemyState,
+    encounterState,
+    { waveCompleted = false } = {},
+  ) {
     let scoreError = null;
     const record = (operation) => {
       try {
@@ -859,7 +982,7 @@ export class GameSession {
 
     if (
       encounterState.kind !== 'boss' &&
-      encounterState.enemy === encounterState.enemiesInWave
+      waveCompleted
     ) {
       record(() =>
         this.scoreManager.recordWaveCompleted({
@@ -922,10 +1045,12 @@ export class GameSession {
       disposalError ??= error;
     }
 
-    try {
-      this.enemySystem.dispose();
-    } catch (error) {
-      disposalError ??= error;
+    for (const enemySystem of this.enemySystems) {
+      try {
+        enemySystem.dispose();
+      } catch (error) {
+        disposalError ??= error;
+      }
     }
 
     try {
@@ -961,6 +1086,7 @@ export class GameSession {
     this.onEnemyHit = () => {};
     this.onEnemyEliminate = () => {};
     this.onEnemyPlayerContact = () => {};
+    this.onEnemyResistanceChange = () => {};
     this.onItemCollected = () => {};
     this.onShot = () => {};
     this.onSpecialAmmoChange = () => {};

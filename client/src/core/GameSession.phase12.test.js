@@ -151,6 +151,96 @@ test('pausa o intervalo da onda junto com o encontro', () => {
   session.dispose();
 });
 
+test('cria um inimigo simultaneo por numero da onda e apenas um chefao', () => {
+  const config = createConfig();
+  config.waves.definitions = config.waves.definitions.map((wave, index) => ({
+    ...wave,
+    enemyCount: GAMEPLAY_CONFIG.waves.definitions[index].enemyCount,
+    typeIds: ['weak'],
+  }));
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    enemyTypeRandom: () => 0,
+  });
+
+  const expectedGroups = [[1, 1, 1], [2, 2], [3, 2], [4, 2]];
+
+  for (let wave = 1; wave <= 4; wave += 1) {
+    assert.equal(session.waveState.wave, wave);
+    const groups = expectedGroups[wave - 1];
+
+    for (const [groupIndex, groupSize] of groups.entries()) {
+      assert.equal(session.activeEnemyCount, groupSize);
+      assert.equal(
+        session.enemySystems.filter((enemy) => enemy.parent !== null).length,
+        groupSize,
+      );
+
+      const activeGroup = session.enemySystems.filter((enemy) => enemy.active);
+      for (const [index, enemy] of activeGroup.entries()) {
+        enemy.applyHit(enemy.resistance);
+        if (index < activeGroup.length - 1) {
+          assert.equal(session.waveState.status, 'active');
+        }
+      }
+
+      if (groupIndex < groups.length - 1) {
+        assert.equal(session.waveState.status, 'between-enemies');
+        session.update(config.waves.definitions[wave - 1].spawnIntervalSeconds);
+      }
+    }
+
+    if (wave < 4) {
+      assert.equal(session.waveState.status, 'between-waves');
+      session.update(config.waves.interWaveDelaySeconds);
+    }
+  }
+
+  assert.equal(session.waveState.status, 'boss-pending');
+  assert.equal(session.activeEnemyCount, 0);
+  session.update(config.boss.spawnDelaySeconds);
+  assert.equal(session.waveState.status, 'boss');
+  assert.equal(session.activeEnemyCount, 1);
+  assert.equal(session.enemyState.type.id, 'boss');
+  assert.equal(
+    session.enemySystems.filter((enemy) => enemy.parent !== null).length,
+    1,
+  );
+  session.dispose();
+});
+
+test('concede o bonus da onda somente quando todo o grupo foi resolvido', () => {
+  const config = createConfig();
+  config.waves.definitions = config.waves.definitions.map((wave) => ({
+    ...wave,
+    enemyCount: wave.number,
+    typeIds: ['weak'],
+  }));
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    enemyTypeRandom: () => 0,
+  });
+
+  session.enemySystem.applyHit(1);
+  session.update(config.waves.interWaveDelaySeconds);
+  const [firstEnemy, secondEnemy] = session.enemySystems;
+
+  secondEnemy.applyHit(1);
+  assert.equal(session.waveState.status, 'active');
+  assert.equal(session.scoreState.score, 700);
+
+  firstEnemy.applyHit(1);
+  assert.equal(session.waveState.status, 'between-waves');
+  assert.equal(session.scoreState.score, 1300);
+  session.dispose();
+});
+
 test('rejeita tipo de onda que nao existe no catalogo de inimigos', () => {
   const config = createConfig();
   config.waves.definitions[0].typeIds = ['ghost'];

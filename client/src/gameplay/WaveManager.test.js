@@ -187,6 +187,43 @@ test('pausa intervalos e reinicia no primeiro inimigo da primeira onda', () => {
   assert.equal(manager.state.status, 'active');
 });
 
+test('mantem grupos simultaneos crescentes ate todos serem resolvidos', () => {
+  const config = {
+    interWaveDelaySeconds: 0,
+    definitions: [1, 2, 3, 4].map((number) => ({
+      number,
+      enemyCount: number,
+      spawnIntervalSeconds: 0,
+      moveSpeed: number,
+      typeIds: ['weak'],
+    })),
+  };
+  const manager = new WaveManager({ config, bossDelaySeconds: 0 });
+
+  assert.equal(manager.spawnCount, 1);
+  manager.completeEnemy();
+
+  for (let wave = 2; wave <= 4; wave += 1) {
+    manager.update(0);
+    assert.equal(manager.state.wave, wave);
+    assert.equal(manager.spawnCount, wave);
+    assert.equal(manager.activeEnemyCount, wave);
+
+    for (let enemy = 1; enemy <= wave; enemy += 1) {
+      manager.completeEnemy();
+      if (enemy < wave) {
+        assert.equal(manager.state.status, 'active');
+        assert.equal(manager.activeEnemyCount, wave - enemy);
+      }
+    }
+  }
+
+  assert.equal(manager.state.status, 'boss-pending');
+  manager.update(0);
+  assert.equal(manager.state.status, 'boss');
+  assert.equal(manager.activeEnemyCount, 1);
+});
+
 test('rejeita configuracoes, deltas e estados invalidos', () => {
   const valid = createWaveConfig();
   const invalidConfigs = [
