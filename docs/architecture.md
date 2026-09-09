@@ -645,6 +645,25 @@ a carga, pontos calculados por `Ballistics` exibem a mesma queda gravitacional d
 projétil real. O desktop e o XR compartilham física e estado, mas possuem
 apresentações adequadas a cada meio.
 
+## Pipeline de assets da Fase 24
+
+As texturas finais são declaradas por `assets/final-assets.js` e carregadas de
+forma assíncrona pelo `RenderContext`. O cenário nasce imediatamente com cores
+de fallback; somente depois do conjunto completo ser validado o `SnowArena`
+recebe os mapas. Um erro libera os carregamentos parciais sem bloquear a partida.
+
+Os inimigos continuam como modelos low-poly nativos e compartilham geometrias e
+materiais. Grupos visuais alternáveis acrescentam cristais, armadura ou coroa de
+acordo com o tipo selecionado, sem criar outro collider ou outro fluxo de
+gameplay. Impactos usam uma geometria `Points` compartilhada, e a reação de
+escala é calculada pelo tempo do sistema.
+
+`GameAudioSystem` é um adaptador opcional de Web Audio. Ele cria o contexto sob
+a ação de início da partida, recebe somente nomes de eventos da composição em
+`main.js` e não participa das transições causais de `GameSession`. A ausência ou
+o bloqueio de áudio não muda o resultado do jogo. Seu descarte faz parte do
+ciclo de `GameApp`, assim como renderer, controles e HUD XR.
+
 ## Servidor
 
 O servidor é um monólito modular Express:

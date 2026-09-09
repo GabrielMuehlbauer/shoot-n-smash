@@ -236,6 +236,8 @@ export const GAMEPLAY_CONFIG = freeze({
       bobAmplitude: 0.07,
       bobAngularSpeed: 5.2,
       limbSwingAmplitude: 0.32,
+      hitPulseDurationSeconds: 0.18,
+      hitPulseScale: 0.16,
     }),
     colors: freeze({
       damaged: 0xffb45f,
@@ -250,6 +252,8 @@ export const GAMEPLAY_CONFIG = freeze({
     maxActive: 12,
     startScale: 0.18,
     endScale: 0.72,
+    particleCount: 12,
+    particleSize: 0.16,
     color: 0xffffff,
   }),
 });

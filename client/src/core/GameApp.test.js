@@ -35,6 +35,13 @@ function createFixture() {
     remove: 0,
   };
   const documentListeners = new Map();
+  const audioCalls = { dispose: 0 };
+  const audioSystem = {
+    dispose: () => {
+      audioCalls.dispose += 1;
+      return true;
+    },
+  };
   const renderContext = {
     disposeCalls: 0,
     renderCalls: 0,
@@ -136,6 +143,8 @@ function createFixture() {
 
   return {
     animationLoops,
+    audioCalls,
+    audioSystem,
     documentCalls,
     documentListeners,
     documentRef,
@@ -309,6 +318,7 @@ test('stop e dispose removem loop e listeners sem duplicação', () => {
   assert.equal(fixture.fireCalls.dispose, 1);
   assert.equal(fixture.gameSessionCalls.cancelCharge, 1);
   assert.equal(fixture.gameSessionCalls.dispose, 1);
+  assert.equal(fixture.audioCalls.dispose, 1);
   assert.equal(fixture.xrCalls.connect, 1);
   assert.equal(fixture.xrCalls.disconnect, 1);
   assert.equal(fixture.xrCalls.dispose, 1);

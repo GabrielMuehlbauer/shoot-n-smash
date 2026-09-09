@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { Texture } from 'three';
+
 import { SNOW_ARENA_CONFIG } from '../config/snow-arena-config.js';
 import { createSnowflakePositions, SnowArena } from './SnowArena.js';
 
@@ -45,6 +47,24 @@ test('reutiliza geometrias e materiais nos elementos repetidos', () => {
   assert.equal(new Set(mountains.map((peak) => peak.children[0].geometry)).size, 1);
   assert.equal(new Set(mountains.map((peak) => peak.children[0].material)).size, 1);
   assert.equal(new Set(mountains.map((peak) => peak.children[1].material)).size, 1);
+});
+
+test('aplica as texturas finais sem duplicar materiais da arena', () => {
+  const arena = new SnowArena();
+  const textures = {
+    snow: new Texture(),
+    ice: new Texture(),
+    rock: new Texture(),
+  };
+
+  assert.equal(arena.applyTextures(textures), true);
+  assert.equal(arena.snowMaterial.map, textures.snow);
+  assert.equal(arena.mountainSnowMaterial.map, textures.snow);
+  assert.equal(arena.iceShelfMaterial.map, textures.ice);
+  assert.equal(arena.icePatchMaterial.map, textures.ice);
+  assert.equal(arena.rockMaterial.map, textures.rock);
+  assert.equal(arena.mountainRockMaterial.map, textures.rock);
+  assert.throws(() => arena.applyTextures({}), /neve, gelo e rocha/i);
 });
 
 test('mantém obstáculos decorativos fora da área inicial do jogador', () => {

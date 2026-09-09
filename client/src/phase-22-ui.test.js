@@ -16,7 +16,8 @@ test('oferece entrada WebXR somente após a verificação de suporte', () => {
 
 test('alterna os adaptadores desktop e XR sem trocar a sessão de jogo', () => {
   assert.match(mainSource, /new XRSlingshotController/);
-  assert.match(mainSource, /onChargeStart: \(\{ mode \}\) => gameSession\.beginCharge\(\{ mode \}\)/);
+  assert.match(mainSource, /onChargeStart: \(\{ mode \}\) => beginCharge\(mode\)/);
+  assert.match(mainSource, /function beginCharge\(mode = 'time'\)[\s\S]*gameSession\?\.beginCharge\(\{ mode \}\)/);
   assert.match(mainSource, /onChargeChange: \(ratio\) => gameSession\.setChargeRatio\(ratio\)/);
   assert.match(mainSource, /onChargeRelease: \(pose\) => gameSession\.releaseShot\(pose\)/);
   assert.match(mainSource, /gameSession\?\.setDesktopSlingshotVisible\(!nextActive\)/);

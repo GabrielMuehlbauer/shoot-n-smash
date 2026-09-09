@@ -66,6 +66,8 @@ function validateConfig(config) {
     ['bobAmplitude', config.animation?.bobAmplitude],
     ['bobAngularSpeed', config.animation?.bobAngularSpeed],
     ['limbSwingAmplitude', config.animation?.limbSwingAmplitude],
+    ['hitPulseDurationSeconds', config.animation?.hitPulseDurationSeconds],
+    ['hitPulseScale', config.animation?.hitPulseScale],
   ]) {
     if (!Number.isFinite(value) || value < 0) {
       throw new RangeError(`enemy.animation.${name} não pode ser negativo.`);
@@ -192,6 +194,7 @@ export class EnemySystem extends Group {
     this.disposed = false;
     this.elapsedMovementSeconds = 0;
     this.previousElapsedMovementSeconds = 0;
+    this.hitPulseRemainingSeconds = 0;
     this.previousPosition = new Vector3();
     this.initialPosition = new Vector3();
     this.toPlayer = new Vector3();
@@ -327,6 +330,50 @@ export class EnemySystem extends Group {
     rightHorn.position.set(radius * 0.24, radius * 0.96, 0);
     rightHorn.rotation.z = 0.18;
 
+    this.typeDetails = new Group();
+    this.typeDetails.name = 'ice-enemy-type-details';
+    this.mediumAdornment = new Group();
+    this.mediumAdornment.name = 'ice-enemy-medium-crystals';
+    this.resistantAdornment = new Group();
+    this.resistantAdornment.name = 'ice-enemy-resistant-armor';
+    this.bossAdornment = new Group();
+    this.bossAdornment.name = 'ice-enemy-boss-crown';
+
+    for (const side of [-1, 1]) {
+      const shoulderCrystal = new Mesh(hornGeometry, hornMaterial);
+      shoulderCrystal.position.set(side * radius * 0.67, radius * 0.25, 0);
+      shoulderCrystal.rotation.z = side * -0.78;
+      shoulderCrystal.scale.setScalar(0.85);
+      this.mediumAdornment.add(shoulderCrystal);
+
+      const shoulderArmor = new Mesh(bodyGeometry, this.iceMaterial);
+      shoulderArmor.position.set(side * radius * 0.7, radius * 0.16, 0);
+      shoulderArmor.scale.set(0.28, 0.24, 0.42);
+      this.resistantAdornment.add(shoulderArmor);
+
+      const crownSide = new Mesh(hornGeometry, hornMaterial);
+      crownSide.position.set(side * radius * 0.34, radius * 1.13, -radius * 0.02);
+      crownSide.rotation.z = side * -0.28;
+      crownSide.scale.setScalar(1.12);
+      this.bossAdornment.add(crownSide);
+    }
+
+    const chestArmor = new Mesh(limbGeometry, hornMaterial);
+    chestArmor.position.set(0, radius * 0.1, radius * 0.52);
+    chestArmor.rotation.z = Math.PI / 2;
+    chestArmor.scale.set(0.72, 1.45, 0.42);
+    this.resistantAdornment.add(chestArmor);
+
+    const crownCenter = new Mesh(hornGeometry, hornMaterial);
+    crownCenter.position.set(0, radius * 1.2, -radius * 0.04);
+    crownCenter.scale.setScalar(1.45);
+    this.bossAdornment.add(crownCenter);
+    this.typeDetails.add(
+      this.mediumAdornment,
+      this.resistantAdornment,
+      this.bossAdornment,
+    );
+
     this.visual.add(
       this.body,
       head,
@@ -336,8 +383,17 @@ export class EnemySystem extends Group {
       rightEye,
       leftHorn,
       rightHorn,
+      this.typeDetails,
     );
     this.add(this.visual);
+    this.syncTypeVisual();
+  }
+
+  syncTypeVisual() {
+    const typeId = this.enemyType.id;
+    this.mediumAdornment.visible = typeId === 'medium';
+    this.resistantAdornment.visible = typeId === 'resistant';
+    this.bossAdornment.visible = typeId === 'boss';
   }
 
   get alive() {
@@ -451,7 +507,17 @@ export class EnemySystem extends Group {
       ? Math.max(0, numericDelta)
       : 0;
 
-    if (delta === 0 || !this.isMoving) {
+    if (delta === 0) {
+      return true;
+    }
+
+    this.hitPulseRemainingSeconds = Math.max(
+      0,
+      this.hitPulseRemainingSeconds - delta,
+    );
+
+    if (!this.isMoving) {
+      this.updateMotionVisual();
       return true;
     }
 
@@ -495,6 +561,17 @@ export class EnemySystem extends Group {
     this.visual.position.y = motion * animation.bobAmplitude;
     this.leftArm.rotation.x = motion * animation.limbSwingAmplitude;
     this.rightArm.rotation.x = -motion * animation.limbSwingAmplitude;
+
+    if (this.currentResistance > 0) {
+      const duration = animation.hitPulseDurationSeconds;
+      const pulseProgress = duration > 0
+        ? 1 - this.hitPulseRemainingSeconds / duration
+        : 1;
+      const pulse = this.hitPulseRemainingSeconds > 0
+        ? Math.sin(pulseProgress * Math.PI) * animation.hitPulseScale
+        : 0;
+      this.visual.scale.setScalar(this.currentVisualScale * (1 + pulse));
+    }
   }
 
   pauseAtFrameRatio(frameRatio) {
@@ -537,9 +614,15 @@ export class EnemySystem extends Group {
     this.currentResistance = Math.max(0, this.currentResistance - amount);
 
     if (this.currentResistance === 0) {
+      this.hitPulseRemainingSeconds = 0;
       this.outcome = 'eliminated';
       this.pendingPlayerContact = false;
       this.pendingContactFrameRatio = null;
+    }
+
+    if (this.currentResistance > 0) {
+      this.hitPulseRemainingSeconds =
+        this.config.animation.hitPulseDurationSeconds;
     }
 
     this.updateVisualState();
@@ -584,6 +667,8 @@ export class EnemySystem extends Group {
   }
 
   updateVisualState() {
+    this.syncTypeVisual();
+
     if (this.currentResistance === 0) {
       this.iceMaterial.color.setHex(this.config.colors.destroyed);
       this.iceMaterial.emissive.setHex(0x000000);
@@ -657,6 +742,7 @@ export class EnemySystem extends Group {
     this.pendingContactFrameRatio = null;
     this.elapsedMovementSeconds = 0;
     this.previousElapsedMovementSeconds = 0;
+    this.hitPulseRemainingSeconds = 0;
     this.updateVisualState();
     this.placeAtSpawn();
 

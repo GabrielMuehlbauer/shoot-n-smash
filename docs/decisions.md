@@ -435,3 +435,22 @@ A mira XR segue as mãos, não o centro da tela: um anel indica a direção entr
 munição e o garfo, enquanto a trajetória de carga reutiliza a função balística do
 projétil. O estilingue também passa a ter garfo completo e origem no ponto médio
 das pontas. Assim, visual, previsão e disparo compartilham a mesma pose física.
+
+## ADR-027 — Assets compactos e procedurais para o primeiro cenário
+
+**Status:** aceita em 8 de setembro de 2026.
+
+A Fase 24 usa três texturas autorais de 512 px e mantém os modelos low-poly como
+composição nativa do Three.js. As classes ganham silhuetas próprias por grupos
+de cristais e armadura que reutilizam geometrias e materiais. Essa abordagem
+evita uma dependência de loader GLTF, reduz download e mantém previsível o custo
+do único inimigo ativo no Quest 3.
+
+Os sons são sintetizados por Web Audio em vez de arquivos comprimidos. São
+efeitos curtos, sem música, ativados somente depois de interação do usuário e
+tratados como feedback opcional. Impactos passam a usar `Points` com geometria
+compartilhada, em vez de vários meshes independentes.
+
+Qualquer falha de textura ou indisponibilidade de Web Audio preserva o gameplay:
+a arena mantém as cores anteriores e o jogo continua silencioso. Assets visuais
+e áudio pertencem ao lifecycle da aplicação e são descartados ao sair da cena.

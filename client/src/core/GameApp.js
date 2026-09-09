@@ -8,6 +8,7 @@ export class GameApp {
     xrController = null,
     xrHud = null,
     performanceMonitor = null,
+    audioSystem = null,
     gameSession = null,
     documentRef = document,
     maxDeltaSeconds = RENDER_CONFIG.loop.maxDeltaSeconds,
@@ -22,6 +23,7 @@ export class GameApp {
     this.xrController = xrController;
     this.xrHud = xrHud;
     this.performanceMonitor = performanceMonitor;
+    this.audioSystem = audioSystem;
     this.gameSession = gameSession;
     this.documentRef = documentRef;
     this.maxDeltaSeconds = maxDeltaSeconds;
@@ -204,6 +206,7 @@ export class GameApp {
     cleanup(() => this.xrController?.dispose?.());
     cleanup(() => this.xrHud?.dispose?.());
     cleanup(() => this.performanceMonitor?.dispose?.());
+    cleanup(() => this.audioSystem?.dispose?.());
     cleanup(() => this.gameSession?.dispose?.());
     cleanup(() => this.lookController?.dispose?.());
     cleanup(() => this.renderContext.dispose());

@@ -745,6 +745,30 @@ o resultado permanece pendente até um novo ensaio no Quest 3.
 O roteiro e a tabela de registro estão em
 [Fase 23 — Validação no Meta Quest 3](phases/phase-23-meta-quest-3.md).
 
+## Fase 24 — em validação
+
+### Cobertura automatizada adicionada
+
+- presença e limite de tamanho das três texturas JPEG finais;
+- configuração sRGB, repetição espelhada e anisotropia limitada;
+- liberação de texturas parciais quando um carregamento falha;
+- aplicação dos mapas sem duplicação de materiais do cenário;
+- silhuetas alternáveis dos inimigos médio, resistente e chefão;
+- animação de pulso após impacto não letal;
+- distribuição determinística e lifecycle das partículas de impacto;
+- síntese, envelopes e descarte dos oito efeitos sonoros;
+- fallback sem Web Audio e preferência de áudio desativada;
+- integração do áudio ao lifecycle da aplicação.
+
+### Validação manual pendente
+
+Textura, contraste, escala das silhuetas, volume e espacialidade percebida não
+podem ser aprovados apenas por testes unitários. A partida completa deve ser
+repetida em desktop e no Quest 3, junto com o reteste da Fase 23.
+
+O roteiro está em
+[Fase 24 — Assets finais](phases/phase-24-assets-finais.md).
+
 ## Estratégia futura
 
 - testes de integração para múltiplos contatos e partida completa;
