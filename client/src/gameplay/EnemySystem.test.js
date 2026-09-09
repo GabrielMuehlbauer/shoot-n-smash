@@ -157,12 +157,16 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
   assert.equal(enemy.parent, scene);
   assert.equal(enemy.name, 'ice-enemy');
   assert.equal(enemy.visual.name, 'ice-enemy-visual');
-  assert.equal(enemy.visual.children.length, 8);
+  assert.equal(enemy.visual.children.length, 9);
   assert.equal(enemy.geometries.size, 5);
   assert.equal(enemy.materials.size, 3);
   assert.equal(enemy.body.name, 'ice-enemy-body');
   assert.equal(enemy.leftArm.name, 'ice-enemy-left-arm');
   assert.equal(enemy.rightArm.name, 'ice-enemy-right-arm');
+  assert.equal(enemy.typeDetails.name, 'ice-enemy-type-details');
+  assert.equal(enemy.mediumAdornment.visible, false);
+  assert.equal(enemy.resistantAdornment.visible, false);
+  assert.equal(enemy.bossAdornment.visible, false);
   assert.equal(enemy.active, true);
   assert.equal(enemy.alive, true);
   assert.equal(enemy.isMoving, true);
@@ -218,6 +222,9 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
       enemy.iceMaterial.color.getHex(),
       enemy.enemyType.color,
     );
+    assert.equal(enemy.mediumAdornment.visible, id === 'medium');
+    assert.equal(enemy.resistantAdornment.visible, id === 'resistant');
+    assert.equal(enemy.bossAdornment.visible, false);
 
     enemy.reset();
     assert.equal(typeSamples, 1);
@@ -332,6 +339,8 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
     enemy.iceMaterial.color.getHex(),
     config.colors.damaged,
   );
+  enemy.update(config.animation.hitPulseDurationSeconds / 2);
+  assert.ok(enemy.visual.scale.x > 1);
   assert.equal(enemy.applyHit(2), true);
 
   assert.deepEqual(

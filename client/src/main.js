@@ -10,6 +10,7 @@ import { GAMEPLAY_CONFIG } from './config/gameplay-config.js';
 import { GameApp } from './core/GameApp.js';
 import { GameSession } from './core/GameSession.js';
 import { RenderContext } from './core/RenderContext.js';
+import { GameAudioSystem } from './audio/GameAudioSystem.js';
 import { describeEnemyState } from './enemy-hud.js';
 import { DesktopFireController } from './input/DesktopFireController.js';
 import { DesktopLookController } from './input/DesktopLookController.js';
@@ -116,6 +117,7 @@ let xrSessionManager = null;
 let xrSlingshotController = null;
 let xrHudSystem = null;
 let xrPerformanceMonitor = null;
+let gameAudioSystem = null;
 let xrActive = false;
 let pointerLocked = false;
 let announcedChargeStage = -1;
@@ -394,6 +396,7 @@ function updateSpecialAmmoState(state) {
 }
 
 function handleItemCollected({ effect, item }) {
+  gameAudioSystem?.play('item');
   itemHud.dataset.itemState = 'collected';
   itemLabel.textContent = item.type.label;
 
@@ -479,6 +482,8 @@ function handleGameStateChange(state) {
   if (!state.terminal) {
     return false;
   }
+
+  gameAudioSystem?.play(state.result === 'victory' ? 'victory' : 'defeat');
 
   void xrSessionManager?.endSession();
 
@@ -652,6 +657,7 @@ function updateChargeState({ charging, ratio, speed, ammoType = 'normal' }) {
 }
 
 function handleShot(shot) {
+  gameAudioSystem?.play('shot');
   const percent = Math.round(Math.min(Math.max(shot.ratio, 0), 1) * 100);
   const projectileLabel =
     shot.activeProjectileCount === 1
@@ -676,11 +682,13 @@ function handleEnemyResistanceChange(state) {
 }
 
 function handleEnemyEliminate(state) {
+  gameAudioSystem?.play('enemy-defeat');
   updateEnemyState(state);
   showEncounterOutcome(state.outcome);
 }
 
 function handleEnemyPlayerContact(state) {
+  gameAudioSystem?.play('player-damage');
   updateEnemyState(state);
   showEncounterOutcome(state.outcome);
 }
@@ -689,6 +697,8 @@ function handleEnemyHit({ maxResistance, outcome, resistance, type }) {
   if (outcome !== null) {
     return;
   }
+
+  gameAudioSystem?.play('hit');
 
   setShotStatus(
     'ready',
@@ -712,6 +722,16 @@ function handleChargeCancel({ reason = 'manual' } = {}) {
   if (!showEncounterOutcome()) {
     setShotStatus('idle', messages[reason] ?? 'Carga cancelada com segurança.');
   }
+}
+
+function beginCharge(mode = 'time') {
+  const started = gameSession?.beginCharge({ mode }) ?? false;
+
+  if (started) {
+    gameAudioSystem?.play('charge');
+  }
+
+  return started;
 }
 
 function updateLookState({ locked, supported }) {
@@ -956,6 +976,8 @@ function enterPrototype() {
   resetXRDiagnostics();
 
   try {
+    gameAudioSystem = new GameAudioSystem();
+    gameAudioSystem.unlock();
     activeMatch = {
       submissionId: createSubmissionId(),
       startedAt: performance.now(),
@@ -1000,7 +1022,7 @@ function enterPrototype() {
     handleGameStateChange(gameSession.gameState);
     fireController = new DesktopFireController({
       canvas: renderContext.renderer.domElement,
-      onChargeStart: () => gameSession.beginCharge(),
+      onChargeStart: () => beginCharge(),
       onChargeRelease: () => gameSession.releaseShot(),
       onChargeCancel: handleChargeCancel,
     });
@@ -1009,7 +1031,7 @@ function enterPrototype() {
       scene: renderContext.scene,
       config: GAMEPLAY_CONFIG.xr,
       projectileConfig: GAMEPLAY_CONFIG.projectile,
-      onChargeStart: ({ mode }) => gameSession.beginCharge({ mode }),
+      onChargeStart: ({ mode }) => beginCharge(mode),
       onChargeChange: (ratio) => gameSession.setChargeRatio(ratio),
       onChargeRelease: (pose) => gameSession.releaseShot(pose),
       onChargeCancel: handleChargeCancel,
@@ -1030,6 +1052,7 @@ function enterPrototype() {
       xrController: xrSlingshotController,
       xrHud: xrHudSystem,
       performanceMonitor: xrPerformanceMonitor,
+      audioSystem: gameAudioSystem,
       gameSession,
     });
     gameApp.start();
@@ -1041,6 +1064,7 @@ function enterPrototype() {
       xrSlingshotController?.dispose();
       xrHudSystem?.dispose();
       xrPerformanceMonitor?.dispose();
+      gameAudioSystem?.dispose();
       fireController?.dispose();
       gameSession?.dispose();
       lookController?.dispose();
@@ -1055,6 +1079,7 @@ function enterPrototype() {
     xrSlingshotController = null;
     xrHudSystem = null;
     xrPerformanceMonitor = null;
+    gameAudioSystem = null;
     xrActive = false;
     activeMatch = null;
     lastCompletedMatch = null;
@@ -1084,6 +1109,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   xrSlingshotController = null;
   xrHudSystem = null;
   xrPerformanceMonitor = null;
+  gameAudioSystem = null;
   xrActive = false;
   pointerLocked = false;
   activeMatch = null;

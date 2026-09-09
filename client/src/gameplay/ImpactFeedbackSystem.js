@@ -1,9 +1,10 @@
 import {
   AdditiveBlending,
+  BufferGeometry,
+  Float32BufferAttribute,
   Group,
-  IcosahedronGeometry,
-  Mesh,
-  MeshBasicMaterial,
+  Points,
+  PointsMaterial,
 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
@@ -25,14 +26,18 @@ function validateConfig(config) {
     ['maxActive', config?.maxActive],
     ['startScale', config?.startScale],
     ['endScale', config?.endScale],
+    ['particleCount', config?.particleCount],
+    ['particleSize', config?.particleSize],
   ]) {
     if (!Number.isFinite(value) || value <= 0) {
       throw new RangeError(`impactFeedback.${name} deve ser maior que zero.`);
     }
   }
 
-  if (!Number.isInteger(config.maxActive)) {
-    throw new TypeError('impactFeedback.maxActive deve ser um inteiro.');
+  for (const name of ['maxActive', 'particleCount']) {
+    if (!Number.isInteger(config[name])) {
+      throw new TypeError(`impactFeedback.${name} deve ser um inteiro.`);
+    }
   }
 
   if (config.endScale < config.startScale) {
@@ -44,6 +49,29 @@ function validateConfig(config) {
   if (!Number.isInteger(config.color)) {
     throw new TypeError('impactFeedback.color deve ser uma cor inteira.');
   }
+}
+
+export function createImpactParticlePositions(count) {
+  if (!Number.isInteger(count) || count <= 0) {
+    throw new RangeError('A quantidade de partículas deve ser um inteiro positivo.');
+  }
+
+  const positions = new Float32Array(count * 3);
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+  for (let index = 0; index < count; index += 1) {
+    const ratio = count === 1 ? 0.5 : index / (count - 1);
+    const y = 1 - ratio * 2;
+    const horizontalRadius = Math.sqrt(Math.max(0, 1 - y * y));
+    const radius = 0.5 + (index % 3) * 0.22;
+    const angle = index * goldenAngle;
+    const offset = index * 3;
+    positions[offset] = Math.cos(angle) * horizontalRadius * radius;
+    positions[offset + 1] = y * radius;
+    positions[offset + 2] = Math.sin(angle) * horizontalRadius * radius;
+  }
+
+  return positions;
 }
 
 export class ImpactFeedbackSystem extends Group {
@@ -66,7 +94,14 @@ export class ImpactFeedbackSystem extends Group {
     this.config = config;
     this.bursts = [];
     this.disposed = false;
-    this.geometry = new IcosahedronGeometry(1, 1);
+    this.geometry = new BufferGeometry();
+    this.geometry.setAttribute(
+      'position',
+      new Float32BufferAttribute(
+        createImpactParticlePositions(config.particleCount),
+        3,
+      ),
+    );
     this.scene.add(this);
   }
 
@@ -87,15 +122,16 @@ export class ImpactFeedbackSystem extends Group {
       this.removeBurst(this.bursts[0]);
     }
 
-    const material = new MeshBasicMaterial({
+    const material = new PointsMaterial({
       color: this.config.color,
+      size: this.config.particleSize,
+      sizeAttenuation: true,
       transparent: true,
       opacity: 0.92,
-      wireframe: true,
       depthWrite: false,
       blending: AdditiveBlending,
     });
-    const mesh = new Mesh(this.geometry, material);
+    const mesh = new Points(this.geometry, material);
     mesh.name = 'impact-burst';
     mesh.position.copy(position);
     mesh.scale.setScalar(this.config.startScale);

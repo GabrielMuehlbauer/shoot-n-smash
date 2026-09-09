@@ -4,11 +4,11 @@ Shoot 'n' Smash é um jogo 3D de tiro ao alvo e sobrevivência em ondas. O jogad
 fica no centro de uma ilha infestada, observa a arena em 360° e usa um estilingue
 para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
-> Status atual: **Fase 23 — validação no Meta Quest 3 em andamento**. O WebXR e
-> os controles de duas mãos estão implementados. A instrumentação de FPS, tempo
-> de frame, draw calls, triângulos e controles está pronta. O primeiro ensaio
-> encontrou problemas no estilingue, HUD e mira; as correções estão prontas e
-> aguardam reteste no headset real.
+> Status atual: **Fase 24 — assets finais em validação**. Texturas autorais,
+> modelos low-poly por classe, sons procedurais, reação animada aos impactos e
+> partículas estão implementados. As correções de estilingue, HUD e mira da
+> Fase 23 ainda aguardam reteste no Meta Quest 3; por isso a versão permanece
+> `0.22.0` até a validação física.
 
 ## Equipe
 
@@ -103,7 +103,7 @@ andamento. Um novo `Esc`, com o cursor livre, retorna ao menu. O botão **Voltar
 ao menu** continua disponível.
 
 Para instruções detalhadas e o resultado esperado, consulte o
-[guia da Fase 23](docs/phases/phase-23-meta-quest-3.md).
+[guia da Fase 24](docs/phases/phase-24-assets-finais.md).
 
 ## Build e execução de produção
 
@@ -132,7 +132,7 @@ npm test
 ```
 
 O procedimento visual completo está no
-[guia de teste da Fase 23](docs/phases/phase-23-meta-quest-3.md#matriz-de-teste-físico).
+[guia de teste da Fase 24](docs/phases/phase-24-assets-finais.md#matriz-de-validação-manual).
 
 ## Scripts
 
@@ -207,7 +207,7 @@ entre frames.
 ## Gameplay planejado
 
 - poderes temporários adicionais;
-- HUD 3D dedicado ao headset;
+- controle de volume e preferência de áudio;
 - opção de inverter as mãos do estilingue.
 
 ### Realidade virtual
@@ -238,6 +238,8 @@ shoot-n-smash/
 ├── client/
 │   └── src/
 │       ├── api/     # cliente HTTP, snapshot de partida e ranking
+│       ├── assets/  # manifesto e carregamento das texturas finais
+│       ├── audio/   # efeitos procedurais com Web Audio
 │       ├── config/  # valores do renderer, arena e gameplay
 │       ├── core/    # GameApp, GameSession e RenderContext
 │       ├── gameplay/ # partida, ondas, estado, combate e pontuação
@@ -260,7 +262,7 @@ A estrutura crescerá somente quando cada sistema for implementado.
 
 ## Limitações conhecidas
 
-- o cenário utiliza somente primitivas low-poly e ainda não possui assets finais;
+- os modelos finais são low-poly e nativos do Three.js; não há modelos GLTF;
 - o modo convencional requer Pointer Lock e mouse para mira e disparo;
 - dispositivos sem mouse recebem um fallback, mas ainda não possuem controle de câmera;
 - existe somente um inimigo hostil ativo por vez; depois das quatro ondas, a
@@ -272,16 +274,17 @@ A estrutura crescerá somente quando cada sistema for implementado.
   de um log autoritativo de eventos;
 - a previsão balística indica gravidade e alcance, mas não antecipa colisões com
   monstros, itens ou elementos decorativos;
-- a interface HTML continua visível no monitor, mas ainda não existe um HUD 3D
-  dedicado dentro do headset;
+- o HUD 3D acompanha a câmera no headset e ainda precisa de validação física de
+  distância e legibilidade após as correções da Fase 23;
 - o fluxo XR possui testes automatizados com controles simulados, porém ainda
   precisa da validação física no Meta Quest 3;
 - a interface atual representa o primeiro recorte de gameplay convencional.
 
 ## Próxima etapa
 
-Executar a matriz da Fase 23 no Meta Quest 3. A Fase 24 só começa depois de
-escala, conforto, mira, desempenho, interface, chefão e tamanhos serem aprovados.
+Executar as matrizes das Fases 23 e 24 no Meta Quest 3. Depois de aprovar escala,
+conforto, mira, desempenho, interface, assets e áudio, promover as versões e
+iniciar a Fase 25 de testes e otimização.
 
 Consulte também:
 
@@ -312,3 +315,4 @@ Consulte também:
 - [Guia da Fase 21](docs/phases/phase-21-estilingue-completo.md)
 - [Guia da Fase 22](docs/phases/phase-22-webxr.md)
 - [Guia da Fase 23](docs/phases/phase-23-meta-quest-3.md)
+- [Guia da Fase 24](docs/phases/phase-24-assets-finais.md)

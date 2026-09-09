@@ -4,7 +4,10 @@ import test from 'node:test';
 import { Scene, Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
-import { ImpactFeedbackSystem } from './ImpactFeedbackSystem.js';
+import {
+  createImpactParticlePositions,
+  ImpactFeedbackSystem,
+} from './ImpactFeedbackSystem.js';
 
 function createSystem(overrides = {}) {
   const scene = new Scene();
@@ -21,6 +24,11 @@ test('cria um burst 3D no centro do projétil no primeiro contato', () => {
   assert.equal(system.parent, scene);
   assert.equal(system.activeCount, 1);
   assert.equal(mesh.name, 'impact-burst');
+  assert.equal(mesh.isPoints, true);
+  assert.equal(
+    mesh.geometry.getAttribute('position').count,
+    config.particleCount,
+  );
   assert.deepEqual(mesh.position.toArray(), position.toArray());
   assert.deepEqual(mesh.scale.toArray(), [
     config.startScale,
@@ -108,6 +116,7 @@ test('valida configuração e posição do impacto', () => {
       }),
     /maxActive.*inteiro/,
   );
+  assert.throws(() => createImpactParticlePositions(0), /inteiro positivo/);
 
   const system = new ImpactFeedbackSystem({ scene });
   assert.throws(() => system.spawn({ x: 0, y: Number.NaN, z: 0 }), /vetor/);

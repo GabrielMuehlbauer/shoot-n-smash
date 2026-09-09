@@ -11,9 +11,11 @@ import {
   PerspectiveCamera,
   Scene,
   SRGBColorSpace,
+  TextureLoader,
   WebGLRenderer,
 } from 'three';
 
+import { loadFinalTextureSet } from '../assets/final-assets.js';
 import { RENDER_CONFIG } from '../config/render-config.js';
 import { SNOW_ARENA_CONFIG } from '../config/snow-arena-config.js';
 import { resizeRendererToContainer } from '../utils/viewport.js';
@@ -25,6 +27,7 @@ export class RenderContext {
     {
       windowRef = window,
       ResizeObserverClass = globalThis.ResizeObserver,
+      textureLoader = globalThis.document ? new TextureLoader() : null,
     } = {},
   ) {
     if (!container?.append) {
@@ -34,6 +37,10 @@ export class RenderContext {
     this.container = container;
     this.windowRef = windowRef;
     this.ResizeObserverClass = ResizeObserverClass;
+    this.textureLoader = textureLoader;
+    this.finalTextures = null;
+    this.assetStatus = textureLoader ? 'loading' : 'fallback';
+    this.assetLoadId = 0;
     this.disposed = false;
     this.animationLoop = null;
 
@@ -51,6 +58,7 @@ export class RenderContext {
 
       this.createLights();
       this.createGround();
+      this.loadFinalAssets();
       this.iceBeacon = this.createIceBeacon();
       this.connectResizeObserver();
       this.resize();
@@ -174,6 +182,50 @@ export class RenderContext {
     return marker;
   }
 
+  loadFinalAssets() {
+    if (!this.textureLoader) {
+      return false;
+    }
+
+    const loadId = ++this.assetLoadId;
+    const maximumAnisotropy =
+      this.renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
+    this.assetStatus = 'loading';
+    this.assetLoadPromise = loadFinalTextureSet({
+      textureLoader: this.textureLoader,
+      maximumAnisotropy,
+    })
+      .then((textures) => {
+        if (this.disposed || loadId !== this.assetLoadId) {
+          for (const texture of Object.values(textures)) {
+            texture.dispose?.();
+          }
+          return false;
+        }
+
+        try {
+          this.snowArena.applyTextures(textures);
+        } catch (error) {
+          for (const texture of Object.values(textures)) {
+            texture.dispose?.();
+          }
+          throw error;
+        }
+
+        this.finalTextures = textures;
+        this.assetStatus = 'ready';
+        return true;
+      })
+      .catch(() => {
+        if (!this.disposed && loadId === this.assetLoadId) {
+          this.assetStatus = 'error';
+        }
+        return false;
+      });
+
+    return this.assetLoadPromise;
+  }
+
   connectResizeObserver() {
     this.windowRef.addEventListener('resize', this.resize);
 
@@ -226,6 +278,12 @@ export class RenderContext {
     }
     this.resizeObserver?.disconnect();
     this.windowRef?.removeEventListener?.('resize', this.resize);
+    this.assetLoadId += 1;
+
+    for (const texture of Object.values(this.finalTextures ?? {})) {
+      texture.dispose?.();
+    }
+    this.finalTextures = null;
 
     const geometries = new Set();
     const materials = new Set();

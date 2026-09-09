@@ -32,6 +32,6 @@ test('apresenta as métricas necessárias para o ensaio no Quest 3', () => {
 });
 
 test('mantém a fase 23 como validação pendente do dispositivo real', () => {
-  assert.match(indexHtml, /Fase 23 em validação/);
+  assert.match(indexHtml, /Fase 24 em validação/);
   assert.doesNotMatch(indexHtml, /Fase 23 concluída/);
 });
