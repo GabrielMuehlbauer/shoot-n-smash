@@ -66,7 +66,7 @@ test('identifica classes por modelo, anima impacto e usa partículas', () => {
   assert.match(impactSource, /createImpactParticlePositions/);
 });
 
-test('apresenta a Fase 24 sem promover a versão antes da validação', () => {
-  assert.match(indexHtml, /Fase 24 em validação/);
-  assert.doesNotMatch(indexHtml, /Fase 24 concluída/);
+test('preserva os assets da fase 24 após sua aprovação', () => {
+  assert.match(indexHtml, /Fase 25 em validação/);
+  assert.doesNotMatch(indexHtml, /Fase 24 em validação/);
 });

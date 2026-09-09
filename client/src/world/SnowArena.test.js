@@ -13,14 +13,26 @@ test('cria todos os grupos visuais do protótipo de neve', () => {
   assert.equal(arena.getObjectByName('ice-island')?.children.length, 2);
   assert.equal(
     arena.getObjectByName('ice-patches')?.children.length,
-    SNOW_ARENA_CONFIG.icePatches.length,
+    1,
   );
   assert.equal(
     arena.getObjectByName('rock-ring')?.children.length,
-    SNOW_ARENA_CONFIG.rocks.length,
+    1,
   );
   assert.equal(
     arena.getObjectByName('mountain-ring')?.children.length,
+    2,
+  );
+  assert.equal(
+    arena.getObjectByName('ice-patch-instances')?.count,
+    SNOW_ARENA_CONFIG.icePatches.length,
+  );
+  assert.equal(
+    arena.getObjectByName('rock-instances')?.count,
+    SNOW_ARENA_CONFIG.rocks.length,
+  );
+  assert.equal(
+    arena.getObjectByName('mountain-body-instances')?.count,
     SNOW_ARENA_CONFIG.mountains.length,
   );
   assert.equal(arena.getObjectByName('snowfall')?.isPoints, true);
@@ -39,14 +51,15 @@ test('cria todos os grupos visuais do protótipo de neve', () => {
 
 test('reutiliza geometrias e materiais nos elementos repetidos', () => {
   const arena = new SnowArena();
-  const rocks = arena.getObjectByName('rock-ring').children;
-  const mountains = arena.getObjectByName('mountain-ring').children;
+  const rocks = arena.getObjectByName('rock-instances');
+  const mountainBodies = arena.getObjectByName('mountain-body-instances');
+  const mountainSnow = arena.getObjectByName('mountain-snow-instances');
 
-  assert.equal(new Set(rocks.map((rock) => rock.geometry)).size, 1);
-  assert.equal(new Set(rocks.map((rock) => rock.material)).size, 1);
-  assert.equal(new Set(mountains.map((peak) => peak.children[0].geometry)).size, 1);
-  assert.equal(new Set(mountains.map((peak) => peak.children[0].material)).size, 1);
-  assert.equal(new Set(mountains.map((peak) => peak.children[1].material)).size, 1);
+  assert.equal(rocks.isInstancedMesh, true);
+  assert.equal(mountainBodies.isInstancedMesh, true);
+  assert.equal(mountainSnow.isInstancedMesh, true);
+  assert.equal(mountainBodies.geometry, mountainSnow.geometry);
+  assert.notEqual(mountainBodies.material, mountainSnow.material);
 });
 
 test('aplica as texturas finais sem duplicar materiais da arena', () => {

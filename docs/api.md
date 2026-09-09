@@ -169,13 +169,13 @@ Possíveis erros: `400` e `500`.
 Erros de validação incluem `code` e uma lista `details` com campo e mensagem. O
 servidor nunca inclui stack trace, segredo ou entrada bruta na resposta.
 
-## Estado da fase 22
+## Estado da fase 25
 
 O cliente envia automaticamente cada vitória ou derrota concluída, usando um
 UUID criado no início da sessão. Em caso de falha, a tela final permite repetir
 o mesmo envio sem duplicar a partida. O menu consulta este endpoint e apresenta
 os dez melhores resultados do cenário de neve.
 
-A Fase 22 não altera os bodies nem as respostas da API. O diagnóstico muda
-somente o campo `phase`; partidas da versão `0.22.0` continuam usando os mesmos
-contratos idempotentes.
+As Fases 23 a 25 não alteram os bodies nem as respostas da API. O diagnóstico
+agora informa `phase: 25`; partidas da candidata `0.25.0-beta.1` continuam usando
+os mesmos contratos idempotentes.

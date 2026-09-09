@@ -454,3 +454,21 @@ compartilhada, em vez de vários meshes independentes.
 Qualquer falha de textura ou indisponibilidade de Web Audio preserva o gameplay:
 a arena mantém as cores anteriores e o jogo continua silencioso. Assets visuais
 e áudio pertencem ao lifecycle da aplicação e são descartados ao sair da cena.
+
+## ADR-028 — Instâncias, carregamento tardio e orçamentos verificáveis
+
+**Status:** aceita em 8 de setembro de 2026.
+
+A Fase 25 reduz draw calls sem remover elementos visuais: ocorrências repetidas
+do cenário usam `InstancedMesh`, preservando uma geometria e um material por
+grupo. O diagnóstico XR mede também os picos de geometrias e texturas para que
+regressões de memória sejam observáveis no Quest.
+
+O motor 3D deixa de bloquear a tela inicial e é dividido por imports dinâmicos.
+O cache da carga é reutilizado após sucesso, descartado após erro e protegido por
+uma identidade que impede montar a cena depois de uma saída antecipada.
+
+Tamanho deixa de ser apenas uma observação do build: `check-build-budget.js`
+rejeita JavaScript inicial/total ou texturas acima dos limites documentados. O
+gate usa bytes minificados e gzip para distinguir custo de transferência do
+tamanho total do pacote.

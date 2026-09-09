@@ -714,7 +714,7 @@ O roteiro completo está em [Fase 20 — Ranking global](phases/phase-20-ranking
 
 O roteiro completo está em [Fase 22 — WebXR](phases/phase-22-webxr.md).
 
-## Fase 23 — em validação
+## Fase 23 — concluída
 
 ### Cobertura automatizada adicionada
 
@@ -732,20 +732,20 @@ O roteiro completo está em [Fase 22 — WebXR](phases/phase-22-webxr.md).
 - atualização do HUD antes da renderização e descarte junto com a aplicação;
 - regressão dos ciclos desktop, XR e descarte de recursos.
 
-### Validação física pendente
+### Validação física
 
 A automação não substitui o ensaio no Meta Quest 3. Escala do chão, ergonomia,
-conforto, percepção de mira, legibilidade e desempenho térmico precisam ser
-observados no dispositivo durante uma partida completa.
+conforto, percepção de mira, legibilidade e desempenho térmico foram aprovados
+no reteste confirmado pela equipe em 8 de setembro de 2026.
 
 O primeiro ensaio físico encontrou ausência de HUD e mira no headset, além de um
 visual incorreto do estilingue. Há cobertura automatizada para as correções, mas
-o resultado permanece pendente até um novo ensaio no Quest 3.
+o reteste no Quest 3 foi aprovado.
 
 O roteiro e a tabela de registro estão em
 [Fase 23 — Validação no Meta Quest 3](phases/phase-23-meta-quest-3.md).
 
-## Fase 24 — em validação
+## Fase 24 — concluída
 
 ### Cobertura automatizada adicionada
 
@@ -760,14 +760,32 @@ O roteiro e a tabela de registro estão em
 - fallback sem Web Audio e preferência de áudio desativada;
 - integração do áudio ao lifecycle da aplicação.
 
-### Validação manual pendente
+### Validação manual
 
 Textura, contraste, escala das silhuetas, volume e espacialidade percebida não
-podem ser aprovados apenas por testes unitários. A partida completa deve ser
-repetida em desktop e no Quest 3, junto com o reteste da Fase 23.
+podem ser aprovados apenas por testes unitários. A equipe confirmou a aprovação
+da partida completa em desktop e no Quest 3 em 8 de setembro de 2026.
 
 O roteiro está em
 [Fase 24 — Assets finais](phases/phase-24-assets-finais.md).
+
+## Fase 25 — em validação
+
+### Cobertura automatizada adicionada
+
+- 40 ciclos seguidos de criação e descarte sem resíduos na cena ou câmera;
+- 400 cenários de colisão móvel invariantes sob translação;
+- contrato de carregamento sob demanda e cancelamento por identidade;
+- uso de instâncias para objetos estáticos repetidos;
+- picos de geometrias e texturas no diagnóstico XR;
+- orçamento automatizado para JavaScript inicial/total e texturas.
+
+O `npm run check` executa testes do cliente e servidor, gera o build e chama
+`npm run check:bundle`. A validação final continua manual porque FPS real,
+conforto e compatibilidade WebXR dependem do dispositivo.
+
+O roteiro está em
+[Fase 25 — Testes e otimização](phases/phase-25-testes-otimizacao.md).
 
 ## Estratégia futura
 

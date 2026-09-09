@@ -87,6 +87,8 @@ export class XRPerformanceMonitor {
     this.slowFrameCount = 0;
     this.maxDrawCalls = 0;
     this.maxTriangles = 0;
+    this.maxGeometries = 0;
+    this.maxTextures = 0;
   }
 
   start({ session } = {}) {
@@ -131,6 +133,15 @@ export class XRPerformanceMonitor {
     this.maxTriangles = Math.max(
       this.maxTriangles,
       finiteMetric(render.triangles),
+    );
+    const memory = this.renderer.info.memory ?? {};
+    this.maxGeometries = Math.max(
+      this.maxGeometries,
+      finiteMetric(memory.geometries),
+    );
+    this.maxTextures = Math.max(
+      this.maxTextures,
+      finiteMetric(memory.textures),
     );
 
     if (this.windowSeconds >= this.config.publishIntervalSeconds) {
@@ -183,6 +194,8 @@ export class XRPerformanceMonitor {
       slowFrameThresholdMs: this.config.slowFrameThresholdMs,
       maxDrawCalls: this.maxDrawCalls,
       maxTriangles: this.maxTriangles,
+      maxGeometries: this.maxGeometries,
+      maxTextures: this.maxTextures,
       controllers: freezeControllers(this.session?.inputSources),
     });
   }

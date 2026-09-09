@@ -5,8 +5,8 @@ import { PROJECT_INFO } from './project-info.js';
 
 test('mantém os metadados aprovados da fase com WebXR', () => {
   assert.equal(PROJECT_INFO.name, "Shoot 'n' Smash");
-  assert.equal(PROJECT_INFO.version, '0.22.0');
-  assert.equal(PROJECT_INFO.phase, 22);
+  assert.equal(PROJECT_INFO.version, '0.25.0-beta.1');
+  assert.equal(PROJECT_INFO.phase, 25);
   assert.equal(PROJECT_INFO.scenario, 'Neve');
   assert.equal(PROJECT_INFO.team.length, 4);
 });

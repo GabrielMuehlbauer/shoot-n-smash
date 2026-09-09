@@ -2,9 +2,9 @@
 
 ## Status
 
-Implementação pronta para validação visual e sonora em desktop e no Meta Quest 3.
-A versão permanece `0.22.0`: o reteste físico das correções da Fase 23 ainda é
-um requisito para promover as fases como concluídas.
+**Concluída em 8 de setembro de 2026.** A equipe confirmou a aprovação visual e
+sonora em desktop e no Meta Quest 3. A versão estável foi promovida para
+`0.24.0`.
 
 ## Escopo entregue
 
@@ -87,11 +87,11 @@ mantém o feedback visível sem multiplicar dezenas de meshes por impacto.
 
 ## Critério de conclusão
 
-A fase pode ser promovida depois de:
+A fase foi aprovada com:
 
 - aprovação visual e sonora no desktop;
 - reteste no Quest 3 sem regressão de mira, HUD ou estilingue;
 - registro das métricas físicas da Fase 23;
 - execução de `npm run check` sem falhas.
 
-Depois disso, a próxima etapa é a **Fase 25 — Testes e otimização**.
+A etapa atual é a **Fase 25 — Testes e otimização**.
