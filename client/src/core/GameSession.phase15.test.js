@@ -187,7 +187,7 @@ test('contato nao letal do chefao reagenda o confronto e restaura resistencia to
   session.update(0.75);
 
   assert.equal(session.enemyState.outcome, 'player-contact');
-  assert.equal(session.playerState.health, 90);
+  assert.equal(session.playerState.health, 75);
   assert.equal(session.waveState.status, 'boss-pending');
   assert.equal(session.gameState.status, 'PLAYING');
   assert.equal(session.scoreState.score, scoreBeforeContact);
@@ -203,7 +203,7 @@ test('contato nao letal do chefao reagenda o confronto e restaura resistencia to
   assert.equal(session.enemyState.active, true);
   assert.equal(session.enemyState.resistance, 10);
   assert.equal(session.enemyState.maxResistance, 10);
-  assert.equal(session.playerState.health, 90);
+  assert.equal(session.playerState.health, 75);
   assert.equal(session.gameState.status, 'PLAYING');
   session.dispose();
 });

@@ -335,7 +335,7 @@ test('anexa inimigo ao cenário e expõe resistência inicial', () => {
     resistance: 1,
     maxResistance: 1,
     ratio: 1,
-    type: { id: 'weak', label: 'Fraco', damage: 1 },
+    type: { id: 'weak', label: 'Fraco', damage: 5 },
     distanceToPlayer: 17,
   });
   session.dispose();
@@ -420,7 +420,7 @@ test('colisão móvel aplica resistência, feedback e consumo uma vez por projé
   assert.deepEqual(eliminations[0].type, {
     id: 'resistant',
     label: 'Resistente',
-    damage: 3,
+    damage: 15,
   });
   assert.equal(session.enemyState.outcome, 'eliminated');
   assert.equal(session.enemyState.resistance, 0);
@@ -511,7 +511,7 @@ test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
 
   assert.equal(contacts.length, 1);
   assert.equal(contacts[0].outcome, 'player-contact');
-  assert.equal(session.playerState.health, 99);
+  assert.equal(session.playerState.health, 95);
   assert.equal(session.enemyState.active, false);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assertAlmostEqual(
@@ -522,8 +522,8 @@ test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
   session.dispose();
 });
 
-test('contatos aplicam dano 1, 2 e 3 antes de notificar o desfecho', () => {
-  const expectedHealth = [99, 98, 97];
+test('contatos aplicam dano 5, 10 e 15 antes de notificar o desfecho', () => {
+  const expectedHealth = [95, 90, 85];
 
   for (const [index, type] of GAMEPLAY_CONFIG.enemy.types.entries()) {
     const events = [];
@@ -659,7 +659,7 @@ test('impacto não letal no empate reduz resistência antes de resolver contato'
   assert.equal(contacts[0].type.id, 'medium');
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.activeProjectileCount, 0);
-  assert.equal(session.playerState.health, 98);
+  assert.equal(session.playerState.health, 90);
   session.dispose();
 });
 
@@ -721,7 +721,7 @@ test('contato anterior ao impacto vence no mesmo frame', () => {
   assert.equal(hits.length, 0);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(session.activeProjectileCount, 1);
-  assert.equal(session.playerState.health, 99);
+  assert.equal(session.playerState.health, 95);
   session.dispose();
 });
 
@@ -771,7 +771,7 @@ test('mantém contato terminal antes de propagar falha do observador', () => {
 
   assert.throws(() => session.update(1), failure);
   assert.equal(session.enemyState.outcome, 'player-contact');
-  assert.equal(session.playerState.health, 99);
+  assert.equal(session.playerState.health, 95);
   assert.equal(session.enemySystem.parent, null);
   session.update(0.01);
   session.dispose();
@@ -798,12 +798,12 @@ test('preserva dano e contato quando o observador da vida falha', () => {
   });
 
   assert.throws(() => session.update(1), failure);
-  assert.equal(session.playerState.health, 97);
+  assert.equal(session.playerState.health, 85);
   assert.equal(session.enemyState.outcome, 'player-contact');
   assert.equal(contacts.length, 1);
-  assert.equal(contacts[0].type.damage, 3);
+  assert.equal(contacts[0].type.damage, 15);
   assert.doesNotThrow(() => session.update(0.01));
-  assert.equal(session.playerState.health, 97);
+  assert.equal(session.playerState.health, 85);
   session.dispose();
 });
 

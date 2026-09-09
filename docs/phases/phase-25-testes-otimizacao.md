@@ -4,7 +4,7 @@
 
 **Em validação.** As Fases 23 e 24 foram aprovadas no Meta Quest 3 em 8 de
 setembro de 2026. A versão estável `0.24.0` deu origem à candidata
-`0.25.0-beta.1`, que precisa de uma última regressão manual depois das
+`0.25.0-beta.2`, que precisa de uma última regressão manual depois das
 otimizações abaixo.
 
 ## Mudanças implementadas
@@ -37,10 +37,10 @@ partida. No build verificado nesta fase:
 
 | Orçamento | Medido | Limite |
 |---|---:|---:|
-| JavaScript inicial | 41.277 bytes | 102.400 bytes |
-| JavaScript inicial gzip | 13.801 bytes | 35.840 bytes |
-| JavaScript total | 696.006 bytes | 870.400 bytes |
-| JavaScript total gzip | 181.631 bytes | 256.000 bytes |
+| JavaScript inicial | 41.278 bytes | 102.400 bytes |
+| JavaScript inicial gzip | 13.799 bytes | 35.840 bytes |
+| JavaScript total | 696.007 bytes | 870.400 bytes |
+| JavaScript total gzip | 181.628 bytes | 256.000 bytes |
 | Texturas | 130.113 bytes | 184.320 bytes |
 
 `npm run check:bundle` transforma esses limites em um gate do build. A divisão
@@ -50,8 +50,19 @@ também eliminou o aviso anterior de chunk JavaScript acima de 500 kB.
 
 Além dos casos de tunneling, tangência, empate temporal e alvos móveis já
 cobertos, 400 cenários determinísticos verificam que transladar toda a cena não
-altera o resultado nem o instante da colisão. Vida, dano, resistência, ondas,
-velocidades, pontuação e probabilidades não foram modificados nesta fase.
+altera o resultado nem o instante da colisão. Após o primeiro ensaio da candidata,
+o balanceamento foi intensificado sem alterar resistência, contagem ou intervalo
+de spawn:
+
+| Entidade | Dano de contato | Velocidade |
+| --- | ---: | ---: |
+| Fraco | 5 | 1,60 na onda 1 |
+| Médio | 10 | até 1,85 na onda 2 |
+| Resistente | 15 | até 2,40 na onda 4 |
+| Chefão | 25 | 1,35 |
+
+As ondas 3 e 4 usam velocidades `2,10` e `2,40`. Os testes automatizados fixam
+esses valores e confirmam que cada contato aplica dano uma única vez.
 
 ### Responsividade e compatibilidade
 

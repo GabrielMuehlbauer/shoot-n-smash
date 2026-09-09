@@ -147,7 +147,7 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
       { id: 'resistant', maxResistance: 3 },
     ],
   );
-  assert.equal(GAMEPLAY_CONFIG.enemy.moveSpeed, 1.25);
+  assert.equal(GAMEPLAY_CONFIG.enemy.moveSpeed, 1.6);
   assert.equal(GAMEPLAY_CONFIG.enemy.playerContactRadius, 1.5);
   assert.deepEqual(GAMEPLAY_CONFIG.enemy.spawn, {
     minRadius: 17,
@@ -180,7 +180,7 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
     resistance: 1,
     maxResistance: 1,
     ratio: 1,
-    type: { id: 'weak', label: 'Fraco', damage: 1 },
+    type: { id: 'weak', label: 'Fraco', damage: 5 },
     distanceToPlayer: enemy.distanceToPlayer,
   });
 
@@ -189,12 +189,12 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
 
 test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
   const cases = [
-    [0, 'weak', 'Fraco', 1],
-    [1 / 3, 'medium', 'Médio', 2],
-    [2 / 3, 'resistant', 'Resistente', 3],
+    [0, 'weak', 'Fraco', 1, 5],
+    [1 / 3, 'medium', 'Médio', 2, 10],
+    [2 / 3, 'resistant', 'Resistente', 3, 15],
   ];
 
-  for (const [typeRatio, id, label, maxResistance] of cases) {
+  for (const [typeRatio, id, label, maxResistance, damage] of cases) {
     let spawnSamples = 0;
     let typeSamples = 0;
     const { enemy } = createEnemy({
@@ -216,7 +216,7 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
     assert.deepEqual(enemy.state.type, {
       id,
       label,
-      damage: maxResistance,
+      damage,
     });
     assert.equal(
       enemy.iceMaterial.color.getHex(),
@@ -232,7 +232,7 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
     assert.deepEqual(enemy.state.type, {
       id,
       label,
-      damage: maxResistance,
+      damage,
     });
     enemy.dispose();
   }
@@ -351,7 +351,7 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
   assert.deepEqual(eliminations[0].type, {
     id: 'resistant',
     label: 'Resistente',
-    damage: 3,
+    damage: 15,
   });
   assert.equal(enemy.resistance, 0);
   assert.equal(enemy.outcome, 'eliminated');
@@ -432,7 +432,7 @@ test('reset restaura estado, visual e um novo spawn sem emitir callbacks', () =>
   assert.deepEqual(enemy.state.type, {
     id: 'medium',
     label: 'Médio',
-    damage: 2,
+    damage: 10,
   });
   assert.equal(enemy.pendingPlayerContact, false);
   assert.equal(enemy.playerContactFrameRatio, null);

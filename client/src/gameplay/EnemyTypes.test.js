@@ -4,7 +4,7 @@ import test from 'node:test';
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
 
-test('configura os três tipos normais com resistências e danos 1, 2 e 3', () => {
+test('configura os três tipos normais com resistências e danos 5, 10 e 15', () => {
   assert.deepEqual(
     GAMEPLAY_CONFIG.enemy.types.map(({ id, label, maxResistance, damage }) => ({
       id,
@@ -13,9 +13,9 @@ test('configura os três tipos normais com resistências e danos 1, 2 e 3', () =
       damage,
     })),
     [
-      { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 1 },
-      { id: 'medium', label: 'Médio', maxResistance: 2, damage: 2 },
-      { id: 'resistant', label: 'Resistente', maxResistance: 3, damage: 3 },
+      { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 5 },
+      { id: 'medium', label: 'Médio', maxResistance: 2, damage: 10 },
+      { id: 'resistant', label: 'Resistente', maxResistance: 3, damage: 15 },
     ],
   );
   assert.equal(Object.isFrozen(GAMEPLAY_CONFIG.enemy.types), true);

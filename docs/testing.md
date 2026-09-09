@@ -335,9 +335,9 @@ O roteiro completo está em
 - rejeição de configurações e danos inválidos;
 - estado preservado quando o observador da vida falha;
 - reset e descarte idempotentes do `PlayerHealthSystem`;
-- dano canônico 1, 2 e 3 nos tipos Fraco, Médio e Resistente;
+- dano atual 5, 10 e 15 nos tipos Fraco, Médio e Resistente;
 - identidade e dano preservados nos snapshots do inimigo;
-- contatos dos três tipos resultando em 99, 98 e 97 pontos de vida;
+- contatos dos três tipos resultando em 95, 90 e 85 pontos de vida;
 - contato terminal aplicando dano somente uma vez;
 - impacto letal anterior ou empatado preservando 100 pontos;
 - impacto não letal empatado seguido por um único dano de contato;
@@ -354,7 +354,7 @@ O roteiro completo está em
 3. Abra a cena e confirme a barra de vida cheia em 100 / 100.
 4. Elimine um inimigo antes do contato e confirme que a vida permanece 100.
 5. Abra outra sessão, não dispare e aguarde o contato.
-6. Confirme feedback vermelho e vida 99, 98 ou 97 para Fraco, Médio ou
+6. Confirme feedback vermelho e vida 95, 90 ou 85 para Fraco, Médio ou
    Resistente.
 7. Aguarde e confirme que o dano não se repete após a remoção do inimigo.
 8. Saia e entre novamente; confirme a restauração para 100 / 100.
@@ -431,13 +431,13 @@ O roteiro completo está em [Fase 12 — Ondas](phases/phase-12-ondas.md).
 
 ### Cobertura automatizada adicionada
 
-- perfil imutável do chefão com resistência 10, dano 10 e escala gigante;
+- perfil imutável do chefão com resistência 10, dano 25 e escala gigante;
 - validação de velocidade, collider, escala, altura e descritor antes da cena;
 - estados `boss-pending`, `boss` e `complete` após a quarta onda;
 - espera configurável e criação única do chefão;
 - reutilização da entidade, geometrias e materiais;
 - exigência de exatamente 10 impactos válidos para eliminação;
-- contato aplicando exatamente 10 de dano uma única vez;
+- contato aplicando exatamente 25 de dano uma única vez;
 - HUD e mensagens específicos para o chefão;
 - regressão das quatro ondas, vida, colisões e lifecycle;
 - metadados e diagnóstico da API atualizados para a Fase 13.

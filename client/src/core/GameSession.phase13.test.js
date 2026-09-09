@@ -61,14 +61,14 @@ function finishFourWaves(session) {
   assert.equal(session.waveState.status, 'boss-pending');
 }
 
-test('configura o chefao com dez acertos, dano dez e escala gigante', () => {
+test('configura o chefao com dez acertos, dano 25 e escala gigante', () => {
   const { boss } = GAMEPLAY_CONFIG;
 
   assert.equal(Object.isFrozen(boss), true);
   assert.equal(Object.isFrozen(boss.type), true);
   assert.equal(boss.type.id, 'boss');
   assert.equal(boss.type.maxResistance, 10);
-  assert.equal(boss.type.damage, 10);
+  assert.equal(boss.type.damage, 25);
   assert.ok(boss.visualScale > 2);
   assert.ok(boss.radius > GAMEPLAY_CONFIG.enemy.radius);
 });
@@ -98,7 +98,7 @@ test('inicia o chefao apos a quarta onda e exige exatamente dez acertos', () => 
   assert.equal(session.enemySystem.parent, scene);
   assert.equal(session.enemyState.type.id, 'boss');
   assert.equal(session.enemyState.type.label, 'Chefão');
-  assert.equal(session.enemyState.type.damage, 10);
+  assert.equal(session.enemyState.type.damage, 25);
   assert.equal(session.enemyState.maxResistance, 10);
   assert.equal(session.enemyState.resistance, 10);
   assert.equal(session.enemySystem.radius, 2);
@@ -125,7 +125,7 @@ test('inicia o chefao apos a quarta onda e exige exatamente dez acertos', () => 
   session.dispose();
 });
 
-test('contato do chefao causa dez de dano e reagenda o confronto', () => {
+test('contato do chefao causa 25 de dano e reagenda o confronto', () => {
   const session = new GameSession({
     camera: createCamera(),
     scene: new Scene(),
@@ -140,17 +140,17 @@ test('contato do chefao causa dez de dano e reagenda o confronto', () => {
   session.update(0.75);
 
   assert.equal(session.enemyState.outcome, 'player-contact');
-  assert.equal(session.playerState.health, 90);
+  assert.equal(session.playerState.health, 75);
   assert.equal(session.waveState.status, 'boss-pending');
   session.update(0.19);
-  assert.equal(session.playerState.health, 90);
+  assert.equal(session.playerState.health, 75);
   assert.equal(session.enemySystem.parent, null);
   session.update(0.02);
   assert.equal(session.waveState.status, 'boss');
   assert.equal(session.enemyState.type.id, 'boss');
   assert.equal(session.enemyState.outcome, null);
   assert.equal(session.enemyState.resistance, 10);
-  assert.equal(session.playerState.health, 90);
+  assert.equal(session.playerState.health, 75);
   session.dispose();
 });
 

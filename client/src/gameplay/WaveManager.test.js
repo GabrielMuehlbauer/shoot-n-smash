@@ -46,7 +46,7 @@ test('configura quatro ondas com dificuldade progressiva e dados imutaveis', () 
   assert.equal(Object.isFrozen(GAMEPLAY_CONFIG.waves), true);
   assert.equal(Object.isFrozen(definitions), true);
   assert.deepEqual(definitions.map(({ enemyCount }) => enemyCount), [3, 4, 5, 6]);
-  assert.deepEqual(definitions.map(({ moveSpeed }) => moveSpeed), [1.15, 1.25, 1.4, 1.6]);
+  assert.deepEqual(definitions.map(({ moveSpeed }) => moveSpeed), [1.6, 1.85, 2.1, 2.4]);
   assert.deepEqual(
     definitions.map(({ spawnIntervalSeconds }) => spawnIntervalSeconds),
     [1.25, 1.1, 0.95, 0.8],
