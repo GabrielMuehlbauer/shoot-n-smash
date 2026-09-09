@@ -283,7 +283,7 @@ nova GameSession
                          remove inimigo uma única vez
                                       │
                                       v
-                    aplica damage 1 | 2 | 3 ao jogador
+                   aplica damage 5 | 10 | 15 ao jogador
                                       │
                                       v
                        onHealthChange atualiza o HUD
@@ -349,10 +349,10 @@ pontuação, chefão ou derrota.
 ## Recorte executável da Fase 12
 
 ```text
-Onda 1: 3 × Fraco                    · velocidade 1,15 · intervalo 1,25 s
-Onda 2: 4 × Fraco/Médio              · velocidade 1,25 · intervalo 1,10 s
-Onda 3: 5 × Fraco/Médio/Resistente   · velocidade 1,40 · intervalo 0,95 s
-Onda 4: 6 × Fraco/Médio/Resistente   · velocidade 1,60 · intervalo 0,80 s
+Onda 1: 3 × Fraco                    · velocidade 1,60 · intervalo 1,25 s
+Onda 2: 4 × Fraco/Médio              · velocidade 1,85 · intervalo 1,10 s
+Onda 3: 5 × Fraco/Médio/Resistente   · velocidade 2,10 · intervalo 0,95 s
+Onda 4: 6 × Fraco/Médio/Resistente   · velocidade 2,40 · intervalo 0,80 s
                     │
                     └── pausa entre ondas: 2,50 s
 ```
@@ -379,8 +379,8 @@ quarta onda concluída
         └── espera 3 s ──> chefão de gelo
                               │
                               ├── escala visual 2,35 · collider 2,20
-                              ├── velocidade 0,85 · resistência 10
-                              └── contato: 10 de dano
+                              ├── velocidade 1,35 · resistência 10
+                              └── contato: 25 de dano
 ```
 
 Após o último inimigo normal, `WaveManager` entra em `boss-pending` e, ao fim do

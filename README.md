@@ -6,7 +6,7 @@ para enfrentar monstros temáticos. O primeiro cenário é a região de neve.
 
 > Status atual: **Fase 25 — testes e otimização em validação**. As Fases 23 e 24
 > foram aprovadas no Meta Quest 3. A versão estável `0.24.0` deu origem à
-> candidata `0.25.0-beta.1`. O cenário agora usa instâncias, o motor 3D é carregado sob demanda e
+> candidata `0.25.0-beta.2`. O cenário agora usa instâncias, o motor 3D é carregado sob demanda e
 > o diagnóstico XR também acompanha geometrias e texturas na memória da GPU.
 
 ## Equipe
@@ -76,13 +76,14 @@ e o servidor. Para testar o recorte jogável:
    para disparar pela origem do modelo;
 5. confirme que cada impacto válido cria um burst branco, consome o projétil e
    reduz a resistência em um acerto; o tipo Fraco exige 1, o Médio 2 e o
-   Resistente 3 impactos;
+   Resistente 3 impactos. Se alcançarem o jogador, eles causam respectivamente
+   5, 10 e 15 de dano;
 6. procure itens brilhantes durante as ondas e acerte-os: o verde recupera até
    20 de vida, sem superar 100, e o dourado concede 3 disparos de dano 2;
 7. acompanhe no HUD quantos disparos especiais restam; cada tiro dourado consome
    uma carga, mesmo que erre;
 8. complete as quatro ondas e confirme que, após 3 segundos, surge um chefão
-   gigante identificado no HUD; ele exige 10 impactos e causa 10 de dano ao
+   gigante identificado no HUD; ele exige 10 impactos e causa 25 de dano ao
    tocar o jogador. Se o contato não zerar a vida, ele retorna após a espera com
    resistência completa e sem conceder pontos;
 9. acompanhe no HUD os pontos por eliminação e os bônus de 500 por onda; ao

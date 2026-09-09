@@ -177,5 +177,5 @@ o mesmo envio sem duplicar a partida. O menu consulta este endpoint e apresenta
 os dez melhores resultados do cenário de neve.
 
 As Fases 23 a 25 não alteram os bodies nem as respostas da API. O diagnóstico
-agora informa `phase: 25`; partidas da candidata `0.25.0-beta.1` continuam usando
+agora informa `phase: 25`; partidas da candidata `0.25.0-beta.2` continuam usando
 os mesmos contratos idempotentes.

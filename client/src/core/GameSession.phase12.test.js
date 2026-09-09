@@ -99,18 +99,18 @@ test('integra quatro ondas, tipos, velocidades e vida persistente', () => {
 
   session.update(0.5);
   assert.equal(session.enemyState.outcome, 'player-contact');
-  assert.equal(session.playerState.health, 97);
+  assert.equal(session.playerState.health, 85);
   assert.equal(session.waveState.wave, 4);
   assert.equal(session.waveState.status, 'between-waves');
 
   session.update(0.5);
   assert.equal(session.enemyState.type.id, 'resistant');
   assert.equal(session.enemySystem.currentMoveSpeed, 4);
-  assert.equal(session.playerState.health, 97);
+  assert.equal(session.playerState.health, 85);
   session.enemySystem.applyHit(3);
   assert.equal(session.waveState.status, 'boss-pending');
   assert.equal(session.enemySystem.parent, null);
-  assert.equal(session.playerState.health, 97);
+  assert.equal(session.playerState.health, 85);
   assert.equal(waveChanges.every(Object.isFrozen), true);
   assert.deepEqual(
     waveChanges.map(({ wave, enemy, status }) => [wave, enemy, status]),

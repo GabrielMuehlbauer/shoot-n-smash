@@ -472,3 +472,15 @@ Tamanho deixa de ser apenas uma observação do build: `check-build-budget.js`
 rejeita JavaScript inicial/total ou texturas acima dos limites documentados. O
 gate usa bytes minificados e gzip para distinguir custo de transferência do
 tamanho total do pacote.
+
+## ADR-029 — Aumentar pressão sem alterar a estrutura das ondas
+
+**Status:** aceita em 8 de setembro de 2026.
+
+A candidata `0.25.0-beta.2` aumenta o dano de contato dos tipos Fraco, Médio e
+Resistente para `5`, `10` e `15`, e o do chefão para `25`. As velocidades das
+quatro ondas passam a `1,60`, `1,85`, `2,10` e `2,40`; o chefão passa a `1,35`.
+
+Resistência, quantidade de inimigos, intervalos e recompensas permanecem iguais.
+Assim, o ajuste aumenta a pressão e torna a perda de vida relevante sem ampliar
+o número de entidades simultâneas nem o custo de renderização no Quest.
