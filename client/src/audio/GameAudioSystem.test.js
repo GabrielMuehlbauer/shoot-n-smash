@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { GameAudioSystem, SOUND_RECIPES } from './GameAudioSystem.js';
+import {
+  BACKGROUND_MUSIC,
+  GameAudioSystem,
+  SOUND_RECIPES,
+} from './GameAudioSystem.js';
 
 class FakeAudioParam {
   constructor() {
@@ -72,6 +76,54 @@ class FakeAudioContext {
   }
 }
 
+class FakeAudio {
+  constructor(src) {
+    this.src = src;
+    this.loop = false;
+    this.preload = 'none';
+    this.volume = 1;
+    this.currentTime = 12;
+    this.playCalls = 0;
+    this.pauseCalls = 0;
+  }
+
+  play() {
+    this.playCalls += 1;
+    return Promise.resolve();
+  }
+
+  pause() {
+    this.pauseCalls += 1;
+  }
+}
+
+test('inicia a música ambiente em loop depois do desbloqueio', () => {
+  const audio = new GameAudioSystem({
+    AudioClass: FakeAudio,
+    AudioContextClass: FakeAudioContext,
+  });
+
+  assert.equal(audio.musicElement, null);
+  assert.equal(audio.unlock(), true);
+  assert.equal(audio.musicElement.src, BACKGROUND_MUSIC.url);
+  assert.equal(audio.musicElement.loop, true);
+  assert.equal(audio.musicElement.preload, 'auto');
+  assert.equal(audio.musicElement.volume, BACKGROUND_MUSIC.volume);
+  assert.equal(audio.musicElement.playCalls, 1);
+
+  audio.play('shot');
+  assert.equal(audio.musicElement.playCalls, 1);
+
+  const musicElement = audio.musicElement;
+  assert.equal(audio.setEnabled(false), true);
+  assert.equal(musicElement.pauseCalls, 1);
+  assert.equal(audio.setEnabled(true), true);
+  assert.equal(musicElement.playCalls, 2);
+  assert.equal(audio.dispose(), true);
+  assert.equal(musicElement.pauseCalls, 2);
+  assert.equal(musicElement.currentTime, 0);
+});
+
 test('desbloqueia o áudio sob interação e sintetiza cada efeito conhecido', () => {
   const audio = new GameAudioSystem({ AudioContextClass: FakeAudioContext });
 
@@ -83,27 +135,67 @@ test('desbloqueia o áudio sob interação e sintetiza cada efeito conhecido', (
     assert.equal(audio.play(name), true);
   }
 
-  assert.equal(audio.context.oscillators.length, Object.keys(SOUND_RECIPES).length);
+  const voiceCount = Object.values(SOUND_RECIPES).reduce(
+    (total, recipe) => total + recipe.voices.length,
+    0,
+  );
+  assert.equal(audio.context.oscillators.length, voiceCount);
   const oscillator = audio.context.oscillators[0];
   const gain = audio.context.gains[0];
-  const recipe = SOUND_RECIPES.charge;
-  assert.equal(oscillator.type, recipe.type);
+  const voice = SOUND_RECIPES.charge.voices[0];
+  assert.equal(oscillator.type, voice.type);
   assert.deepEqual(oscillator.frequency.events, [
-    ['set', recipe.startHz, 2],
-    ['ramp', recipe.endHz, 2 + recipe.duration],
+    ['set', voice.startHz, 2],
+    ['ramp', voice.endHz, 2 + voice.duration],
   ]);
   assert.deepEqual(gain.gain.events, [
-    ['set', recipe.volume, 2],
-    ['ramp', 0.0001, 2 + recipe.duration],
+    ['set', voice.volume, 2],
+    ['ramp', 0.0001, 2 + voice.duration],
   ]);
   assert.deepEqual(oscillator.startCalls, [2]);
-  assert.deepEqual(oscillator.stopCalls, [2 + recipe.duration]);
+  assert.deepEqual(oscillator.stopCalls, [2 + voice.duration]);
   assert.deepEqual(gain.connections, [audio.context.destination]);
 
   oscillator.onended();
   assert.equal(audio.activeNodes.has(oscillator), false);
   assert.equal(oscillator.disconnectCalls, 1);
   assert.equal(gain.disconnectCalls, 1);
+  audio.dispose();
+});
+
+test('varia o som da tensão e cria um smash de eliminação em camadas', () => {
+  const audio = new GameAudioSystem({ AudioContextClass: FakeAudioContext });
+
+  assert.equal(
+    audio.play('stretch', { pitchScale: 1.4, volumeScale: 1.2 }),
+    true,
+  );
+  const stretchVoice = SOUND_RECIPES.stretch.voices[0];
+  assert.deepEqual(audio.context.oscillators[0].frequency.events[0], [
+    'set',
+    stretchVoice.startHz * 1.4,
+    2,
+  ]);
+  assert.deepEqual(audio.context.gains[0].gain.events[0], [
+    'set',
+    stretchVoice.volume * 1.2,
+    2,
+  ]);
+
+  const initialVoiceCount = audio.context.oscillators.length;
+  assert.equal(audio.play('enemy-defeat'), true);
+  assert.equal(
+    audio.context.oscillators.length - initialVoiceCount,
+    SOUND_RECIPES['enemy-defeat'].voices.length,
+  );
+  assert.ok(SOUND_RECIPES['enemy-defeat'].voices.length >= 4);
+  assert.ok(
+    Math.max(
+      ...SOUND_RECIPES['enemy-defeat'].voices.map(
+        ({ delay = 0, duration }) => delay + duration,
+      ),
+    ) >= 0.7,
+  );
   audio.dispose();
 });
 
@@ -141,6 +233,10 @@ test('valida a preferência enabled', () => {
   assert.throws(
     () => new GameAudioSystem({ enabled: 'sim' }),
     /enabled booleano/,
+  );
+  assert.throws(
+    () => new GameAudioSystem({ music: { url: '', volume: 2 } }),
+    /música válida/,
   );
 });
 

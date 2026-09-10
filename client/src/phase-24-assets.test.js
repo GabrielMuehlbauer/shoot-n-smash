@@ -3,7 +3,10 @@ import { readFile, stat } from 'node:fs/promises';
 import test from 'node:test';
 
 import { FINAL_TEXTURE_MANIFEST } from './assets/final-assets.js';
-import { SOUND_RECIPES } from './audio/GameAudioSystem.js';
+import {
+  BACKGROUND_MUSIC,
+  SOUND_RECIPES,
+} from './audio/GameAudioSystem.js';
 
 const [indexHtml, mainSource, enemySource, impactSource] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
@@ -31,9 +34,12 @@ test('mantém no pacote as três texturas finais compactas', async () => {
 test('liga a identidade sonora aos eventos principais do gameplay', () => {
   assert.deepEqual(Object.keys(SOUND_RECIPES), [
     'charge',
+    'stretch',
+    'max-charge',
     'shot',
     'hit',
     'enemy-defeat',
+    'boss-arrival',
     'player-damage',
     'item',
     'victory',
@@ -43,18 +49,37 @@ test('liga a identidade sonora aos eventos principais do gameplay', () => {
 
   for (const sound of [
     'charge',
+    'stretch',
+    'max-charge',
     'shot',
     'hit',
     'enemy-defeat',
+    'boss-arrival',
     'player-damage',
     'item',
   ]) {
-    assert.match(mainSource, new RegExp(`play\\('${sound}'\\)`));
+    assert.match(mainSource, new RegExp(`['"]${sound}['"]`));
   }
   assert.match(
     mainSource,
     /play\(state\.result === 'victory' \? 'victory' : 'defeat'\)/,
   );
+});
+
+test('mantém a música ambiente no pacote em formato MP3', async () => {
+  const assetUrl = new URL(
+    `../public${BACKGROUND_MUSIC.url}`,
+    import.meta.url,
+  );
+  const [metadata, bytes] = await Promise.all([
+    stat(assetUrl),
+    readFile(assetUrl),
+  ]);
+
+  assert.ok(metadata.size > 1_024 * 1_024);
+  assert.deepEqual(bytes.subarray(0, 3).toString('ascii'), 'ID3');
+  assert.ok(BACKGROUND_MUSIC.volume > 0);
+  assert.equal(BACKGROUND_MUSIC.volume, 0.5);
 });
 
 test('identifica classes por modelo, anima impacto e usa partículas', () => {

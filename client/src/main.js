@@ -112,6 +112,7 @@ let gameAudioSystem = null;
 let xrActive = false;
 let pointerLocked = false;
 let announcedChargeStage = -1;
+let lastStretchSoundStep = -1;
 let currentPlayerName = normalizePlayerName('');
 let activeMatch = null;
 let lastCompletedMatch = null;
@@ -338,6 +339,7 @@ function resetSlingshotHud(state = 'ready') {
   slingshotTrajectoryValue.textContent = 'Segure para prever';
   slingshotHud.dataset.state = state;
   announcedChargeStage = -1;
+  lastStretchSoundStep = -1;
 }
 
 function updateEnemyState(state) {
@@ -619,6 +621,7 @@ function updateWaveState(state) {
   }
 
   if (state.status === 'boss') {
+    gameAudioSystem?.play('boss-arrival');
     updateEnemyState(gameSession.enemyState);
     setShotStatus(
       pointerLocked || xrActive ? 'ready' : 'idle',
@@ -676,6 +679,23 @@ function updateChargeState({ charging, ratio, speed, ammoType = 'normal' }) {
     resetSlingshotHud(pointerLocked || xrActive ? 'ready' : 'idle');
     showEncounterOutcome();
     return;
+  }
+
+  const stretchSoundStep = Math.min(5, Math.floor(normalizedRatio * 5));
+
+  if (stretchSoundStep > lastStretchSoundStep) {
+    lastStretchSoundStep = stretchSoundStep;
+
+    if (stretchSoundStep > 0) {
+      const reachedMaximum = stretchSoundStep === 5;
+      gameAudioSystem?.play(
+        reachedMaximum ? 'max-charge' : 'stretch',
+        {
+          pitchScale: 0.8 + normalizedRatio * 0.65,
+          volumeScale: 0.78 + normalizedRatio * 0.32,
+        },
+      );
+    }
   }
 
   if (showEncounterOutcome()) {
