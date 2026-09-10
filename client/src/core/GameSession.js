@@ -465,7 +465,6 @@ export class GameSession {
           moveSpeed,
           typeIds,
           radius: this.config.enemy.radius,
-          visualScale: 1,
           spawnHeight: this.config.enemy.spawn.height,
         });
       }

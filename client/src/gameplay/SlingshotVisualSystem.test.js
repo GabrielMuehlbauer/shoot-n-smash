@@ -33,6 +33,14 @@ test('cria estilingue em primeira pessoa com garfo, elásticos e projétil', () 
   assert.ok(scene.getObjectByName('slingshot-right-band'));
   assert.equal(visual.loadedBall.visible, false);
   assert.equal(visual.trajectory.geometry.drawRange.count, 0);
+  visual.root.traverse((object) => {
+    if (object.material) {
+      assert.equal(object.material.transparent, true);
+      assert.equal(object.material.depthTest, false);
+      assert.equal(object.material.depthWrite, false);
+      assert.equal(object.renderOrder, 20);
+    }
+  });
   visual.dispose();
 });
 

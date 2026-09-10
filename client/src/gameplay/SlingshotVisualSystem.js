@@ -171,12 +171,18 @@ export class SlingshotVisualSystem {
       color: colors.wood,
       roughness: 0.72,
       metalness: 0.02,
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
       depthWrite: false,
     });
     const pouchMaterial = new MeshStandardMaterial({
       color: colors.pouch,
       roughness: 0.84,
       metalness: 0,
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
       depthWrite: false,
     });
     const ballMaterial = new MeshStandardMaterial({
@@ -184,6 +190,9 @@ export class SlingshotVisualSystem {
       emissive: colors.snowballEmissive,
       emissiveIntensity: 0.14,
       roughness: 0.92,
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
       depthWrite: false,
     });
     const specialBallMaterial = new MeshStandardMaterial({
@@ -191,6 +200,9 @@ export class SlingshotVisualSystem {
       emissive: colors.specialBallEmissive,
       emissiveIntensity: 0.9,
       roughness: 0.72,
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
       depthWrite: false,
     });
     const handleGeometry = new CylinderGeometry(
@@ -276,6 +288,9 @@ export class SlingshotVisualSystem {
     const material = new LineBasicMaterial({
       color: this.config.colors.band,
       linewidth: this.config.band.width,
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
       depthWrite: false,
     });
     this.resources.add(geometry);

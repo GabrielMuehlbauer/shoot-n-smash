@@ -1,11 +1,11 @@
 import {
   Color,
+  ConeGeometry,
   CylinderGeometry,
   DirectionalLight,
   Fog,
   Group,
   HemisphereLight,
-  IcosahedronGeometry,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -108,16 +108,16 @@ export class RenderContext {
     renderer.domElement.setAttribute('role', 'img');
     renderer.domElement.setAttribute(
       'aria-label',
-      'Arena 3D de neve com mira, disparos e um inimigo hostil que avança até o jogador.',
+      'Arena 3D de neve com mira, disparos e inimigos hostis que avançam até o jogador.',
     );
 
     return renderer;
   }
 
   createLights() {
-    const hemisphereLight = new HemisphereLight(0xdff7ff, 0x17304b, 2.15);
-    const directionalLight = new DirectionalLight(0xffffff, 2.6);
-    directionalLight.position.set(-4, 8, 2);
+    const hemisphereLight = new HemisphereLight(0xeaf7ff, 0x24496a, 2.35);
+    const directionalLight = new DirectionalLight(0xfff7ef, 3.1);
+    directionalLight.position.set(-8, 12, 4);
 
     this.scene.add(hemisphereLight, directionalLight);
   }
@@ -151,7 +151,7 @@ export class RenderContext {
 
   createIceBeacon() {
     const group = new Group();
-    group.position.set(0, 0, -6);
+    group.position.set(-8.8, 0, -10.4);
 
     const base = new Mesh(
       new CylinderGeometry(1.15, 1.55, 0.35, 8),
@@ -164,7 +164,7 @@ export class RenderContext {
     base.position.y = 0.175;
 
     const marker = new Mesh(
-      new IcosahedronGeometry(0.9, 1),
+      new ConeGeometry(0.62, 2.3, 5),
       new MeshStandardMaterial({
         color: 0x65ddff,
         emissive: 0x0b4b66,
@@ -173,7 +173,7 @@ export class RenderContext {
         roughness: 0.38,
       }),
     );
-    marker.position.y = 1.35;
+    marker.position.y = 1.48;
     marker.rotation.z = Math.PI / 10;
 
     group.add(base, marker);

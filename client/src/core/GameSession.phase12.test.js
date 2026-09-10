@@ -75,6 +75,7 @@ test('integra quatro ondas, tipos, velocidades e vida persistente', () => {
   assert.equal(session.waveState.enemy, 1);
   assert.equal(session.enemyState.type.id, 'weak');
   assert.equal(session.enemySystem.currentMoveSpeed, 1);
+  assert.equal(session.enemySystem.currentVisualScale, 0.78);
 
   session.enemySystem.applyHit(1);
   assert.equal(session.waveState.status, 'between-enemies');
@@ -90,12 +91,14 @@ test('integra quatro ondas, tipos, velocidades e vida persistente', () => {
   session.update(0.5);
   assert.equal(session.enemyState.type.id, 'medium');
   assert.equal(session.enemySystem.currentMoveSpeed, 2);
+  assert.equal(session.enemySystem.currentVisualScale, 1);
 
   session.enemySystem.applyHit(2);
   session.update(0.5);
   assert.equal(session.waveState.wave, 3);
   assert.equal(session.enemyState.type.id, 'resistant');
   assert.equal(session.enemySystem.currentMoveSpeed, 3);
+  assert.equal(session.enemySystem.currentVisualScale, 1.25);
 
   session.update(0.5);
   assert.equal(session.enemyState.outcome, 'player-contact');

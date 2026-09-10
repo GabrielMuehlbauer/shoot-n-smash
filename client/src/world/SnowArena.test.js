@@ -10,7 +10,9 @@ test('cria todos os grupos visuais do protótipo de neve', () => {
   const arena = new SnowArena();
 
   assert.equal(arena.name, 'snow-arena');
+  assert.equal(arena.getObjectByName('frozen-lake')?.isMesh, true);
   assert.equal(arena.getObjectByName('ice-island')?.children.length, 2);
+  assert.equal(arena.getObjectByName('central-arena')?.children.length, 4);
   assert.equal(
     arena.getObjectByName('ice-patches')?.children.length,
     1,
@@ -35,6 +37,22 @@ test('cria todos os grupos visuais do protótipo de neve', () => {
     arena.getObjectByName('mountain-body-instances')?.count,
     SNOW_ARENA_CONFIG.mountains.length,
   );
+  assert.equal(
+    arena.getObjectByName('crystal-shard-instances')?.count,
+    SNOW_ARENA_CONFIG.crystals.length * 3,
+  );
+  assert.equal(
+    arena.getObjectByName('pine-trunk-instances')?.count,
+    SNOW_ARENA_CONFIG.trees.length,
+  );
+  assert.equal(
+    arena.getObjectByName('pine-foliage-instances')?.count,
+    SNOW_ARENA_CONFIG.trees.length * 3,
+  );
+  assert.equal(
+    arena.getObjectByName('lantern-flame-instances')?.count,
+    SNOW_ARENA_CONFIG.lanterns.length,
+  );
   assert.equal(arena.getObjectByName('snowfall')?.isPoints, true);
 
   let meshCount = 0;
@@ -52,13 +70,25 @@ test('cria todos os grupos visuais do protótipo de neve', () => {
 test('reutiliza geometrias e materiais nos elementos repetidos', () => {
   const arena = new SnowArena();
   const rocks = arena.getObjectByName('rock-instances');
+  const crystals = arena.getObjectByName('crystal-shard-instances');
+  const pineFoliage = arena.getObjectByName('pine-foliage-instances');
   const mountainBodies = arena.getObjectByName('mountain-body-instances');
   const mountainSnow = arena.getObjectByName('mountain-snow-instances');
 
   assert.equal(rocks.isInstancedMesh, true);
+  assert.equal(crystals.isInstancedMesh, true);
+  assert.equal(pineFoliage.isInstancedMesh, true);
   assert.equal(mountainBodies.isInstancedMesh, true);
   assert.equal(mountainSnow.isInstancedMesh, true);
-  assert.equal(mountainBodies.geometry, mountainSnow.geometry);
+  assert.notEqual(mountainBodies.geometry, mountainSnow.geometry);
+  assert.ok(
+    mountainBodies.geometry.getAttribute('position').count >
+      mountainSnow.geometry.getAttribute('position').count,
+  );
+  assert.equal(
+    mountainBodies.geometry.getAttribute('uv').count,
+    mountainBodies.geometry.getAttribute('position').count,
+  );
   assert.notEqual(mountainBodies.material, mountainSnow.material);
 });
 
@@ -72,10 +102,15 @@ test('aplica as texturas finais sem duplicar materiais da arena', () => {
 
   assert.equal(arena.applyTextures(textures), true);
   assert.equal(arena.snowMaterial.map, textures.snow);
+  assert.equal(arena.platformSnowMaterial.map, textures.snow);
+  assert.equal(arena.treeSnowMaterial.map, textures.snow);
   assert.equal(arena.mountainSnowMaterial.map, textures.snow);
   assert.equal(arena.iceShelfMaterial.map, textures.ice);
+  assert.equal(arena.frozenLakeMaterial.map, textures.ice);
+  assert.equal(arena.platformIceMaterial.map, textures.ice);
   assert.equal(arena.icePatchMaterial.map, textures.ice);
   assert.equal(arena.rockMaterial.map, textures.rock);
+  assert.equal(arena.lanternStoneMaterial.map, textures.rock);
   assert.equal(arena.mountainRockMaterial.map, textures.rock);
   assert.throws(() => arena.applyTextures({}), /neve, gelo e rocha/i);
 });
@@ -92,6 +127,20 @@ test('mantém obstáculos decorativos fora da área inicial do jogador', () => {
   for (const rock of SNOW_ARENA_CONFIG.rocks) {
     assert.ok(
       Math.hypot(rock.x, rock.z) - rock.scale * 1.18 >=
+        SNOW_ARENA_CONFIG.playerClearanceRadius,
+    );
+  }
+
+  for (const crystal of SNOW_ARENA_CONFIG.crystals) {
+    assert.ok(
+      Math.hypot(crystal.x, crystal.z) - crystal.scale >=
+        SNOW_ARENA_CONFIG.playerClearanceRadius,
+    );
+  }
+
+  for (const tree of SNOW_ARENA_CONFIG.trees) {
+    assert.ok(
+      Math.hypot(tree.x, tree.z) - tree.scale >=
         SNOW_ARENA_CONFIG.playerClearanceRadius,
     );
   }

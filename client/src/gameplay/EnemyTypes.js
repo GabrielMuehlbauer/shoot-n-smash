@@ -40,6 +40,13 @@ function assertTypeDescriptor(type, index) {
   ) {
     throw new RangeError(`${prefix}.color deve ser uma cor hexadecimal válida.`);
   }
+
+  if (
+    type.visualScale !== undefined &&
+    (!Number.isFinite(type.visualScale) || type.visualScale <= 0)
+  ) {
+    throw new RangeError(`${prefix}.visualScale deve ser maior que zero.`);
+  }
 }
 
 export function validateEnemyTypes(types) {
@@ -82,11 +89,17 @@ export function selectEnemyType({
 
   const selected = types[Math.floor(value * types.length)];
 
-  return Object.freeze({
+  const snapshot = {
     id: selected.id,
     label: selected.label,
     maxResistance: selected.maxResistance,
     damage: selected.damage,
     color: selected.color,
-  });
+  };
+
+  if (selected.visualScale !== undefined) {
+    snapshot.visualScale = selected.visualScale;
+  }
+
+  return Object.freeze(snapshot);
 }

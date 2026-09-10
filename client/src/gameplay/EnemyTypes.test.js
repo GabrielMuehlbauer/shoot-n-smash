@@ -4,18 +4,39 @@ import test from 'node:test';
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
 
-test('configura os três tipos normais com resistências e danos 5, 10 e 15', () => {
+test('configura tipos normais com resistência, dano e altura crescentes', () => {
   assert.deepEqual(
-    GAMEPLAY_CONFIG.enemy.types.map(({ id, label, maxResistance, damage }) => ({
-      id,
-      label,
-      maxResistance,
-      damage,
-    })),
+    GAMEPLAY_CONFIG.enemy.types.map(
+      ({ id, label, maxResistance, damage, visualScale }) => ({
+        id,
+        label,
+        maxResistance,
+        damage,
+        visualScale,
+      }),
+    ),
     [
-      { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 5 },
-      { id: 'medium', label: 'Médio', maxResistance: 2, damage: 10 },
-      { id: 'resistant', label: 'Resistente', maxResistance: 3, damage: 15 },
+      {
+        id: 'weak',
+        label: 'Fraco',
+        maxResistance: 1,
+        damage: 5,
+        visualScale: 0.78,
+      },
+      {
+        id: 'medium',
+        label: 'Médio',
+        maxResistance: 2,
+        damage: 10,
+        visualScale: 1,
+      },
+      {
+        id: 'resistant',
+        label: 'Resistente',
+        maxResistance: 3,
+        damage: 15,
+        visualScale: 1.25,
+      },
     ],
   );
   assert.equal(Object.isFrozen(GAMEPLAY_CONFIG.enemy.types), true);
@@ -117,6 +138,20 @@ test('rejeita catálogos, descritores e geradores inválidos', () => {
         { id: 'weak', label: 'Fraco', maxResistance: 1, damage: 1, color: 0x1000000 },
       ]),
     /color.*hexadecimal válida/,
+  );
+  assert.throws(
+    () =>
+      validateEnemyTypes([
+        {
+          id: 'weak',
+          label: 'Fraco',
+          maxResistance: 1,
+          damage: 1,
+          color: 0,
+          visualScale: 0,
+        },
+      ]),
+    /visualScale.*maior que zero/,
   );
   assert.throws(
     () =>

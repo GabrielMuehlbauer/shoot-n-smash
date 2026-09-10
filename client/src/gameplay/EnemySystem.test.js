@@ -157,16 +157,25 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
   assert.equal(enemy.parent, scene);
   assert.equal(enemy.name, 'ice-enemy');
   assert.equal(enemy.visual.name, 'ice-enemy-visual');
-  assert.equal(enemy.visual.children.length, 9);
+  assert.equal(enemy.visual.children.length, 17);
   assert.equal(enemy.geometries.size, 5);
-  assert.equal(enemy.materials.size, 3);
+  assert.equal(enemy.materials.size, 4);
   assert.equal(enemy.body.name, 'ice-enemy-body');
   assert.equal(enemy.leftArm.name, 'ice-enemy-left-arm');
   assert.equal(enemy.rightArm.name, 'ice-enemy-right-arm');
+  assert.equal(enemy.leftHand.name, 'ice-enemy-left-hand');
+  assert.equal(enemy.rightHand.name, 'ice-enemy-right-hand');
+  assert.equal(enemy.faceDetails.children.length, 6);
+  assert.equal(enemy.clawDetails.children.length, 6);
   assert.equal(enemy.typeDetails.name, 'ice-enemy-type-details');
+  assert.equal(enemy.weakAdornment.visible, true);
   assert.equal(enemy.mediumAdornment.visible, false);
   assert.equal(enemy.resistantAdornment.visible, false);
   assert.equal(enemy.bossAdornment.visible, false);
+  assertVectorAlmostEqual(
+    enemy.visual.scale,
+    new Vector3(0.78, 0.78, 0.78),
+  );
   assert.equal(enemy.active, true);
   assert.equal(enemy.alive, true);
   assert.equal(enemy.isMoving, true);
@@ -222,9 +231,18 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
       enemy.iceMaterial.color.getHex(),
       enemy.enemyType.color,
     );
+    assert.equal(enemy.weakAdornment.visible, id === 'weak');
     assert.equal(enemy.mediumAdornment.visible, id === 'medium');
     assert.equal(enemy.resistantAdornment.visible, id === 'resistant');
     assert.equal(enemy.bossAdornment.visible, false);
+    assertVectorAlmostEqual(
+      enemy.visual.scale,
+      new Vector3(
+        enemy.enemyType.visualScale,
+        enemy.enemyType.visualScale,
+        enemy.enemyType.visualScale,
+      ),
+    );
 
     enemy.reset();
     assert.equal(typeSamples, 1);
@@ -367,7 +385,10 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
     config.colors.destroyed,
   );
   assert.equal(enemy.iceMaterial.emissiveIntensity, 0);
-  assert.equal(enemy.visual.scale.equals(new Vector3(0.72, 0.72, 0.72)), true);
+  assertVectorAlmostEqual(
+    enemy.visual.scale,
+    new Vector3(1.25 * 0.72, 1.25 * 0.72, 1.25 * 0.72),
+  );
 
   enemy.dispose();
 });
@@ -678,7 +699,7 @@ test('dispose remove o inimigo e libera cada recurso uma única vez', () => {
   assert.equal(enemy.parent, null);
   assert.equal(scene.getObjectByName('ice-enemy'), undefined);
   assert.deepEqual([...geometryDisposals.values()], [1, 1, 1, 1, 1]);
-  assert.deepEqual([...materialDisposals.values()], [1, 1, 1]);
+  assert.deepEqual([...materialDisposals.values()], [1, 1, 1, 1]);
   assert.equal(enemy.disposed, true);
   assert.equal(enemy.active, false);
   assert.equal(enemy.alive, false);
