@@ -1058,6 +1058,15 @@ async function enterPrototype() {
       return false;
     }
 
+    renderContext = new RenderContext(sceneContainer);
+    const arenaLoaded = await renderContext.assetLoadPromise;
+    if (loadId !== prototypeLoadId || prototypeView.hidden) {
+      renderContext.dispose();
+      return false;
+    }
+    if (!arenaLoaded) {
+      throw renderContext.assetError ?? new Error('Não foi possível carregar a arena de gelo.');
+    }
     prototypeView.dataset.gameState = 'PLAYING';
     gameAudioSystem = new GameAudioSystem();
     gameAudioSystem.unlock();
@@ -1067,7 +1076,6 @@ async function enterPrototype() {
       submission: null,
     };
     lastCompletedMatch = null;
-    renderContext = new RenderContext(sceneContainer);
     xrHudSystem = new XRHudSystem({
       renderer: renderContext.renderer,
       scene: renderContext.scene,

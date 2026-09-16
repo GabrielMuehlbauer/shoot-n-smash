@@ -1,4 +1,5 @@
 import {
+  ACESFilmicToneMapping,
   Color,
   ConeGeometry,
   CylinderGeometry,
@@ -14,12 +15,14 @@ import {
   TextureLoader,
   WebGLRenderer,
 } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { loadFinalTextureSet } from '../assets/final-assets.js';
 import { RENDER_CONFIG } from '../config/render-config.js';
 import { SNOW_ARENA_CONFIG } from '../config/snow-arena-config.js';
 import { resizeRendererToContainer } from '../utils/viewport.js';
 import { SnowArena } from '../world/SnowArena.js';
+import { disposeScenario, loadIceScenario } from '../world/IceScenario.js';
 
 export class RenderContext {
   constructor(
@@ -28,6 +31,7 @@ export class RenderContext {
       windowRef = window,
       ResizeObserverClass = globalThis.ResizeObserver,
       textureLoader = globalThis.document ? new TextureLoader() : null,
+      scenarioLoader = globalThis.document ? new GLTFLoader() : null,
     } = {},
   ) {
     if (!container?.append) {
@@ -38,6 +42,7 @@ export class RenderContext {
     this.windowRef = windowRef;
     this.ResizeObserverClass = ResizeObserverClass;
     this.textureLoader = textureLoader;
+    this.scenarioLoader = scenarioLoader;
     this.finalTextures = null;
     this.assetStatus = textureLoader ? 'loading' : 'fallback';
     this.assetLoadId = 0;
@@ -103,6 +108,8 @@ export class RenderContext {
     });
 
     renderer.outputColorSpace = SRGBColorSpace;
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.9;
     renderer.setClearColor(RENDER_CONFIG.renderer.clearColor);
     renderer.domElement.dataset.gameCanvas = 'true';
     renderer.domElement.setAttribute('role', 'img');
@@ -115,9 +122,9 @@ export class RenderContext {
   }
 
   createLights() {
-    const hemisphereLight = new HemisphereLight(0xeaf7ff, 0x24496a, 2.35);
-    const directionalLight = new DirectionalLight(0xfff7ef, 3.1);
-    directionalLight.position.set(-8, 12, 4);
+    const hemisphereLight = new HemisphereLight(0xdff0ff, 0x344666, 1.2);
+    const directionalLight = new DirectionalLight(0xfff2e5, 2.0);
+    directionalLight.position.set(-30, 45, 20);
 
     this.scene.add(hemisphereLight, directionalLight);
   }
@@ -183,6 +190,50 @@ export class RenderContext {
   }
 
   loadFinalAssets() {
+    if (this.scenarioLoader) {
+      const loadId = ++this.assetLoadId;
+      this.assetStatus = 'loading';
+      this.assetLoadPromise = loadIceScenario({
+        loader: this.scenarioLoader,
+        textureLoader: this.textureLoader,
+      })
+        .then((scenario) => {
+          if (this.disposed || loadId !== this.assetLoadId) {
+            disposeScenario(scenario);
+            return false;
+          }
+          // Keep the animated snowfall while replacing the old procedural ground.
+          const oldArena = this.snowArena;
+          const snowfall = oldArena.snowfall;
+          snowfall.removeFromParent();
+          scenario.add(snowfall);
+          scenario.update = (delta) => {
+            snowfall.rotation.y += Math.max(0, Number(delta) || 0)
+              * SNOW_ARENA_CONFIG.snowfall.rotationRadiansPerSecond;
+          };
+          oldArena.removeFromParent();
+          disposeScenario(oldArena);
+          this.snowArena = scenario;
+          this.scene.add(scenario);
+          if (this.iceBeacon?.parent) this.iceBeacon.parent.visible = false;
+          this.scene.background = new Color(0xb7cbea);
+          this.scene.fog = new Fog(0xb7cbea, 100, 350);
+          this.camera.far = 500;
+          this.camera.updateProjectionMatrix();
+          this.assetStatus = 'ready';
+          this.renderer.domElement.dataset.scenario = 'ice-scenario';
+          return true;
+        })
+        .catch((error) => {
+          if (!this.disposed && loadId === this.assetLoadId) {
+            this.assetStatus = 'error';
+            this.assetError = error;
+          }
+          return false;
+        });
+      return this.assetLoadPromise;
+    }
+
     if (!this.textureLoader) {
       return false;
     }

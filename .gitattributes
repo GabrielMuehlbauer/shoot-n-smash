@@ -5,6 +5,7 @@
 *.jpeg binary
 *.webp binary
 *.glb binary
+*.blend binary
 *.gltf text eol=lf
 *.mp3 binary
 *.ogg binary

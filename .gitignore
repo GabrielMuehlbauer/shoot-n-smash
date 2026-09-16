@@ -10,3 +10,6 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+*.blend1
+*.blend2
+/ice_scenario_report.json
