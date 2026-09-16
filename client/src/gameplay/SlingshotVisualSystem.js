@@ -16,6 +16,8 @@ import {
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { calculateBallisticPoint } from './Ballistics.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadSlingshotAsset } from './SlingshotAsset.js';
 
 const UP = new Vector3(0, 1, 0);
 
@@ -108,6 +110,7 @@ export class SlingshotVisualSystem {
     camera,
     config = GAMEPLAY_CONFIG.slingshotVisual,
     projectileConfig = GAMEPLAY_CONFIG.projectile,
+    assetLoader = globalThis.document ? new GLTFLoader() : null,
   } = {}) {
     if (!scene?.add || !scene?.remove) {
       throw new Error('SlingshotVisualSystem requer uma cena Three.js válida.');
@@ -145,6 +148,8 @@ export class SlingshotVisualSystem {
       this.trajectory = this.createTrajectory();
       this.scene.add(this.root, this.trajectory);
       this.update({ charging: false, ratio: 0, speed: projectileConfig.minSpeed });
+      this.assetStatus = assetLoader ? 'loading' : 'fallback';
+      this.assetLoadPromise = assetLoader ? this.loadAsset(assetLoader) : Promise.resolve(false);
     } catch (error) {
       if (this.root) {
         this.scene.remove(this.root);
@@ -279,6 +284,33 @@ export class SlingshotVisualSystem {
     return root;
   }
 
+  async loadAsset(loader) {
+    try {
+      const asset = await loadSlingshotAsset({ config: this.config, loader });
+      if (this.disposed) {
+        asset.dispose();
+        return false;
+      }
+      // Keep the loaded snowball and trajectory driven by the gameplay system.
+      // The procedural frame is only a download/error fallback.
+      for (const child of this.root.children) {
+        if (child !== this.loadedBall) child.visible = false;
+      }
+      this.asset = asset;
+      this.root.add(asset.scene);
+      asset.setPull(this.currentPullDistance ?? 0);
+      this.assetStatus = 'ready';
+      return true;
+    } catch (error) {
+      if (!this.disposed) {
+        this.assetStatus = 'error';
+        this.assetError = error;
+        console.warn('Não foi possível carregar o novo estilingue; usando o visual de reserva.', error);
+      }
+      return false;
+    }
+  }
+
   createBand(name) {
     const geometry = new BufferGeometry();
     geometry.setAttribute(
@@ -369,6 +401,8 @@ export class SlingshotVisualSystem {
     this.loadedBall.material = this.loadedBallMaterials[selectedAmmo];
     this.updateBand(this.leftBand, this.leftTip, this.pouch.position);
     this.updateBand(this.rightBand, this.rightTip, this.pouch.position);
+    this.currentPullDistance = this.config.pouch.pullDistance * safeRatio;
+    this.asset?.setPull(this.currentPullDistance);
 
     if (charging && Number.isFinite(safeSpeed) && safeSpeed > 0) {
       this.updateTrajectory(safeSpeed, selectedAmmo);
@@ -453,6 +487,8 @@ export class SlingshotVisualSystem {
     }
 
     this.scene.remove(this.root, this.trajectory);
+    this.asset?.dispose();
+    this.asset = null;
     for (const resource of this.resources) {
       resource.dispose();
     }

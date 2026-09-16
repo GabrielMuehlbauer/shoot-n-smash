@@ -1,0 +1,43 @@
+{
+  "objects": 7,
+  "mesh_objects": 6,
+  "vertices": 1878,
+  "faces": 2244,
+  "triangles": 3608,
+  "materials": [
+    "Ice_Detail",
+    "Leather",
+    "Rubber",
+    "Wood_Main"
+  ],
+  "dimensions_blender_m": [
+    0.48954,
+    0.20621,
+    0.71918
+  ],
+  "bounds_blender_m": [
+    [
+      -0.24285712838172913,
+      -0.14800000190734863,
+      -0.19712533056735992
+    ],
+    [
+      0.24667976796627045,
+      0.058212440460920334,
+      0.5220552682876587
+    ]
+  ],
+  "validation": {
+    "centred_x": true,
+    "height_055_to_075_m": true,
+    "scales_applied": true,
+    "grip_pivot_at_origin": true,
+    "separate_bands_and_pouch": true,
+    "under_5000_triangles": true,
+    "four_materials": true,
+    "no_textures": true,
+    "no_exported_camera_or_light": true
+  },
+  "glb_bytes": 316236,
+  "blender_version": "5.2.2 LTS"
+}
