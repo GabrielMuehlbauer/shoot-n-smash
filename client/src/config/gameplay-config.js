@@ -68,9 +68,14 @@ export const GAMEPLAY_CONFIG = freeze({
   boss: freeze({
     spawnDelaySeconds: 3,
     moveSpeed: 1.35,
-    radius: 2.2,
+    radius: 2.4,
     visualScale: 2.35,
     spawnHeight: 2.2,
+    hitboxes: freeze([
+      freeze({ height: 1.15, radius: 1.5 }),
+      freeze({ height: 3.2, radius: 2.4 }),
+      freeze({ height: 5.25, radius: 1.25 }),
+    ]),
     type: freeze({
       id: 'boss',
       label: 'Chefão',

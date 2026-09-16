@@ -134,6 +134,22 @@ npm test
 O procedimento completo está no
 [guia de teste da Fase 25](docs/phases/phase-25-testes-otimizacao.md#matriz-de-validação-manual).
 
+## Modelo do chefão Ice Golem
+
+O chefão usa o modelo em `client/public/assets/models/ice_golem.glb`. Os demais
+inimigos continuam com o visual procedural. Para regenerar o modelo na raiz do
+projeto, instale o Blender no Windows e abra um novo terminal:
+
+```powershell
+winget install --id BlenderFoundation.Blender --exact
+blender --background --python generate_ice_golem.py
+```
+
+Se `blender` não estiver no PATH, execute o mesmo comando com o caminho completo
+do `blender.exe`. O script grava `ice_golem.blend` e `ice_golem.glb` ao lado dele e
+copia o GLB para os assets do cliente. O modelo usa quatro materiais PBR, rig de
+18 ossos e aproximadamente 84 mil triângulos.
+
 ## Scripts
 
 | Comando | Finalidade |

@@ -32,6 +32,18 @@ function validateBossConfig(config) {
   if (!Number.isFinite(config.spawnHeight) || config.spawnHeight < 0) {
     throw new RangeError('boss.spawnHeight não pode ser negativo.');
   }
+
+  if (
+    !Array.isArray(config.hitboxes) ||
+    config.hitboxes.length === 0 ||
+    config.hitboxes.some((hitbox) =>
+      !hitbox ||
+      !Number.isFinite(hitbox.height) || hitbox.height < 0 ||
+      !Number.isFinite(hitbox.radius) || hitbox.radius <= 0,
+    )
+  ) {
+    throw new RangeError('boss.hitboxes deve conter alturas e raios válidos.');
+  }
 }
 
 export class GameSession {
@@ -129,6 +141,8 @@ export class GameSession {
     this.currentEncounter = this.createEncounterIdentity('enemy');
     this.enemyPreviousCenter = new Vector3();
     this.enemyCenter = new Vector3();
+    this.bossHitboxPreviousCenter = new Vector3();
+    this.bossHitboxCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
     this.itemCenter = new Vector3();
     this.pendingProjectileImpacts = [];
@@ -664,20 +678,40 @@ export class GameSession {
           : this.projectileContactCenter
               .copy(previousPosition)
               .lerp(currentPosition, contactRatio);
-      const collision = intersectMovingSpheres(
-        previousPosition,
-        projectileEnd,
-        radius,
-        this.enemyPreviousCenter,
-        this.enemyCenter,
-        enemySystem.radius,
-      );
+      let collision = null;
+      if (enemySystem.enemyType.id === 'boss') {
+        for (const hitbox of this.config.boss.hitboxes) {
+          const offset = hitbox.height - enemySystem.currentSpawnHeight;
+          this.bossHitboxPreviousCenter.copy(this.enemyPreviousCenter).y += offset;
+          this.bossHitboxCenter.copy(this.enemyCenter).y += offset;
+          const candidate = intersectMovingSpheres(
+            previousPosition,
+            projectileEnd,
+            radius,
+            this.bossHitboxPreviousCenter,
+            this.bossHitboxCenter,
+            hitbox.radius,
+          );
+          if (candidate.hit && (!collision || candidate.t < collision.t)) {
+            collision = candidate;
+          }
+        }
+      } else {
+        collision = intersectMovingSpheres(
+          previousPosition,
+          projectileEnd,
+          radius,
+          this.enemyPreviousCenter,
+          this.enemyCenter,
+          enemySystem.radius,
+        );
+      }
 
       const impactRatio =
-        contactRatio === null ? collision.t : collision.t * contactRatio;
+        contactRatio === null ? collision?.t : collision?.t * contactRatio;
 
       if (
-        collision.hit &&
+        collision?.hit &&
         (!nearestImpact || impactRatio < nearestImpact.impactRatio)
       ) {
         nearestImpact = {

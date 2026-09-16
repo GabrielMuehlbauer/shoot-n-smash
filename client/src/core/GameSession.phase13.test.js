@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { PerspectiveCamera, Scene } from 'three';
+import { PerspectiveCamera, Scene, Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { GameSession } from './GameSession.js';
@@ -154,6 +154,51 @@ test('contato do chefao causa 25 de dano e reagenda o confronto', () => {
   session.dispose();
 });
 
+test('hitboxes do chefão recebem tiros dos pés à cabeça sem ampliar inimigos comuns', () => {
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config: createConfig(),
+    enemyRandom: () => 0,
+    enemyTypeRandom: () => 0,
+  });
+  finishFourWaves(session);
+  session.update(0.2);
+  const enemy = session.enemySystem;
+  enemy.position.set(0, session.config.boss.spawnHeight, -10);
+  enemy.previousPosition.copy(enemy.position);
+
+  function probe(x, y) {
+    session.pendingProjectileImpacts.length = 0;
+    session.handleProjectileStep({
+      previousPosition: new Vector3(x, y, -15),
+      currentPosition: new Vector3(x, y, -5),
+      radius: 0.18,
+      mesh: {},
+      projectile: {},
+    });
+    return session.pendingProjectileImpacts.length === 1;
+  }
+
+  assert.equal(probe(0.9, 0.1), true, 'pé');
+  assert.equal(probe(0.7, 1.8), true, 'perna');
+  assert.equal(probe(2.2, 3.2), true, 'ombro');
+  assert.equal(probe(0.2, 6.1), true, 'cabeça');
+  assert.equal(probe(0, 6.9), false, 'acima da cabeça');
+  assert.equal(probe(3.2, 3.2), false, 'fora da largura');
+
+  enemy.reset({
+    enemyType: GAMEPLAY_CONFIG.enemy.types[0],
+    radius: GAMEPLAY_CONFIG.enemy.radius,
+    visualScale: GAMEPLAY_CONFIG.enemy.types[0].visualScale,
+    spawnHeight: GAMEPLAY_CONFIG.enemy.spawn.height,
+  });
+  enemy.position.set(0, GAMEPLAY_CONFIG.enemy.spawn.height, -10);
+  enemy.previousPosition.copy(enemy.position);
+  assert.equal(probe(0.2, 6.1), false, 'inimigo comum mantém a colisão antiga');
+  session.dispose();
+});
+
 test('rejeita configuracoes invalidas do chefao antes de criar recursos', () => {
   const base = createConfig();
   const invalidBosses = [
@@ -161,6 +206,8 @@ test('rejeita configuracoes invalidas do chefao antes de criar recursos', () => 
     { ...base.boss, radius: 0 },
     { ...base.boss, visualScale: 0 },
     { ...base.boss, spawnHeight: -1 },
+    { ...base.boss, hitboxes: [] },
+    { ...base.boss, hitboxes: [{ height: 2, radius: -1 }] },
     { ...base.boss, type: { ...base.boss.type, maxResistance: 0 } },
   ];
 

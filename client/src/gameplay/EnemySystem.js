@@ -10,7 +10,14 @@ import {
 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
+import {
+  BOSS_GOLEM_GAME_HEIGHT,
+  BOSS_GOLEM_SOURCE_HEIGHT,
+  disposeBossGolemAsset,
+  loadBossGolemAsset,
+} from './BossGolemAsset.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const FULL_CIRCLE = Math.PI * 2;
 
@@ -158,6 +165,7 @@ export class EnemySystem extends Group {
     onEliminate = () => {},
     onPlayerContact = () => {},
     onResistanceChange = () => {},
+    bossAssetLoader = globalThis.document ? new GLTFLoader() : null,
   } = {}) {
     super();
 
@@ -200,6 +208,10 @@ export class EnemySystem extends Group {
     this.toPlayer = new Vector3();
     this.geometries = new Set();
     this.materials = new Set();
+    this.bossAssetLoader = bossAssetLoader;
+    this.bossAssetPromise = null;
+    this.bossAsset = null;
+    this.bossAssetError = null;
 
     this.createVisual();
     this.placeAtSpawn();
@@ -521,8 +533,45 @@ export class EnemySystem extends Group {
       this.clawDetails,
       this.typeDetails,
     );
+    this.proceduralParts = [...this.visual.children];
     this.add(this.visual);
     this.syncTypeVisual();
+  }
+
+  requestBossAsset() {
+    if (!this.bossAssetLoader || this.bossAssetPromise) return;
+    this.bossAssetPromise = loadBossGolemAsset({ loader: this.bossAssetLoader })
+      .then((asset) => {
+        if (this.disposed) {
+          disposeBossGolemAsset(asset);
+          return;
+        }
+        this.bossAsset = asset;
+        this.visual.add(asset);
+        this.syncBossAsset();
+      })
+      .catch((error) => {
+        this.bossAssetError = error;
+        console.warn('Falha ao carregar o modelo do chefão:', error);
+      });
+  }
+
+  syncBossAsset() {
+    const boss = this.enemyType.id === 'boss';
+    if (boss) this.requestBossAsset();
+    for (const part of this.proceduralParts) {
+      if (boss && this.bossAsset) {
+        if (part.parent === this.visual) this.visual.remove(part);
+      } else if (part.parent !== this.visual) {
+        this.visual.add(part);
+      }
+    }
+    if (!this.bossAsset) return;
+    this.bossAsset.visible = boss;
+    this.bossAsset.position.set(0, -this.config.radius, 0);
+    this.bossAsset.scale.setScalar(
+      BOSS_GOLEM_GAME_HEIGHT / (BOSS_GOLEM_SOURCE_HEIGHT * this.currentVisualScale),
+    );
   }
 
   syncTypeVisual() {
@@ -982,6 +1031,7 @@ export class EnemySystem extends Group {
 
   updateVisualState() {
     this.syncTypeVisual();
+    this.syncBossAsset();
 
     if (this.currentResistance === 0) {
       this.iceMaterial.color.setHex(this.config.colors.destroyed);
@@ -1076,6 +1126,12 @@ export class EnemySystem extends Group {
     }
 
     this.scene.remove(this);
+
+    if (this.bossAsset) {
+      disposeBossGolemAsset(this.bossAsset);
+      this.visual.remove(this.bossAsset);
+      this.bossAsset = null;
+    }
 
     for (const geometry of this.geometries) {
       geometry.dispose();
