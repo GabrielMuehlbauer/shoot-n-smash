@@ -8,7 +8,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import {
   BOSS_GOLEM_URL,
+  createBossGolemRig,
   prepareBossGolemAsset,
+  updateBossGolemPose,
 } from './BossGolemAsset.js';
 import { EnemySystem } from './EnemySystem.js';
 
@@ -55,6 +57,31 @@ test('GLB do chefão contém rig, partes, materiais e orçamento geométrico', a
   assert.deepEqual([...boneNames].sort(), ['Chest', 'Pelvis', 'Spine']);
   assert.ok(Math.abs(box.getSize(new Vector3()).y - 4.5) < 0.05);
   assert.ok(Math.abs(box.min.y) < 0.05);
+  assert.ok(root.getObjectByName('IceGolem_CoreLight')?.isPointLight);
+});
+
+test('rig do chefão coordena passada, contrabalanço e retorno ao repouso', async () => {
+  const { scene } = await parseGameAsset();
+  prepareBossGolemAsset(scene);
+  const rig = createBossGolemRig(scene);
+  const rest = Object.fromEntries(
+    Object.entries(rig.restQuaternions).map(([name, quaternion]) => [name, quaternion.clone()]),
+  );
+
+  const pose = updateBossGolemPose(rig, { phase: Math.PI / 2, moving: true });
+  assert.equal(pose.stride, 1);
+  assert.ok(pose.verticalOffset < 0);
+  assert.ok(rig.bones.UpperArm_L.quaternion.angleTo(rest.UpperArm_L) > 0.15);
+  assert.ok(rig.bones.UpperArm_R.quaternion.angleTo(rest.UpperArm_R) > 0.15);
+  assert.ok(rig.bones.UpperLeg_L.quaternion.angleTo(rest.UpperLeg_L) > 0.2);
+  assert.ok(rig.bones.UpperLeg_R.quaternion.angleTo(rest.UpperLeg_R) > 0.2);
+  assert.ok(rig.bones.LowerLeg_R.quaternion.angleTo(rest.LowerLeg_R) > 0.15);
+  assert.ok(rig.bones.LowerLeg_L.quaternion.angleTo(rest.LowerLeg_L) < 1e-8);
+
+  updateBossGolemPose(rig, { phase: Math.PI / 2, moving: false });
+  for (const [name, bone] of Object.entries(rig.bones)) {
+    assert.ok(bone.quaternion.angleTo(rest[name]) < 1e-6, `${name} não voltou ao repouso`);
+  }
 });
 
 test('somente o chefão troca o visual procedural pelo GLB', async () => {

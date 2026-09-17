@@ -1,8 +1,9 @@
-"""Generate a rigged, game-ready ice titan. Run with Blender in background mode.
+"""Generate a rigged, game-ready weak ice golem. Run in Blender background mode.
 
-The sculpt is built from irregular lofts, inset armor plates and tapered crystal
-meshes. There are no external textures, so the four glTF PBR materials export
-without baking. The local -Y axis is the face direction (+Z after GLTFLoader).
+The sculpt follows the compact wave-one creature: oversized expressive head,
+short powerful limbs, crystalline horns, ears, claws and layered ice plates.
+There are no external textures, so the four glTF PBR materials export without
+baking. The local -Y axis is the face direction (+Z after GLTFLoader).
 """
 
 from __future__ import annotations
@@ -46,11 +47,11 @@ def material(name, color, roughness, metallic=0.02, emission=None):
 
 
 MATS = {
-    "Ice_Base": material("Ice_Base", (.055, .31, .58), .36),
-    "Ice_Dark": material("Ice_Dark", (.013, .08, .20), .47),
-    "Ice_Light": material("Ice_Light", (.27, .65, .88), .26),
-    "Ice_Emission": material("Ice_Emission", (.01, .26, .48), .3,
-                             emission=(0, .52, .86)),
+    "Ice_Base": material("Ice_Base", (.42, .78, .92), .34),
+    "Ice_Dark": material("Ice_Dark", (.012, .075, .17), .43),
+    "Ice_Light": material("Ice_Light", (.78, .95, 1.0), .25),
+    "Ice_Emission": material("Ice_Emission", (.025, .38, .66), .28,
+                             emission=(.02, .68, 1.0)),
 }
 
 
@@ -209,6 +210,39 @@ def glowing_crack(builder, points, width=.018):
     for i in range(len(points) - 1):
         a = i * 2
         faces.extend(((a, a + 1, a + 2), (a + 1, a + 3, a + 2)))
+    builder.add(verts, faces)
+
+
+def ellipsoid(builder, center, radii, segments=48, rings=32, seed=0):
+    """Closed faceted ellipsoid with controlled, deterministic ice breakup."""
+    cx, cy, cz = center
+    rx, ry, rz = radii
+    verts = [(cx, cy, cz - rz)]
+    for j in range(1, rings):
+        phi = -math.pi / 2 + math.pi * j / rings
+        cp, sp = math.cos(phi), math.sin(phi)
+        for i in range(segments):
+            theta = 2 * math.pi * i / segments
+            grain = (1 + .018 * math.sin(i * 2.31 + j * .73 + seed)
+                     + .012 * math.cos(i * .81 - j * 1.47 + seed * 2))
+            verts.append((cx + rx * cp * math.cos(theta) * grain,
+                          cy + ry * cp * math.sin(theta) * grain,
+                          cz + rz * sp * grain))
+    top = len(verts)
+    verts.append((cx, cy, cz + rz))
+    faces = []
+    for i in range(segments):
+        faces.append((0, 1 + (i + 1) % segments, 1 + i))
+    for j in range(rings - 2):
+        row = 1 + j * segments
+        nxt = row + segments
+        for i in range(segments):
+            a, b = row + i, row + (i + 1) % segments
+            c, d = nxt + (i + 1) % segments, nxt + i
+            faces.extend(((a, b, d), (b, c, d)))
+    last = 1 + (rings - 2) * segments
+    for i in range(segments):
+        faces.append((last + i, last + (i + 1) % segments, top))
     builder.add(verts, faces)
 
 
@@ -435,6 +469,162 @@ for side in (-1, 1):
                    (side * .55, -.45, .67), (side * .51, -.45, .36)], .018)
 
 
+# The original generator built a tall titan. The active model below deliberately
+# replaces that draft with the compact, friendly-aggressive wave-one creature.
+builders.clear()
+rng.seed(SEED + 101)
+
+# Round belly and oversized head establish the reference's readable chibi shape.
+ellipsoid(B("Body"), (0, .02, 1.38), (.69, .55, .82), 64, 48, 50)
+ellipsoid(B("Body", "Ice_Light"), (0, -.50, 1.46), (.43, .10, .52), 40, 30, 51)
+for side in (-1, 1):
+    for row in range(3):
+        plate(B("Body", "Ice_Light" if row == 0 else "Ice_Base"),
+              (side * (.17 + row * .14), -.565, 1.20 + row * .25),
+              .23, .27, .038, side * (.08 + row * .04))
+
+ellipsoid(B("Head", "Ice_Base", "Head"), (0, -.02, 2.55),
+          (1.02, .78, .92), 72, 52, 60)
+# Bright mask planes keep the face legible under the blue arena lighting.
+for side in (-1, 1):
+    plate(B("Head", "Ice_Light", "Head"),
+          (side * .40, -.744, 2.66), .50, .54, .038, side * .08)
+
+# Large layered eyes: pale sclera, cyan iris, dark pupil and tiny highlight.
+for side in (-1, 1):
+    ellipsoid(B("Head", "Ice_Light", "Head"),
+              (side * .37, -.75, 2.68), (.32, .10, .38), 40, 30, 70 + side)
+    ellipsoid(B("Head", "Ice_Emission", "Head"),
+              (side * .37, -.842, 2.65), (.20, .055, .24), 32, 22, 72 + side)
+    ellipsoid(B("Head", "Ice_Dark", "Head"),
+              (side * .37, -.887, 2.68), (.105, .035, .15), 28, 20, 74 + side)
+    ellipsoid(B("Head", "Ice_Light", "Head"),
+              (side * .33, -.92, 2.80), (.040, .018, .052), 16, 12, 76 + side)
+    # Strong angular brow gives the otherwise cute face an aggressive focus.
+    shard(B("Head", "Ice_Base", "Head"),
+          (side * .10, -.83, 2.98), (side * .57, -.85, 3.10), .080, .055,
+          sides=7, twist=side * .14)
+
+# Smiling dark mouth with icy lip, tongue glint and six small teeth.
+plate(B("Head", "Ice_Dark", "Head"), (0, -.814, 2.25), .78, .25, .055)
+plate(B("Head", "Ice_Emission", "Head"), (0, -.877, 2.20), .31, .075, .012)
+for i, x in enumerate((-.28, -.12, .12, .28)):
+    top = i in (0, 3)
+    shard(B("Head", "Ice_Light", "Head"),
+          (x, -.89, 2.34 if top else 2.14),
+          (x * .96, -.91, 2.20 if top else 2.27), .045, .035, sides=6)
+
+# A short crystalline chin tuft satisfies the beard slot without aging the imp.
+for i, x in enumerate((-.18, -.09, 0, .09, .18)):
+    shard(B("Beard", "Ice_Light" if i % 2 else "Ice_Base", "Head"),
+          (x, -.62, 2.02), (x * 1.05, -.66, 1.91 - .025 * (i % 2)), .044,
+          sides=6, twist=i * .31)
+
+# Tall curved horns, pointed ears and a crown of varied crystal fins.
+for side, name in ((-1, "Horn_L"), (1, "Horn_R")):
+    path = [(side * (.62 + .31 * math.sin(t * math.pi * .72)),
+             -.05 + .08 * math.sin(t * math.pi),
+             2.98 + .78 * t + .20 * math.sin(t * math.pi))
+            for t in (i / 20 for i in range(21))]
+    curved_horn(B(name, "Ice_Base", "Head"), path,
+                [.16 * (1 - i / 21) ** 1.15 + .008 for i in range(21)], 14)
+    shard(B(name, "Ice_Light", "Head"),
+          (side * .70, -.02, 3.17), (side * .83, -.04, 3.63), .085)
+    # Long elf-like side ear with a secondary translucent-looking inner shard.
+    shard(B("Head", "Ice_Base", "Head"),
+          (side * .83, -.05, 2.68), (side * 1.33, -.13, 2.92), .17, .09,
+          sides=8, twist=.2)
+    shard(B("Head", "Ice_Light", "Head"),
+          (side * .90, -.12, 2.72), (side * 1.20, -.17, 2.86), .075, .04,
+          sides=7)
+for i, x in enumerate((-.43, -.22, 0, .22, .43)):
+    height = (3.72, 3.87, 4.08, 3.83, 3.70)[i]
+    shard(B("Head", "Ice_Light" if i in (1, 3) else "Ice_Base", "Head"),
+          (x, .08, 3.16), (x * 1.12, .10, height), .13 - abs(x) * .07,
+          sides=8, twist=i * .22)
+
+# Compact shoulders with a few large, readable crystals instead of visual noise.
+for side, name, suffix in ((-1, "Shoulder_L", "L"), (1, "Shoulder_R", "R")):
+    ellipsoid(B(name, "Ice_Base", f"UpperArm_{suffix}"),
+              (side * .78, .01, 1.78), (.34, .34, .37), 36, 26, 80 + side)
+    for i in range(4):
+        shard(B(name, "Ice_Light" if i == 1 else "Ice_Base", f"UpperArm_{suffix}"),
+              (side * (.65 + i * .10), .05, 1.98),
+              (side * (.73 + i * .15), .08 + .04 * i, 2.29 + .10 * (i % 2)),
+              .075 + .018 * i, sides=7, twist=i * .35)
+
+# Short arms, oversized mitten-like hands and three hooked claws per hand.
+for side, suffix in ((-1, "L"), (1, "R")):
+    loft(B(f"Arm_{suffix}", "Ice_Base", f"UpperArm_{suffix}"),
+         (side * .91, 0, 1.34), (side * .78, 0, 1.83),
+         .25, .27, .29, .30, sides=40, rings=28, seed=90 + side, bulge=.16)
+    loft(B(f"Arm_{suffix}", "Ice_Base", f"LowerArm_{suffix}"),
+         (side * 1.00, -.03, .94), (side * .91, 0, 1.37),
+         .29, .30, .25, .27, sides=40, rings=26, seed=92 + side, bulge=.2)
+    ellipsoid(B(f"Hand_{suffix}", "Ice_Base", f"Hand_{suffix}"),
+              (side * 1.00, -.08, .82), (.32, .31, .31), 36, 26, 94 + side)
+    for claw in range(3):
+        x = side * (.80 + claw * .20)
+        shard(B(f"Hand_{suffix}", "Ice_Light", f"Hand_{suffix}"),
+              (x, -.23, .75), (x + side * .05, -.37, .47 + .05 * claw),
+              .09, .075, sides=7, twist=claw * .2)
+    for i in range(5):
+        shard(B("Arm_Crystals", "Ice_Base", f"LowerArm_{suffix}"),
+              (side * (.88 + .06 * i), .15, 1.05 + .10 * i),
+              (side * (1.06 + .07 * i), .20, 1.18 + .16 * i),
+              .055 + .009 * i, sides=6)
+    glowing_crack(B("Arm_Crystals", "Ice_Emission", f"LowerArm_{suffix}"),
+                  [(side * .93, -.31, 1.34), (side * .99, -.33, 1.20),
+                   (side * .94, -.34, 1.05), (side * 1.02, -.32, .93)], .016)
+
+# Squat legs and broad planted feet match the small enemy's low center of mass.
+for side, suffix in ((-1, "L"), (1, "R")):
+    loft(B(f"Leg_{suffix}", "Ice_Dark", f"UpperLeg_{suffix}"),
+         (side * .41, .02, .66), (side * .36, .02, 1.18),
+         .32, .31, .36, .34, sides=38, rings=28, seed=100 + side, bulge=.15)
+    loft(B(f"Leg_{suffix}", "Ice_Base", f"LowerLeg_{suffix}"),
+         (side * .43, 0, .26), (side * .41, .02, .70),
+         .31, .34, .31, .31, sides=38, rings=26, seed=102 + side, bulge=.12)
+    ellipsoid(B(f"Foot_{suffix}", "Ice_Base", f"Foot_{suffix}"),
+              (side * .43, -.18, .20), (.43, .53, .22), 40, 28, 104 + side)
+    for toe in range(3):
+        x = side * (.20 + toe * .22)
+        shard(B(f"Foot_{suffix}", "Ice_Light", f"Foot_{suffix}"),
+              (x, -.52, .20), (x + side * .02, -.78, .05),
+              .11, .095, sides=7, twist=toe * .17)
+    for row in range(2):
+        for col in range(2):
+            plate(B("Leg_Crystals", "Ice_Base", f"LowerLeg_{suffix}"),
+                  (side * (.30 + col * .23), -.34, .45 + row * .25),
+                  .27, .28, .04, side * .14)
+    glowing_crack(B("Leg_Crystals", "Ice_Emission", f"LowerLeg_{suffix}"),
+                  [(side * .40, -.37, .72), (side * .46, -.39, .59),
+                   (side * .39, -.40, .45), (side * .45, -.37, .31)], .015)
+
+# Back crest and a small waist ruff repeat the head's crystalline rhythm.
+for side in (-1, 1):
+    for i in range(5):
+        x = side * (.13 + i * .12)
+        shard(B("Back_Crystals", "Ice_Base" if i % 2 else "Ice_Light"),
+              (x, .45, 1.75 + .14 * i),
+              (x + side * .08, .65, 2.17 + .20 * i),
+              .075 + .012 * i, sides=7, twist=i * .28)
+for i in range(15):
+    a = 2 * math.pi * i / 15
+    x, y = math.cos(a) * .55, math.sin(a) * .44
+    shard(B("Waist_Armor", "Ice_Light" if i % 5 == 0 else "Ice_Base", "Pelvis"),
+          (x, y, 1.02), (x * 1.10, y * 1.12, .76 - .06 * (i % 2)),
+          .068, sides=6, twist=a)
+
+# Central chest crystal and restrained branching cyan fissures.
+shard(B("Chest_Core", "Ice_Emission"),
+      (0, -.58, 1.72), (0, -.66, 1.28), .13, .085, sides=8)
+for side in (-1, 1):
+    glowing_crack(B("Chest_Core", "Ice_Emission"),
+                  [(0, -.61, 1.72), (side * .16, -.62, 1.61),
+                   (side * .29, -.59, 1.66), (side * .42, -.54, 1.54)], .016)
+
+
 def make_rig(root):
     arm_data = bpy.data.armatures.new("IceGolem_Skeleton")
     arm = bpy.data.objects.new("IceGolem_Armature", arm_data)
@@ -445,26 +635,26 @@ def make_rig(root):
     bpy.ops.object.mode_set(mode="EDIT")
     bones = [
         ("Root", None, (0, 0, 0), (0, 0, .3)),
-        ("Pelvis", "Root", (0, 0, 1.72), (0, 0, 2.16)),
-        ("Spine", "Pelvis", (0, 0, 2.16), (0, 0, 2.76)),
-        ("Chest", "Spine", (0, 0, 2.76), (0, 0, 3.46)),
-        ("Neck", "Chest", (0, 0, 3.46), (0, 0, 3.67)),
-        ("Head", "Neck", (0, 0, 3.67), (0, 0, 4.05)),
+        ("Pelvis", "Root", (0, 0, .76), (0, 0, 1.10)),
+        ("Spine", "Pelvis", (0, 0, 1.10), (0, 0, 1.48)),
+        ("Chest", "Spine", (0, 0, 1.48), (0, 0, 1.88)),
+        ("Neck", "Chest", (0, 0, 1.88), (0, 0, 2.14)),
+        ("Head", "Neck", (0, 0, 2.14), (0, 0, 3.12)),
     ]
     for side, suffix in ((-1, "L"), (1, "R")):
         bones += [
             (f"UpperArm_{suffix}", "Chest",
-             (side * 1.02, 0, 3.23), (side * 1.42, 0, 2.35)),
+             (side * .78, 0, 1.78), (side * .91, 0, 1.35)),
             (f"LowerArm_{suffix}", f"UpperArm_{suffix}",
-             (side * 1.42, 0, 2.35), (side * 1.62, 0, 1.55)),
+             (side * .91, 0, 1.35), (side * 1.00, -.02, .93)),
             (f"Hand_{suffix}", f"LowerArm_{suffix}",
-             (side * 1.62, 0, 1.55), (side * 1.68, 0, 1.15)),
+             (side * 1.00, -.02, .93), (side * 1.00, -.12, .67)),
             (f"UpperLeg_{suffix}", "Pelvis",
-             (side * .46, 0, 2.03), (side * .49, 0, 1.08)),
+             (side * .36, 0, 1.10), (side * .41, 0, .66)),
             (f"LowerLeg_{suffix}", f"UpperLeg_{suffix}",
-             (side * .49, 0, 1.08), (side * .51, 0, .36)),
+             (side * .41, 0, .66), (side * .43, 0, .28)),
             (f"Foot_{suffix}", f"LowerLeg_{suffix}",
-             (side * .51, 0, .36), (side * .51, -.40, .08)),
+             (side * .43, 0, .28), (side * .43, -.45, .12)),
         ]
     for name, parent, head, tail in bones:
         bone = arm_data.edit_bones.new(name)
@@ -476,6 +666,58 @@ def make_rig(root):
     bpy.ops.object.mode_set(mode="OBJECT")
     arm.select_set(False)
     return arm
+
+
+def render_preview():
+    """Render a deterministic beauty check without adding helpers to the GLB."""
+    world = bpy.context.scene.world or bpy.data.worlds.new("Preview_World")
+    bpy.context.scene.world = world
+    world.use_nodes = True
+    world.node_tree.nodes["Background"].inputs["Color"].default_value = (
+        .012, .025, .045, 1)
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = .32
+
+    bpy.ops.mesh.primitive_plane_add(size=16, location=(0, 0, -.025))
+    ground = bpy.context.object
+    ground.name = "Preview_Ground"
+    ground_mat = material("Preview_Ground_Material", (.12, .28, .38), .58)
+    ground.data.materials.append(ground_mat)
+
+    def area(name, location, color, energy, size):
+        data = bpy.data.lights.new(name, "AREA")
+        data.color = color
+        data.energy = energy
+        data.shape = "DISK"
+        data.size = size
+        obj = bpy.data.objects.new(name, data)
+        bpy.context.collection.objects.link(obj)
+        obj.location = location
+        direction = Vector((0, 0, 2.2)) - obj.location
+        obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+
+    area("Preview_Key", (-4.5, -5.5, 7), (.72, .92, 1.0), 1250, 4.0)
+    area("Preview_Fill", (4.5, -2.5, 4), (.28, .65, 1.0), 850, 3.0)
+    area("Preview_Rim", (1.5, 4.0, 5.5), (.10, .48, 1.0), 1100, 3.0)
+
+    camera_data = bpy.data.cameras.new("Preview_Camera")
+    camera = bpy.data.objects.new("Preview_Camera", camera_data)
+    bpy.context.collection.objects.link(camera)
+    camera.location = (5.9, -8.4, 3.8)
+    camera.rotation_euler = (Vector((0, 0, 2.15)) - camera.location).to_track_quat(
+        "-Z", "Y").to_euler()
+    camera_data.lens = 58
+    bpy.context.scene.camera = camera
+
+    scene = bpy.context.scene
+    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.render.resolution_x = 768
+    scene.render.resolution_y = 768
+    scene.render.resolution_percentage = 100
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.filepath = str(OUT / "ice_golem_preview.png")
+    scene.render.film_transparent = False
+    scene.view_settings.look = "AgX - Medium High Contrast"
+    bpy.ops.render.render(write_still=True)
 
 
 def main():
@@ -540,9 +782,13 @@ def main():
         mesh.update()
         for name in material_names:
             mesh.materials.append(MATS[name])
+        smooth_parts = {
+            "Body", "Head", "Arm_L", "Arm_R", "Hand_L", "Hand_R",
+            "Leg_L", "Leg_R", "Foot_L", "Foot_R",
+        }
         for polygon, material_index in zip(mesh.polygons, face_materials):
             polygon.material_index = material_index
-            polygon.use_smooth = False
+            polygon.use_smooth = category in smooth_parts
         obj = bpy.data.objects.new(category, mesh)
         bpy.context.collection.objects.link(obj)
         obj.parent = arm
@@ -568,15 +814,15 @@ def main():
         for vertex, bone in zip(mesh.vertices, vertex_bones):
             if category == "Body":
                 z = vertex.co.z / MODEL_SCALE
-                if z < 2.2:
+                if z < 1.0:
                     weights = (("Pelvis", 1.0),)
-                elif z < 2.55:
-                    t = round((z - 2.2) / .35, 2)
+                elif z < 1.3:
+                    t = round((z - 1.0) / .30, 2)
                     weights = (("Pelvis", 1 - t), ("Spine", t))
-                elif z < 2.78:
+                elif z < 1.55:
                     weights = (("Spine", 1.0),)
-                elif z < 3.08:
-                    t = round((z - 2.78) / .30, 2)
+                elif z < 1.82:
+                    t = round((z - 1.55) / .27, 2)
                     weights = (("Spine", 1 - t), ("Chest", t))
                 else:
                     weights = (("Chest", 1.0),)
@@ -600,14 +846,15 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT / "ice_golem.blend"))
     bpy.ops.export_scene.gltf(
         filepath=str(OUT / "ice_golem.glb"), export_format="GLB",
-        use_selection=True, export_apply=False, export_skins=True,
+        use_selection=True, export_apply=True, export_skins=True,
         export_yup=True, export_normals=True, export_texcoords=True,
         export_materials="EXPORT", export_extras=False,
         export_animations=False,
     )
     game_asset = OUT / "client" / "public" / "assets" / "models"
     if game_asset.is_dir():
-        shutil.copyfile(OUT / "ice_golem.glb", game_asset / "ice_golem.glb")
+        shutil.copyfile(OUT / "ice_golem.glb", game_asset / "ice_golem_weak.glb")
+    render_preview()
     print(f"ICE_GOLEM_STATS vertices={sum(len(o.data.vertices) for o in meshes)} "
           f"faces={sum(len(o.data.polygons) for o in meshes)} "
           f"triangles={tris()} meshes={len(meshes)} "

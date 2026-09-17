@@ -6,6 +6,8 @@ coverage/
 !.env.example
 *.log
 npm-debug.log*
+__pycache__/
+*.py[cod]
 .DS_Store
 Thumbs.db
 .idea/

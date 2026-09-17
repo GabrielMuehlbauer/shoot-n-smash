@@ -134,21 +134,31 @@ npm test
 O procedimento completo está no
 [guia de teste da Fase 25](docs/phases/phase-25-testes-otimizacao.md#matriz-de-validação-manual).
 
-## Modelo do chefão Ice Golem
+## Modelos Ice Golem
 
-O chefão usa o modelo em `client/public/assets/models/ice_golem.glb`. Os demais
-inimigos continuam com o visual procedural. Para regenerar o modelo na raiz do
-projeto, instale o Blender no Windows e abra um novo terminal:
+O chefão preserva o modelo em `client/public/assets/models/ice_golem.glb`. O
+inimigo fraco da primeira onda usa a variante baseada na referência chibi em
+`client/public/assets/models/ice_golem_weak.glb`. O inimigo médio (monstro 2)
+usa `client/public/assets/models/ice_golem_medium.glb` e o resistente (monstro 3)
+usa `client/public/assets/models/ice_golem_resistant.glb`. Para regenerar os
+modelos na raiz do projeto, instale o Blender no Windows e abra um novo terminal:
 
 ```powershell
 winget install --id BlenderFoundation.Blender --exact
 blender --background --python generate_ice_golem.py
+blender --background --python generate_ice_golem_medium.py
+blender --background --python generate_ice_golem_resistant.py
 ```
 
-Se `blender` não estiver no PATH, execute o mesmo comando com o caminho completo
-do `blender.exe`. O script grava `ice_golem.blend` e `ice_golem.glb` ao lado dele e
-copia o GLB para os assets do cliente. O modelo usa quatro materiais PBR, rig de
-18 ossos e aproximadamente 84 mil triângulos.
+Se `blender` não estiver no PATH, use o caminho completo, normalmente
+`C:\Program Files\Blender Foundation\Blender 4.5\blender.exe`. O script grava
+`ice_golem.blend`, `ice_golem.glb` e `ice_golem_preview.png` ao lado dele e copia
+o GLB para os assets do cliente com o nome `ice_golem_weak.glb`. O modelo usa
+quatro materiais PBR, rig de 18 ossos e aproximadamente 84 mil triângulos. O
+segundo script gera `ice_golem_medium.blend`, `ice_golem_medium.glb`, a prévia
+correspondente e copia o GLB de aproximadamente 93 mil triângulos para o cliente.
+O terceiro gera os arquivos `ice_golem_resistant`, com rochas escuras, placas de
+gelo, fissuras emissivas e aproximadamente 104 mil triângulos.
 
 ## Scripts
 

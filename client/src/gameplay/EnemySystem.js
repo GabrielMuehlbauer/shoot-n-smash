@@ -13,10 +13,33 @@ import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import {
   BOSS_GOLEM_GAME_HEIGHT,
   BOSS_GOLEM_SOURCE_HEIGHT,
+  createBossGolemRig,
   disposeBossGolemAsset,
   loadBossGolemAsset,
+  updateBossGolemPose,
 } from './BossGolemAsset.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
+import {
+  createMediumGolemRig,
+  disposeMediumGolemAsset,
+  loadMediumGolemAsset,
+  MEDIUM_GOLEM_GAME_HEIGHT,
+  MEDIUM_GOLEM_SOURCE_HEIGHT,
+} from './MediumGolemAsset.js';
+import {
+  createResistantGolemRig,
+  disposeResistantGolemAsset,
+  loadResistantGolemAsset,
+  RESISTANT_GOLEM_GAME_HEIGHT,
+  RESISTANT_GOLEM_SOURCE_HEIGHT,
+} from './ResistantGolemAsset.js';
+import {
+  createWeakGolemRig,
+  disposeWeakGolemAsset,
+  loadWeakGolemAsset,
+  WEAK_GOLEM_GAME_HEIGHT,
+  WEAK_GOLEM_SOURCE_HEIGHT,
+} from './WeakGolemAsset.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const FULL_CIRCLE = Math.PI * 2;
@@ -166,6 +189,9 @@ export class EnemySystem extends Group {
     onPlayerContact = () => {},
     onResistanceChange = () => {},
     bossAssetLoader = globalThis.document ? new GLTFLoader() : null,
+    weakAssetLoader = globalThis.document ? new GLTFLoader() : null,
+    mediumAssetLoader = globalThis.document ? new GLTFLoader() : null,
+    resistantAssetLoader = globalThis.document ? new GLTFLoader() : null,
   } = {}) {
     super();
 
@@ -211,9 +237,26 @@ export class EnemySystem extends Group {
     this.bossAssetLoader = bossAssetLoader;
     this.bossAssetPromise = null;
     this.bossAsset = null;
+    this.bossRig = null;
     this.bossAssetError = null;
+    this.weakAssetLoader = weakAssetLoader;
+    this.weakAssetPromise = null;
+    this.weakAsset = null;
+    this.weakRig = null;
+    this.weakAssetError = null;
+    this.mediumAssetLoader = mediumAssetLoader;
+    this.mediumAssetPromise = null;
+    this.mediumAsset = null;
+    this.mediumRig = null;
+    this.mediumAssetError = null;
+    this.resistantAssetLoader = resistantAssetLoader;
+    this.resistantAssetPromise = null;
+    this.resistantAsset = null;
+    this.resistantRig = null;
+    this.resistantAssetError = null;
 
     this.createVisual();
+    this.syncModelAssets();
     this.placeAtSpawn();
     this.scene.add(this);
   }
@@ -546,9 +589,18 @@ export class EnemySystem extends Group {
           disposeBossGolemAsset(asset);
           return;
         }
+        let rig;
+        try {
+          rig = createBossGolemRig(asset);
+        } catch (error) {
+          disposeBossGolemAsset(asset);
+          throw error;
+        }
         this.bossAsset = asset;
+        this.bossRig = rig;
         this.visual.add(asset);
-        this.syncBossAsset();
+        this.syncModelAssets();
+        this.updateMotionVisual();
       })
       .catch((error) => {
         this.bossAssetError = error;
@@ -556,22 +608,138 @@ export class EnemySystem extends Group {
       });
   }
 
-  syncBossAsset() {
+  requestWeakAsset() {
+    if (!this.weakAssetLoader || this.weakAssetPromise) return;
+    this.weakAssetPromise = loadWeakGolemAsset({ loader: this.weakAssetLoader })
+      .then((asset) => {
+        if (this.disposed) {
+          disposeWeakGolemAsset(asset);
+          return;
+        }
+        let rig;
+        try {
+          rig = createWeakGolemRig(asset);
+        } catch (error) {
+          disposeWeakGolemAsset(asset);
+          throw error;
+        }
+        this.weakAsset = asset;
+        this.weakRig = rig;
+        this.visual.add(asset);
+        this.syncModelAssets();
+        this.updateMotionVisual();
+      })
+      .catch((error) => {
+        this.weakAssetError = error;
+        console.warn('Falha ao carregar o modelo do golem fraco:', error);
+      });
+  }
+
+  requestMediumAsset() {
+    if (!this.mediumAssetLoader || this.mediumAssetPromise) return;
+    this.mediumAssetPromise = loadMediumGolemAsset({ loader: this.mediumAssetLoader })
+      .then((asset) => {
+        if (this.disposed) {
+          disposeMediumGolemAsset(asset);
+          return;
+        }
+        let rig;
+        try {
+          rig = createMediumGolemRig(asset);
+        } catch (error) {
+          disposeMediumGolemAsset(asset);
+          throw error;
+        }
+        this.mediumAsset = asset;
+        this.mediumRig = rig;
+        this.visual.add(asset);
+        this.syncModelAssets();
+        this.updateMotionVisual();
+      })
+      .catch((error) => {
+        this.mediumAssetError = error;
+        console.warn('Falha ao carregar o modelo do golem médio:', error);
+      });
+  }
+
+  requestResistantAsset() {
+    if (!this.resistantAssetLoader || this.resistantAssetPromise) return;
+    this.resistantAssetPromise = loadResistantGolemAsset({ loader: this.resistantAssetLoader })
+      .then((asset) => {
+        if (this.disposed) {
+          disposeResistantGolemAsset(asset);
+          return;
+        }
+        let rig;
+        try {
+          rig = createResistantGolemRig(asset);
+        } catch (error) {
+          disposeResistantGolemAsset(asset);
+          throw error;
+        }
+        this.resistantAsset = asset;
+        this.resistantRig = rig;
+        this.visual.add(asset);
+        this.syncModelAssets();
+        this.updateMotionVisual();
+      })
+      .catch((error) => {
+        this.resistantAssetError = error;
+        console.warn('Falha ao carregar o modelo do golem resistente:', error);
+      });
+  }
+
+  syncModelAssets() {
     const boss = this.enemyType.id === 'boss';
+    const weak = this.enemyType.id === 'weak';
+    const medium = this.enemyType.id === 'medium';
+    const resistant = this.enemyType.id === 'resistant';
     if (boss) this.requestBossAsset();
+    if (weak) this.requestWeakAsset();
+    if (medium) this.requestMediumAsset();
+    if (resistant) this.requestResistantAsset();
+    const externalAssetVisible =
+      (boss && this.bossAsset) ||
+      (weak && this.weakAsset) ||
+      (medium && this.mediumAsset) ||
+      (resistant && this.resistantAsset);
     for (const part of this.proceduralParts) {
-      if (boss && this.bossAsset) {
+      if (externalAssetVisible) {
         if (part.parent === this.visual) this.visual.remove(part);
       } else if (part.parent !== this.visual) {
         this.visual.add(part);
       }
     }
-    if (!this.bossAsset) return;
-    this.bossAsset.visible = boss;
-    this.bossAsset.position.set(0, -this.config.radius, 0);
-    this.bossAsset.scale.setScalar(
-      BOSS_GOLEM_GAME_HEIGHT / (BOSS_GOLEM_SOURCE_HEIGHT * this.currentVisualScale),
-    );
+    if (this.bossAsset) {
+      this.bossAsset.visible = boss;
+      this.bossAsset.position.set(0, -this.config.radius, 0);
+      this.bossAsset.scale.setScalar(
+        BOSS_GOLEM_GAME_HEIGHT / (BOSS_GOLEM_SOURCE_HEIGHT * this.currentVisualScale),
+      );
+    }
+    if (this.weakAsset) {
+      this.weakAsset.visible = weak;
+      this.weakAsset.position.set(0, -this.config.radius, 0);
+      this.weakAsset.scale.setScalar(
+        WEAK_GOLEM_GAME_HEIGHT / (WEAK_GOLEM_SOURCE_HEIGHT * this.currentVisualScale),
+      );
+    }
+    if (this.mediumAsset) {
+      this.mediumAsset.visible = medium;
+      this.mediumAsset.position.set(0, -this.config.radius, 0);
+      this.mediumAsset.scale.setScalar(
+        MEDIUM_GOLEM_GAME_HEIGHT /
+          (MEDIUM_GOLEM_SOURCE_HEIGHT * this.currentVisualScale),
+      );
+    }
+    if (this.resistantAsset) {
+      this.resistantAsset.visible = resistant;
+      this.resistantAsset.position.set(0, -this.config.radius, 0);
+      this.resistantAsset.scale.setScalar(
+        RESISTANT_GOLEM_GAME_HEIGHT /
+          (RESISTANT_GOLEM_SOURCE_HEIGHT * this.currentVisualScale),
+      );
+    }
   }
 
   syncTypeVisual() {
@@ -919,7 +1087,33 @@ export class EnemySystem extends Group {
       this.enemyType.id === 'boss'
         ? this.currentVisualScale * this.config.radius - this.currentSpawnHeight
         : (this.currentVisualScale - 1) * this.config.radius;
-    this.visual.position.y = groundOffset + motion * animation.bobAmplitude;
+    let verticalMotion = motion * animation.bobAmplitude;
+    if (this.enemyType.id === 'boss' && this.bossRig) {
+      const bossPose = updateBossGolemPose(this.bossRig, {
+        phase: phase * 0.58,
+        moving: this.isMoving,
+      });
+      verticalMotion = bossPose.verticalOffset;
+    } else if (this.enemyType.id === 'weak' && this.weakRig) {
+      const weakPose = updateBossGolemPose(this.weakRig, {
+        phase: phase * 0.9,
+        moving: this.isMoving,
+      });
+      verticalMotion = weakPose.verticalOffset * 0.65;
+    } else if (this.enemyType.id === 'medium' && this.mediumRig) {
+      const mediumPose = updateBossGolemPose(this.mediumRig, {
+        phase: phase * 0.72,
+        moving: this.isMoving,
+      });
+      verticalMotion = mediumPose.verticalOffset * 0.82;
+    } else if (this.enemyType.id === 'resistant' && this.resistantRig) {
+      const resistantPose = updateBossGolemPose(this.resistantRig, {
+        phase: phase * 0.62,
+        moving: this.isMoving,
+      });
+      verticalMotion = resistantPose.verticalOffset * 0.9;
+    }
+    this.visual.position.y = groundOffset + verticalMotion;
     this.leftArm.rotation.x = motion * animation.limbSwingAmplitude;
     this.rightArm.rotation.x = -motion * animation.limbSwingAmplitude;
     this.leftLeg.rotation.x = -motion * animation.limbSwingAmplitude * 0.28;
@@ -1031,7 +1225,7 @@ export class EnemySystem extends Group {
 
   updateVisualState() {
     this.syncTypeVisual();
-    this.syncBossAsset();
+    this.syncModelAssets();
 
     if (this.currentResistance === 0) {
       this.iceMaterial.color.setHex(this.config.colors.destroyed);
@@ -1131,6 +1325,25 @@ export class EnemySystem extends Group {
       disposeBossGolemAsset(this.bossAsset);
       this.visual.remove(this.bossAsset);
       this.bossAsset = null;
+      this.bossRig = null;
+    }
+    if (this.weakAsset) {
+      disposeWeakGolemAsset(this.weakAsset);
+      this.visual.remove(this.weakAsset);
+      this.weakAsset = null;
+      this.weakRig = null;
+    }
+    if (this.mediumAsset) {
+      disposeMediumGolemAsset(this.mediumAsset);
+      this.visual.remove(this.mediumAsset);
+      this.mediumAsset = null;
+      this.mediumRig = null;
+    }
+    if (this.resistantAsset) {
+      disposeResistantGolemAsset(this.resistantAsset);
+      this.visual.remove(this.resistantAsset);
+      this.resistantAsset = null;
+      this.resistantRig = null;
     }
 
     for (const geometry of this.geometries) {
