@@ -156,9 +156,11 @@ Se `blender` não estiver no PATH, use o caminho completo, normalmente
 o GLB para os assets do cliente com o nome `ice_golem_weak.glb`. O modelo usa
 quatro materiais PBR, rig de 18 ossos e aproximadamente 84 mil triângulos. O
 segundo script gera `ice_golem_medium.blend`, `ice_golem_medium.glb`, a prévia
-correspondente e copia o GLB de aproximadamente 93 mil triângulos para o cliente.
+correspondente e copia o GLB de aproximadamente 96 mil triângulos para o cliente.
 O terceiro gera os arquivos `ice_golem_resistant`, com rochas escuras, placas de
-gelo, fissuras emissivas e aproximadamente 104 mil triângulos.
+gelo, fissuras emissivas e aproximadamente 111 mil triângulos. Cada gerador
+também renderiza vistas `preview_front`, `preview_3q` e `preview_side` para a
+revisão visual de olhos, peito e silhueta antes de usar o GLB no jogo.
 
 ## Scripts
 

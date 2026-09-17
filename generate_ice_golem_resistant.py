@@ -31,6 +31,7 @@ B = base.B
 ellipsoid = base.ellipsoid
 loft = base.loft
 plate = base.plate
+armor_plate = base.armor_plate
 shard = base.shard
 glowing_crack = base.glowing_crack
 
@@ -38,23 +39,29 @@ glowing_crack = base.glowing_crack
 # Dense, dark stone under-body. The pale ice pieces below overlap it like armor
 # instead of reading as a collection of disconnected primitive spheres.
 loft(B("Body", "Ice_Dark"), (0, .08, 1.48), (0, .08, 3.20),
-     .67, .45, .96, .57, sides=64, rings=48, seed=300, bulge=.10)
-ellipsoid(B("Body", "Ice_Dark", "Chest"), (0, .08, 2.58),
-          (1.03, .56, .86), 56, 38, 301)
+     .69, .39, 1.00, .47, sides=64, rings=48, seed=300, bulge=.08)
+loft(B("Body", "Ice_Base", "Chest"), (0, .06, 1.70), (0, .06, 3.17),
+     .70, .34, 1.03, .44, sides=64, rings=44, seed=301, bulge=.06)
 
 # Interlocking heart-shaped chest armor, abdominal boulders and side plates.
 for side in (-1, 1):
-    ellipsoid(B("Body", "Ice_Light", "Chest"),
-              (side * .47, -.48, 2.86), (.56, .22, .53), 48, 32, 303 + side)
+    armor_plate(B("Body", "Ice_Base", "Chest"),
+                (side * .47, -.39, 2.83), 1.02, .82, .11, side * .08)
+    armor_plate(B("Body", "Ice_Light", "Chest"),
+                (side * .49, -.48, 3.04), .74, .38, .052, side * .15)
+    armor_plate(B("Body", "Ice_Light", "Chest"),
+                (side * .38, -.475, 2.72), .58, .32, .046, side * .07)
     plate(B("Body", "Ice_Base", "Chest"),
-          (side * .34, -.655, 2.78), .55, .63, .055, side * .10)
+          (side * .65, -.50, 2.73), .34, .46, .035, side * .16)
     for row in range(3):
         ellipsoid(B("Body", "Ice_Dark", "Spine" if row else "Pelvis"),
-                  (side * (.23 + .09 * (row == 0)), -.48, 1.86 + row * .34),
-                  (.31, .18, .25), 30, 20, 310 + row * 3 + side)
+                  (side * (.23 + .09 * (row == 0)), -.37, 1.86 + row * .34),
+                  (.31, .115, .25), 30, 20, 310 + row * 3 + side)
         plate(B("Body", "Ice_Base", "Spine" if row else "Pelvis"),
-              (side * (.30 + .04 * row), -.625, 1.86 + row * .35),
+              (side * (.30 + .04 * row), -.49, 1.86 + row * .35),
               .31, .32, .045, side * (.10 + row * .03))
+armor_plate(B("Body", "Ice_Dark", "Chest"),
+            (0, -.45, 2.72), .18, .82, .025, .0)
 
 # Small aggressive helmeted head, faceted mask and a dominant crown crystal.
 ellipsoid(B("Head", "Ice_Dark", "Head"), (0, -.02, 3.43),
@@ -63,8 +70,10 @@ plate(B("Head", "Ice_Base", "Head"), (0, -.37, 3.47), .64, .50, .06)
 for side in (-1, 1):
     plate(B("Head", "Ice_Light", "Head"),
           (side * .20, -.425, 3.57), .30, .24, .035, side * .13)
+    plate(B("Head", "Ice_Dark", "Head"),
+          (side * .17, -.448, 3.49), .27, .15, .022, side * .19)
     ellipsoid(B("Head", "Ice_Emission", "Head"),
-              (side * .17, -.465, 3.48), (.115, .040, .066), 22, 14, 322 + side)
+              (side * .17, -.473, 3.48), (.095, .021, .052), 22, 14, 322 + side)
     shard(B("Head", "Ice_Dark", "Head"),
           (side * .03, -.44, 3.70), (side * .35, -.46, 3.61),
           .075, .05, sides=7, twist=side * .22)
@@ -107,6 +116,7 @@ for side, name, suffix in ((-1, "Shoulder_L", "L"), (1, "Shoulder_R", "R")):
         (1.17, 3.17, .67, .15), (1.37, 3.01, .49, .12),
     ]
     for i, (x, z, height, width) in enumerate(shoulder_blades):
+        height += .06 if side < 0 and i == 2 else -.03 if side > 0 and i == 3 else 0
         shard(B(name, "Ice_Light" if i in (0, 2) else "Ice_Base",
                 f"UpperArm_{suffix}"),
               (side * x, .10 + .025 * i, z),
@@ -215,15 +225,15 @@ for side in (-1, 1):
 shard(B("Waist_Armor", "Ice_Light", "Pelvis"),
       (0, -.61, 1.76), (0, -.72, 1.02), .25, .15, sides=9, twist=.10)
 shard(B("Chest_Core", "Ice_Emission", "Chest"),
-      (0, -.675, 2.73), (0, -.72, 2.30), .105, .065, sides=8)
+      (0, -.56, 2.73), (0, -.60, 2.30), .105, .065, sides=8)
 for side in (-1, 1):
     glowing_crack(B("Chest_Core", "Ice_Emission", "Chest"),
-                  [(0, -.67, 2.76), (side * .17, -.68, 2.64),
-                   (side * .38, -.65, 2.70), (side * .62, -.58, 2.54),
-                   (side * .79, -.50, 2.62)], .021)
+                  [(0, -.575, 2.76), (side * .17, -.58, 2.64),
+                   (side * .38, -.57, 2.70), (side * .62, -.53, 2.54),
+                   (side * .79, -.48, 2.62)], .021)
     glowing_crack(B("Chest_Core", "Ice_Emission", "Spine"),
-                  [(0, -.65, 2.33), (side * .13, -.66, 2.18),
-                   (side * .08, -.65, 2.00)], .017)
+                  [(0, -.56, 2.33), (side * .13, -.565, 2.18),
+                   (side * .08, -.55, 2.00)], .017)
 
 
 if __name__ == "__main__":

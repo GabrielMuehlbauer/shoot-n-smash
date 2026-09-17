@@ -35,26 +35,35 @@ B = base.B
 ellipsoid = base.ellipsoid
 loft = base.loft
 plate = base.plate
+armor_plate = base.armor_plate
 shard = base.shard
 curved_horn = base.curved_horn
 glowing_crack = base.glowing_crack
 
 
-# Wide inverted-triangle torso with separate pectorals and layered abdominal ice.
+# Wide inverted-triangle torso with a continuous ribcage and shallow armor.
 loft(B("Body", "Ice_Dark"), (0, .05, 1.55), (0, .05, 3.18),
-     .66, .42, .92, .54, sides=64, rings=50, seed=120, bulge=.13)
-ellipsoid(B("Body"), (0, .01, 2.43), (1.02, .58, .94), 64, 44, 121)
+     .66, .36, .94, .44, sides=64, rings=50, seed=120, bulge=.10)
+loft(B("Body"), (0, .04, 1.72), (0, .04, 3.17),
+     .62, .32, .98, .42, sides=64, rings=46, seed=121, bulge=.08)
 for side in (-1, 1):
-    ellipsoid(B("Body", "Ice_Light", "Chest"),
-              (side * .47, -.49, 2.88), (.58, .22, .38), 42, 28, 122 + side)
+    armor_plate(B("Body", "Ice_Base", "Chest"),
+                (side * .43, -.39, 2.87), .96, .72, .10, side * .09)
+    armor_plate(B("Body", "Ice_Light", "Chest"),
+                (side * .46, -.47, 3.02), .70, .34, .050, side * .16)
+    armor_plate(B("Body", "Ice_Light", "Chest"),
+                (side * .36, -.465, 2.73), .52, .27, .043, side * .08)
     for row in range(3):
         ellipsoid(B("Body", "Ice_Base", "Spine" if row > 1 else "Pelvis"),
-                  (side * .23, -.54, 1.93 + row * .32),
-                  (.28, .12, .23), 26, 18, 126 + row + side)
-    for i in range(4):
+                  (side * .23, -.39, 1.93 + row * .32),
+                  (.28, .10, .23), 26, 18, 126 + row + side)
+    for i in range(3):
         plate(B("Body", "Ice_Base", "Chest"),
-              (side * (.23 + i * .19), -.56, 3.04 - .10 * i),
-              .28, .31, .045, side * .16)
+              (side * (.22 + i * .22), -.49, 3.10 - .11 * i),
+              .27, .28, .034, side * (.13 + i * .02))
+# A narrow inset between the two slabs houses the core and keeps the sternum deep.
+armor_plate(B("Body", "Ice_Dark", "Chest"),
+            (0, -.435, 2.77), .16, .73, .025, .0)
 
 # Compact aggressive head, glowing eyes, heavy brows and ice-fang mouth.
 ellipsoid(B("Head", "Ice_Base", "Head"), (0, -.02, 3.45),
@@ -62,8 +71,10 @@ ellipsoid(B("Head", "Ice_Base", "Head"), (0, -.02, 3.45),
 for side in (-1, 1):
     plate(B("Head", "Ice_Light", "Head"),
           (side * .21, -.405, 3.50), .34, .28, .04, side * .12)
+    plate(B("Head", "Ice_Dark", "Head"),
+          (side * .18, -.438, 3.51), .29, .17, .022, side * .18)
     ellipsoid(B("Head", "Ice_Emission", "Head"),
-              (side * .18, -.465, 3.51), (.12, .045, .09), 24, 16, 138 + side)
+              (side * .18, -.468, 3.51), (.105, .025, .065), 24, 16, 138 + side)
     shard(B("Head", "Ice_Base", "Head"),
           (side * .03, -.47, 3.70), (side * .39, -.48, 3.61),
           .08, .055, sides=7, twist=side * .2)
@@ -108,6 +119,7 @@ for side, name, suffix in ((-1, "Shoulder_L", "L"), (1, "Shoulder_R", "R")):
     crystal_data = [(.76, 3.04, .47), (.97, 3.15, .70), (1.18, 3.04, .58),
                     (1.35, 2.87, .43)]
     for i, (x, z, height) in enumerate(crystal_data):
+        height += .05 if side > 0 and i == 1 else -.025 if side < 0 and i == 3 else 0
         shard(B(name, "Ice_Light" if i in (0, 2) else "Ice_Base",
                 f"UpperArm_{suffix}"),
               (side * x, .10 + .04 * i, z),
@@ -185,11 +197,11 @@ shard(B("Waist_Armor", "Ice_Emission", "Pelvis"),
 
 # Chest core and restrained branching fissures keep the face as the focal point.
 shard(B("Chest_Core", "Ice_Emission", "Chest"),
-      (0, -.62, 2.66), (0, -.69, 2.30), .115, .08, sides=8)
+      (0, -.535, 2.66), (0, -.575, 2.30), .115, .08, sides=8)
 for side in (-1, 1):
     glowing_crack(B("Chest_Core", "Ice_Emission", "Chest"),
-                  [(0, -.64, 2.68), (side * .18, -.65, 2.57),
-                   (side * .39, -.61, 2.62), (side * .61, -.54, 2.48)], .017)
+                  [(0, -.555, 2.68), (side * .18, -.56, 2.57),
+                   (side * .39, -.55, 2.62), (side * .61, -.50, 2.48)], .017)
 
 
 def make_rig(root):
@@ -259,8 +271,6 @@ def render_preview():
     camera_data = bpy.data.cameras.new("Medium_Preview_Camera")
     camera = bpy.data.objects.new("Medium_Preview_Camera", camera_data)
     bpy.context.collection.objects.link(camera)
-    camera.location = (5.4, -9.5, 4.0)
-    camera.rotation_euler = (Vector((0, 0, 2.2)) - camera.location).to_track_quat("-Z", "Y").to_euler()
     camera_data.lens = 62
     scene = bpy.context.scene
     scene.camera = camera
@@ -268,9 +278,21 @@ def render_preview():
     scene.render.resolution_x = scene.render.resolution_y = 768
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
-    scene.render.filepath = str(OUT / f"{OUTPUT_STEM}_preview.png")
     scene.view_settings.look = "AgX - Medium High Contrast"
-    bpy.ops.render.render(write_still=True)
+    views = (
+        ("front", (0, -10.2, 2.45)),
+        ("3q", (5.4, -9.5, 4.0)),
+        ("side", (10.2, 0, 2.45)),
+    )
+    for label, location in views:
+        camera.location = location
+        camera.rotation_euler = (
+            Vector((0, 0, 2.2)) - camera.location
+        ).to_track_quat("-Z", "Y").to_euler()
+        scene.render.filepath = str(OUT / f"{OUTPUT_STEM}_preview_{label}.png")
+        bpy.ops.render.render(write_still=True)
+    shutil.copyfile(OUT / f"{OUTPUT_STEM}_preview_3q.png",
+                    OUT / f"{OUTPUT_STEM}_preview.png")
 
 
 def main():
@@ -297,6 +319,8 @@ def main():
             mesh = bpy.data.meshes.new("Temporary_Medium_Refinement")
             mesh.from_pydata(builder.verts, [], builder.faces)
             mesh.update()
+            for polygon, smooth in zip(mesh.polygons, builder.face_smooth):
+                polygon.material_index = 0 if smooth else 1
             bm = bmesh.new()
             bm.from_mesh(mesh)
             bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=1, use_grid_fill=True)
@@ -304,6 +328,7 @@ def main():
             bm.free()
             builder.verts = [tuple(v.co) for v in mesh.vertices]
             builder.faces = [tuple(p.vertices) for p in mesh.polygons]
+            builder.face_smooth = [p.material_index == 0 for p in mesh.polygons]
             bpy.data.meshes.remove(mesh)
 
     meshes = []
@@ -314,21 +339,23 @@ def main():
             raise RuntimeError(f"Peça sem geometria: {category}")
         material_names = [name for name in base.MATS if any(b.mat == name for b in pieces)]
         material_indices = {name: i for i, name in enumerate(material_names)}
-        verts, faces, face_materials, vertex_bones = [], [], [], []
+        verts, faces, face_materials, face_smooth, vertex_bones = [], [], [], [], []
         for builder in pieces:
             offset = len(verts)
             verts.extend(tuple(v * base.MODEL_SCALE for v in point) for point in builder.verts)
             faces.extend(tuple(offset + i for i in face) for face in builder.faces)
             face_materials.extend([material_indices[builder.mat]] * len(builder.faces))
+            face_smooth.extend(builder.face_smooth)
             vertex_bones.extend([builder.bone] * len(builder.verts))
         mesh = bpy.data.meshes.new(category + "_Geometry")
         mesh.from_pydata(verts, [], faces)
         mesh.update()
         for name in material_names:
             mesh.materials.append(base.MATS[name])
-        for polygon, material_index in zip(mesh.polygons, face_materials):
+        for polygon, material_index, smooth in zip(
+                mesh.polygons, face_materials, face_smooth):
             polygon.material_index = material_index
-            polygon.use_smooth = category in smooth_parts
+            polygon.use_smooth = category in smooth_parts and smooth
         obj = bpy.data.objects.new(category, mesh)
         bpy.context.collection.objects.link(obj)
         obj.parent = arm

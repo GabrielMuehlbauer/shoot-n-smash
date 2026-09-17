@@ -62,11 +62,13 @@ class MeshBuilder:
         self.bone = bone
         self.verts = []
         self.faces = []
+        self.face_smooth = []
 
-    def add(self, verts, faces):
+    def add(self, verts, faces, flat=False):
         offset = len(self.verts)
         self.verts.extend(tuple(v) for v in verts)
         self.faces.extend(tuple(offset + i for i in face) for face in faces)
+        self.face_smooth.extend([not flat] * len(faces))
 
     @property
     def triangles(self):
@@ -199,6 +201,41 @@ def plate(builder, center, wide, tall, depth, skew=0, normal=(0, -1, 0)):
     for i in range(n):
         faces.append((n + i, n + (i + 1) % n, len(verts) - 1))
     builder.add(verts, faces)
+
+
+def armor_plate(builder, center, wide, tall, depth, skew=0,
+                normal=(0, -1, 0)):
+    """A shallow trapezoidal armor slab split into readable planar facets.
+
+    Unlike an ellipsoid this keeps the frontal silhouette broad while adding
+    very little depth.  The raised, slightly off-center ridge gives large chest
+    plates a sculpted crystalline break without requiring a texture map.
+    """
+    normal = Vector(normal).normalized()
+    u = Vector((1, 0, 0)) if abs(normal.y) > .5 else Vector((0, 1, 0))
+    v = Vector((0, 0, 1))
+    c = Vector(center)
+    outline = [(-.48, -.34), (-.30, -.55), (.24, -.58), (.48, -.31),
+               (.52, .24), (.29, .51), (-.25, .56), (-.52, .22)]
+    verts = []
+    for layer, factor in ((0, 1.0), (1, .91)):
+        for i, (dx, dz) in enumerate(outline):
+            p = c + u * (dx + skew * dz * .10) * wide * factor
+            p += v * dz * tall * factor
+            if layer:
+                p += normal * depth * (.68 + .08 * math.sin(i * 1.71 + skew))
+            verts.append(p)
+    ridge = c + normal * depth * .94 + u * skew * wide * .16
+    ridge += v * tall * .02
+    verts.append(ridge)
+    faces = []
+    count = len(outline)
+    for i in range(count):
+        a, b = i, (i + 1) % count
+        inner_a, inner_b = count + i, count + (i + 1) % count
+        faces.extend(((a, b, inner_a), (b, inner_b, inner_a)))
+        faces.append((inner_a, inner_b, len(verts) - 1))
+    builder.add(verts, faces, flat=True)
 
 
 def glowing_crack(builder, points, width=.018):
@@ -490,19 +527,22 @@ for side in (-1, 1):
     plate(B("Head", "Ice_Light", "Head"),
           (side * .40, -.744, 2.66), .50, .54, .038, side * .08)
 
-# Large layered eyes: pale sclera, cyan iris, dark pupil and tiny highlight.
+# Recessed family eyes: dark angular sockets, compact cyan ovals and heavy lids.
+# They stay slightly larger than the other stages without reading as spheres.
 for side in (-1, 1):
-    ellipsoid(B("Head", "Ice_Light", "Head"),
-              (side * .37, -.75, 2.68), (.32, .10, .38), 40, 30, 70 + side)
+    plate(B("Head", "Ice_Dark", "Head"),
+          (side * .31, -.762, 2.67), .37, .28, .024, side * .18)
     ellipsoid(B("Head", "Ice_Emission", "Head"),
-              (side * .37, -.842, 2.65), (.20, .055, .24), 32, 22, 72 + side)
+              (side * .31, -.795, 2.66), (.155, .026, .115), 28, 18, 72 + side)
     ellipsoid(B("Head", "Ice_Dark", "Head"),
-              (side * .37, -.887, 2.68), (.105, .035, .15), 28, 20, 74 + side)
+              (side * .31, -.821, 2.66), (.062, .012, .068), 22, 14, 74 + side)
     ellipsoid(B("Head", "Ice_Light", "Head"),
-              (side * .33, -.92, 2.80), (.040, .018, .052), 16, 12, 76 + side)
-    # Strong angular brow gives the otherwise cute face an aggressive focus.
+              (side * .285, -.834, 2.705), (.022, .007, .025), 12, 8, 76 + side)
+    plate(B("Head", "Ice_Base", "Head"),
+          (side * .31, -.806, 2.765), .31, .14, .026, side * .22)
+    # The inner edge sits lower, producing curiosity with an aggressive focus.
     shard(B("Head", "Ice_Base", "Head"),
-          (side * .10, -.83, 2.98), (side * .57, -.85, 3.10), .080, .055,
+          (side * .075, -.800, 2.865), (side * .53, -.812, 3.025), .092, .060,
           sides=7, twist=side * .14)
 
 # Smiling dark mouth with icy lip, tongue glint and six small teeth.
@@ -702,9 +742,6 @@ def render_preview():
     camera_data = bpy.data.cameras.new("Preview_Camera")
     camera = bpy.data.objects.new("Preview_Camera", camera_data)
     bpy.context.collection.objects.link(camera)
-    camera.location = (5.9, -8.4, 3.8)
-    camera.rotation_euler = (Vector((0, 0, 2.15)) - camera.location).to_track_quat(
-        "-Z", "Y").to_euler()
     camera_data.lens = 58
     bpy.context.scene.camera = camera
 
@@ -714,10 +751,22 @@ def render_preview():
     scene.render.resolution_y = 768
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
-    scene.render.filepath = str(OUT / "ice_golem_preview.png")
     scene.render.film_transparent = False
     scene.view_settings.look = "AgX - Medium High Contrast"
-    bpy.ops.render.render(write_still=True)
+    views = (
+        ("front", (0, -9.6, 2.35)),
+        ("3q", (5.9, -8.4, 3.8)),
+        ("side", (9.6, 0, 2.35)),
+    )
+    for label, location in views:
+        camera.location = location
+        camera.rotation_euler = (
+            Vector((0, 0, 2.15)) - camera.location
+        ).to_track_quat("-Z", "Y").to_euler()
+        scene.render.filepath = str(OUT / f"ice_golem_preview_{label}.png")
+        bpy.ops.render.render(write_still=True)
+    shutil.copyfile(OUT / "ice_golem_preview_3q.png",
+                    OUT / "ice_golem_preview.png")
 
 
 def main():
@@ -747,6 +796,8 @@ def main():
             mesh = bpy.data.meshes.new("Temporary_Refinement")
             mesh.from_pydata(builder.verts, [], builder.faces)
             mesh.update()
+            for polygon, smooth in zip(mesh.polygons, builder.face_smooth):
+                polygon.material_index = 0 if smooth else 1
             bm = bmesh.new()
             bm.from_mesh(mesh)
             bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=1,
@@ -756,6 +807,7 @@ def main():
             mesh.update()
             builder.verts = [tuple(v.co) for v in mesh.vertices]
             builder.faces = [tuple(p.vertices) for p in mesh.polygons]
+            builder.face_smooth = [p.material_index == 0 for p in mesh.polygons]
             bpy.data.meshes.remove(mesh)
 
     meshes = []
@@ -767,7 +819,7 @@ def main():
         material_names = [name for name in MATS
                           if any(b.mat == name for b in pieces)]
         material_indices = {name: i for i, name in enumerate(material_names)}
-        verts, faces, face_materials, vertex_bones = [], [], [], []
+        verts, faces, face_materials, face_smooth, vertex_bones = [], [], [], [], []
         for builder in pieces:
             offset = len(verts)
             verts.extend(tuple(v * MODEL_SCALE for v in point)
@@ -775,6 +827,7 @@ def main():
             faces.extend(tuple(offset + i for i in face)
                          for face in builder.faces)
             face_materials.extend([material_indices[builder.mat]] * len(builder.faces))
+            face_smooth.extend(builder.face_smooth)
             vertex_bones.extend([builder.bone] * len(builder.verts))
 
         mesh = bpy.data.meshes.new(category + "_Geometry")
@@ -786,9 +839,10 @@ def main():
             "Body", "Head", "Arm_L", "Arm_R", "Hand_L", "Hand_R",
             "Leg_L", "Leg_R", "Foot_L", "Foot_R",
         }
-        for polygon, material_index in zip(mesh.polygons, face_materials):
+        for polygon, material_index, smooth in zip(
+                mesh.polygons, face_materials, face_smooth):
             polygon.material_index = material_index
-            polygon.use_smooth = category in smooth_parts
+            polygon.use_smooth = category in smooth_parts and smooth
         obj = bpy.data.objects.new(category, mesh)
         bpy.context.collection.objects.link(obj)
         obj.parent = arm
