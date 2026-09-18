@@ -23,6 +23,7 @@ import { SNOW_ARENA_CONFIG } from '../config/snow-arena-config.js';
 import { resizeRendererToContainer } from '../utils/viewport.js';
 import { SnowArena } from '../world/SnowArena.js';
 import { disposeScenario, loadIceScenario } from '../world/IceScenario.js';
+import { SnowstormSystem } from '../world/SnowstormSystem.js';
 
 export class RenderContext {
   constructor(
@@ -63,6 +64,10 @@ export class RenderContext {
 
       this.createLights();
       this.createGround();
+      this.weatherSystem = new SnowstormSystem({
+        scene: this.scene,
+        camera: this.camera,
+      });
       this.loadFinalAssets();
       this.iceBeacon = this.createIceBeacon();
       this.connectResizeObserver();
@@ -216,8 +221,7 @@ export class RenderContext {
           this.snowArena = scenario;
           this.scene.add(scenario);
           if (this.iceBeacon?.parent) this.iceBeacon.parent.visible = false;
-          this.scene.background = new Color(0xb7cbea);
-          this.scene.fog = new Fog(0xb7cbea, 100, 350);
+          this.weatherSystem.applyAtmosphere();
           this.camera.far = 500;
           this.camera.updateProjectionMatrix();
           this.assetStatus = 'ready';
@@ -311,8 +315,13 @@ export class RenderContext {
 
   update(deltaSeconds) {
     this.snowArena?.update(deltaSeconds);
+    this.weatherSystem?.update(deltaSeconds);
     this.iceBeacon.rotation.y +=
       deltaSeconds * RENDER_CONFIG.loop.beaconRotationRadiansPerSecond;
+  }
+
+  setWeatherState(waveState) {
+    return this.weatherSystem?.setWaveState(waveState) ?? false;
   }
 
   render() {
@@ -330,6 +339,7 @@ export class RenderContext {
     this.resizeObserver?.disconnect();
     this.windowRef?.removeEventListener?.('resize', this.resize);
     this.assetLoadId += 1;
+    this.weatherSystem?.dispose();
 
     for (const texture of Object.values(this.finalTextures ?? {})) {
       texture.dispose?.();
