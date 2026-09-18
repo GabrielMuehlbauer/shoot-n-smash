@@ -35,8 +35,12 @@ function createFixture() {
     remove: 0,
   };
   const documentListeners = new Map();
-  const audioCalls = { dispose: 0 };
+  const audioCalls = { dispose: 0, proximity: [] };
   const audioSystem = {
+    updateEnemyProximity: (enemies, deltaSeconds) => {
+      audioCalls.proximity.push({ enemies, deltaSeconds });
+      frameOrder.push('audio');
+    },
     dispose: () => {
       audioCalls.dispose += 1;
       return true;
@@ -78,6 +82,7 @@ function createFixture() {
     },
   };
   const gameSession = {
+    enemyAudioStates: [{ distance: 8, pan: 0.5, typeId: 'weak' }],
     update: (deltaSeconds) => {
       gameSessionCalls.updates.push(deltaSeconds);
       frameOrder.push('gameplay');
@@ -189,13 +194,19 @@ test('limita o delta após uma pausa longa', () => {
   assert.deepEqual(fixture.frameOrder, [
     'xr',
     'gameplay',
+    'audio',
     'world',
     'render',
     'xr',
     'gameplay',
+    'audio',
     'world',
     'render',
   ]);
+  assert.deepEqual(
+    fixture.audioCalls.proximity.map(({ deltaSeconds }) => deltaSeconds),
+    [0, 0.05],
+  );
   assert.equal(fixture.renderContext.renderCalls, 2);
 });
 

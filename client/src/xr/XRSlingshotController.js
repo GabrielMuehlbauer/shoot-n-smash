@@ -16,9 +16,11 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import { calculateBallisticPoint } from '../gameplay/Ballistics.js';
+import { loadSlingshotAsset } from '../gameplay/SlingshotAsset.js';
 
 const CONTROLLER_COUNT = 2;
 const SLINGSHOT_HAND = 'left';
@@ -110,6 +112,8 @@ export class XRSlingshotController {
     onInputStateChange = () => {},
     config = GAMEPLAY_CONFIG.xr,
     projectileConfig = GAMEPLAY_CONFIG.projectile,
+    assetLoader = globalThis.document ? new GLTFLoader() : null,
+    slingshotAssetLoader = loadSlingshotAsset,
   } = {}) {
     if (!renderer?.xr?.getController) {
       throw new Error('XRSlingshotController requer um renderer WebXR.');
@@ -141,6 +145,7 @@ export class XRSlingshotController {
     this.onChargeRelease = onChargeRelease;
     this.onChargeCancel = onChargeCancel;
     this.onInputStateChange = onInputStateChange;
+    this.slingshotAssetLoader = slingshotAssetLoader;
     this.controllers = [];
     this.resources = new Set();
     this.connected = false;
@@ -176,6 +181,10 @@ export class XRSlingshotController {
     try {
       this.visualRoot = this.createVisualRoot();
       this.scene.add(this.visualRoot);
+      this.assetStatus = assetLoader ? 'loading' : 'fallback';
+      this.assetLoadPromise = assetLoader
+        ? this.loadFinalSlingshotAsset(assetLoader)
+        : Promise.resolve(false);
       this.createControllers();
       this.syncVisibility();
     } catch (error) {
@@ -302,7 +311,8 @@ export class XRSlingshotController {
       end: this.localRightTip,
       name: 'xr-slingshot-right-arm',
     });
-    this.slingshotVisual.add(this.handleVisual, leftArm, rightArm);
+    this.fallbackFrame = [this.handleVisual, leftArm, rightArm];
+    this.slingshotVisual.add(...this.fallbackFrame);
     this.projectileVisual = new Mesh(ballGeometry, ballMaterial);
     this.projectileVisual.name = 'xr-slingshot-projectile';
     this.projectileMaterials = {
@@ -334,6 +344,51 @@ export class XRSlingshotController {
       this.aimMarker,
     );
     return root;
+  }
+
+  async loadFinalSlingshotAsset(loader) {
+    try {
+      const { visual } = this.config;
+      const asset = await this.slingshotAssetLoader({
+        config: {
+          pouch: {
+            y: visual.forkTipY * 0.38,
+            restZ: 0,
+          },
+        },
+        loader,
+        prepareOptions: {
+          overlay: false,
+          pullDirection: -1,
+          scale: 0.58,
+        },
+      });
+
+      if (this.disposed) {
+        asset.dispose();
+        return false;
+      }
+
+      this.asset = asset;
+      asset.scene.name = 'xr-slingshot-final-asset';
+      this.slingshotVisual.add(asset.scene);
+      for (const object of this.fallbackFrame) {
+        object.visible = false;
+      }
+      asset.setPull(0);
+      this.assetStatus = 'ready';
+      return true;
+    } catch (error) {
+      if (!this.disposed) {
+        this.assetStatus = 'error';
+        this.assetError = error;
+        console.warn(
+          'Não foi possível carregar o estilingue final no VR; usando o visual de reserva.',
+          error,
+        );
+      }
+      return false;
+    }
   }
 
   createControllers() {
@@ -593,6 +648,9 @@ export class XRSlingshotController {
   }
 
   updateVisuals() {
+    this.asset?.setPull(
+      this.charging ? this.lastRatio * this.config.visual.forkTipY * 1.55 : 0,
+    );
     this.projectileVisual.position.copy(this.projectilePosition);
     this.projectileVisual.material = this.projectileMaterials[this.ammoType];
     const positions = this.bandVisual.geometry.getAttribute('position');
@@ -722,7 +780,10 @@ export class XRSlingshotController {
     this.projectileVisual.visible =
       this.active && this.poseValid && this.charging;
     this.bandVisual.visible =
-      this.active && this.poseValid && this.charging;
+      this.active &&
+      this.poseValid &&
+      this.charging &&
+      this.assetStatus !== 'ready';
     this.trajectoryVisual.visible =
       this.active && this.poseValid && this.charging;
     this.aimMarker.visible = this.active && this.poseValid;
@@ -748,6 +809,11 @@ export class XRSlingshotController {
   }
 
   disposeResources() {
+    if (this.asset) {
+      this.asset.dispose();
+      this.asset = null;
+    }
+
     if (this.controllers) {
       for (const record of this.controllers) {
         record.object.removeEventListener?.('connected', record.onConnected);

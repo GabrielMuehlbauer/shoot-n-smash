@@ -39,6 +39,12 @@ test('liga a identidade sonora aos eventos principais do gameplay', () => {
     'shot',
     'hit',
     'enemy-defeat',
+    'enemy-spawn',
+    'wave-start',
+    'monster-weak',
+    'monster-medium',
+    'monster-resistant',
+    'monster-boss',
     'boss-arrival',
     'player-damage',
     'item',
@@ -54,6 +60,8 @@ test('liga a identidade sonora aos eventos principais do gameplay', () => {
     'shot',
     'hit',
     'enemy-defeat',
+    'enemy-spawn',
+    'wave-start',
     'boss-arrival',
     'player-damage',
     'item',
@@ -79,7 +87,7 @@ test('mantém a música ambiente no pacote em formato MP3', async () => {
   assert.ok(metadata.size > 1_024 * 1_024);
   assert.deepEqual(bytes.subarray(0, 3).toString('ascii'), 'ID3');
   assert.ok(BACKGROUND_MUSIC.volume > 0);
-  assert.equal(BACKGROUND_MUSIC.volume, 0.5);
+  assert.equal(BACKGROUND_MUSIC.volume, 0.28);
 });
 
 test('identifica classes por modelo, anima impacto e usa partículas', () => {

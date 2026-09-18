@@ -160,6 +160,24 @@ test('carrega de 0 a 1 e dispara na direção mundial da câmera', () => {
   session.dispose();
 });
 
+test('expõe distância e direção estéreo dos inimigos para o áudio', () => {
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    enemyRandom: () => 0,
+  });
+  session.enemySystem.position.set(6, session.enemySystem.position.y, 2);
+
+  const [audioState] = session.enemyAudioStates;
+
+  assert.equal(audioState.active, true);
+  assert.equal(audioState.typeId, 'weak');
+  assertAlmostEqual(audioState.distance, 5);
+  assertAlmostEqual(audioState.pan, 1);
+  assert.ok(Object.isFrozen(audioState));
+  session.dispose();
+});
+
 test('clique rápido usa velocidade mínima e cancelamento não dispara', () => {
   const chargeStates = [];
   const projectileSystem = createProjectileSystem();

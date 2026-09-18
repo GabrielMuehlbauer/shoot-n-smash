@@ -31,6 +31,34 @@ const SOUND_RECIPES = Object.freeze({
     { type: 'triangle', startHz: 1_600, endHz: 280, duration: 0.18, volume: 0.08, delay: 0.08 },
     { type: 'sawtooth', startHz: 92, endHz: 31, duration: 0.68, volume: 0.09, delay: 0.13 },
   ),
+  'enemy-spawn': createRecipe(
+    { type: 'triangle', startHz: 72, endHz: 46, duration: 0.34, volume: 0.11 },
+    { type: 'sawtooth', startHz: 310, endHz: 92, duration: 0.26, volume: 0.045, delay: 0.04 },
+    { type: 'sine', startHz: 1_480, endHz: 720, duration: 0.12, volume: 0.04, delay: 0.08 },
+  ),
+  'wave-start': createRecipe(
+    { type: 'sine', startHz: 330, endHz: 660, duration: 0.28, volume: 0.07 },
+    { type: 'triangle', startHz: 494, endHz: 988, duration: 0.3, volume: 0.055, delay: 0.12 },
+    { type: 'sine', startHz: 82, endHz: 58, duration: 0.42, volume: 0.055, delay: 0.18 },
+  ),
+  'monster-weak': createRecipe(
+    { type: 'triangle', startHz: 168, endHz: 112, duration: 0.2, volume: 0.075 },
+    { type: 'square', startHz: 1_180, endHz: 720, duration: 0.075, volume: 0.025, delay: 0.035 },
+  ),
+  'monster-medium': createRecipe(
+    { type: 'sawtooth', startHz: 108, endHz: 68, duration: 0.3, volume: 0.085 },
+    { type: 'triangle', startHz: 820, endHz: 390, duration: 0.11, volume: 0.035, delay: 0.08 },
+  ),
+  'monster-resistant': createRecipe(
+    { type: 'sawtooth', startHz: 78, endHz: 43, duration: 0.42, volume: 0.1 },
+    { type: 'square', startHz: 54, endHz: 38, duration: 0.36, volume: 0.055, delay: 0.035 },
+    { type: 'triangle', startHz: 1_050, endHz: 280, duration: 0.15, volume: 0.035, delay: 0.13 },
+  ),
+  'monster-boss': createRecipe(
+    { type: 'sawtooth', startHz: 55, endHz: 31, duration: 0.62, volume: 0.12 },
+    { type: 'square', startHz: 39, endHz: 27, duration: 0.56, volume: 0.07, delay: 0.04 },
+    { type: 'triangle', startHz: 620, endHz: 155, duration: 0.22, volume: 0.045, delay: 0.18 },
+  ),
   'boss-arrival': createRecipe(
     { type: 'sawtooth', startHz: 72, endHz: 36, duration: 0.9, volume: 0.14 },
     { type: 'square', startHz: 108, endHz: 48, duration: 0.68, volume: 0.09, delay: 0.12 },
@@ -55,7 +83,14 @@ const SOUND_RECIPES = Object.freeze({
 
 const BACKGROUND_MUSIC = Object.freeze({
   url: '/assets/audio/frozen-motif.mp3',
-  volume: 0.5,
+  volume: 0.28,
+});
+
+const MONSTER_AUDIO = Object.freeze({
+  audibleDistance: 22,
+  closestDistance: 1.5,
+  farIntervalSeconds: 3.1,
+  nearIntervalSeconds: 0.62,
 });
 
 export class GameAudioSystem {
@@ -88,6 +123,7 @@ export class GameAudioSystem {
     this.musicElement = null;
     this.musicStarted = false;
     this.activeNodes = new Set();
+    this.proximityCooldownSeconds = 0;
     this.disposed = false;
   }
 
@@ -142,7 +178,7 @@ export class GameAudioSystem {
     return musicAvailable || effectsAvailable;
   }
 
-  play(name, { pitchScale = 1, volumeScale = 1 } = {}) {
+  play(name, { pan = 0, pitchScale = 1, volumeScale = 1 } = {}) {
     if (this.disposed || !this.enabled || !SOUND_RECIPES[name]) {
       return false;
     }
@@ -161,6 +197,9 @@ export class GameAudioSystem {
     const safeVolumeScale = Number.isFinite(volumeScale)
       ? Math.min(Math.max(volumeScale, 0), 2)
       : 1;
+    const safePan = Number.isFinite(pan)
+      ? Math.min(Math.max(pan, -1), 1)
+      : 0;
     const createdVoices = [];
 
     try {
@@ -170,6 +209,10 @@ export class GameAudioSystem {
       for (const voice of recipe.voices) {
         const oscillator = context.createOscillator();
         const gain = context.createGain();
+        const panner =
+          Math.abs(safePan) > 0.001 && context.createStereoPanner
+            ? context.createStereoPanner()
+            : null;
         const startAt = context.currentTime + (voice.delay ?? 0);
         const endAt = startAt + voice.duration;
         oscillator.type = voice.type;
@@ -187,13 +230,20 @@ export class GameAudioSystem {
         );
         gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
         oscillator.connect(gain);
-        gain.connect(context.destination);
-        createdVoices.push({ gain, oscillator });
+        if (panner) {
+          panner.pan.setValueAtTime(safePan, startAt);
+          gain.connect(panner);
+          panner.connect(context.destination);
+        } else {
+          gain.connect(context.destination);
+        }
+        createdVoices.push({ gain, oscillator, panner });
         this.activeNodes.add(oscillator);
         oscillator.onended = () => {
           this.activeNodes.delete(oscillator);
           oscillator.disconnect?.();
           gain.disconnect?.();
+          panner?.disconnect?.();
         };
         oscillator.start(startAt);
         oscillator.stop(endAt);
@@ -201,7 +251,7 @@ export class GameAudioSystem {
 
       return true;
     } catch {
-      for (const { gain, oscillator } of createdVoices) {
+      for (const { gain, oscillator, panner } of createdVoices) {
         this.activeNodes.delete(oscillator);
         try {
           oscillator.stop?.();
@@ -210,9 +260,70 @@ export class GameAudioSystem {
         }
         oscillator.disconnect?.();
         gain.disconnect?.();
+        panner?.disconnect?.();
       }
       return false;
     }
+  }
+
+  updateEnemyProximity(enemies, deltaSeconds = 0) {
+    if (this.disposed || !this.enabled || !Array.isArray(enemies)) {
+      return false;
+    }
+
+    const delta = Number.isFinite(deltaSeconds)
+      ? Math.max(0, deltaSeconds)
+      : 0;
+    this.proximityCooldownSeconds = Math.max(
+      0,
+      this.proximityCooldownSeconds - delta,
+    );
+
+    if (this.proximityCooldownSeconds > 0) {
+      return false;
+    }
+
+    const nearest = enemies
+      .filter(
+        ({ active = true, distance }) =>
+          active && Number.isFinite(distance) && distance >= 0,
+      )
+      .sort((left, right) => left.distance - right.distance)[0];
+
+    if (!nearest || nearest.distance > MONSTER_AUDIO.audibleDistance) {
+      return false;
+    }
+
+    const proximity = 1 - Math.min(
+      Math.max(
+        (nearest.distance - MONSTER_AUDIO.closestDistance) /
+          (MONSTER_AUDIO.audibleDistance - MONSTER_AUDIO.closestDistance),
+        0,
+      ),
+      1,
+    );
+    const typeId = ['weak', 'medium', 'resistant', 'boss'].includes(
+      nearest.typeId,
+    )
+      ? nearest.typeId
+      : 'medium';
+    const played = this.play(`monster-${typeId}`, {
+      pan: nearest.pan,
+      pitchScale: 0.94 + proximity * 0.12,
+      volumeScale: 0.4 + proximity * 0.85,
+    });
+
+    if (played) {
+      const typePacing = typeId === 'boss' ? 1.18 : 1;
+      this.proximityCooldownSeconds =
+        (MONSTER_AUDIO.farIntervalSeconds -
+          (MONSTER_AUDIO.farIntervalSeconds -
+            MONSTER_AUDIO.nearIntervalSeconds) *
+            proximity) *
+        typePacing;
+    }
+
+    return played;
   }
 
   setEnabled(enabled) {
@@ -256,6 +367,7 @@ export class GameAudioSystem {
     }
     this.musicElement = null;
     this.musicStarted = false;
+    this.proximityCooldownSeconds = 0;
     try {
       const closeResult = this.context?.close?.();
       void closeResult?.catch?.(() => {});
@@ -268,4 +380,4 @@ export class GameAudioSystem {
   }
 }
 
-export { BACKGROUND_MUSIC, SOUND_RECIPES };
+export { BACKGROUND_MUSIC, MONSTER_AUDIO, SOUND_RECIPES };

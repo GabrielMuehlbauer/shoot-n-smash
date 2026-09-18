@@ -28,6 +28,7 @@ class FakeAudioContext {
     this.destination = { name: 'destination' };
     this.oscillators = [];
     this.gains = [];
+    this.panners = [];
     this.resumeCalls = 0;
     this.closeCalls = 0;
   }
@@ -71,6 +72,20 @@ class FakeAudioContext {
     return gain;
   }
 
+  createStereoPanner() {
+    const panner = {
+      pan: new FakeAudioParam(),
+      connections: [],
+      disconnectCalls: 0,
+      connect: (node) => panner.connections.push(node),
+      disconnect: () => {
+        panner.disconnectCalls += 1;
+      },
+    };
+    this.panners.push(panner);
+    return panner;
+  }
+
   async close() {
     this.closeCalls += 1;
   }
@@ -109,6 +124,7 @@ test('inicia a música ambiente em loop depois do desbloqueio', () => {
   assert.equal(audio.musicElement.loop, true);
   assert.equal(audio.musicElement.preload, 'auto');
   assert.equal(audio.musicElement.volume, BACKGROUND_MUSIC.volume);
+  assert.ok(BACKGROUND_MUSIC.volume < 0.5);
   assert.equal(audio.musicElement.playCalls, 1);
 
   audio.play('shot');
@@ -263,4 +279,52 @@ test('falhas da API de áudio preservam o gameplay silencioso', () => {
   assert.equal(failingUnlock.unlock(), false);
   assert.equal(failingPlayback.dispose(), true);
   assert.equal(failingUnlock.dispose(), true);
+});
+
+test('sinaliza a aproximação do monstro mais próximo com identidade e direção', () => {
+  const audio = new GameAudioSystem({ AudioContextClass: FakeAudioContext });
+
+  assert.equal(
+    audio.updateEnemyProximity([
+      { active: true, distance: 14, pan: -0.8, typeId: 'weak' },
+      { active: true, distance: 5, pan: 0.65, typeId: 'resistant' },
+    ]),
+    true,
+  );
+  assert.equal(
+    audio.context.oscillators.length,
+    SOUND_RECIPES['monster-resistant'].voices.length,
+  );
+  assert.equal(
+    audio.context.panners.length,
+    SOUND_RECIPES['monster-resistant'].voices.length,
+  );
+  assert.deepEqual(audio.context.panners[0].pan.events[0], ['set', 0.65, 2]);
+  assert.equal(
+    audio.updateEnemyProximity([
+      { active: true, distance: 2, pan: 0, typeId: 'boss' },
+    ], 0.1),
+    false,
+  );
+  assert.equal(
+    audio.updateEnemyProximity([
+      { active: true, distance: 2, pan: 0, typeId: 'boss' },
+    ], 10),
+    true,
+  );
+  audio.dispose();
+});
+
+test('mantém o áudio de aproximação silencioso sem ameaça audível', () => {
+  const audio = new GameAudioSystem({ AudioContextClass: FakeAudioContext });
+
+  assert.equal(audio.updateEnemyProximity([], 1), false);
+  assert.equal(
+    audio.updateEnemyProximity([
+      { active: true, distance: 50, pan: 0, typeId: 'weak' },
+    ], 1),
+    false,
+  );
+  assert.equal(audio.context, null);
+  audio.dispose();
 });
