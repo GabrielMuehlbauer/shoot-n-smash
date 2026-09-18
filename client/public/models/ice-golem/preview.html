@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ice Golem · prévia</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #08131e; color: #d8f2ff; font: 14px system-ui, sans-serif; }
+    #panel { position: fixed; top: 16px; left: 16px; z-index: 2; padding: 14px 16px; background: #08131edb; border: 1px solid #59819a; border-radius: 10px; line-height: 1.8; }
+    #panel strong { display: block; font-size: 18px; }
+    label { display: block; cursor: pointer; }
+    #status { color: #8addff; }
+    canvas { display: block; }
+  </style>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"}}
+  </script>
+</head>
+<body>
+  <div id="panel">
+    <strong>Ice Golem</strong>
+    <div id="status">Carregando GLB…</div>
+    <label><input id="wire" type="checkbox"> Wireframe</label>
+    <label><input id="bones" type="checkbox"> Esqueleto</label>
+    <label><input id="silhouette" type="checkbox"> Silhueta</label>
+    <small>Arraste para girar · scroll para aproximar</small>
+  </div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x08131e);
+    scene.fog = new THREE.Fog(0x08131e, 12, 25);
+    const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(5.0, 3.8, 6.8);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.10;
+    renderer.shadowMap.enabled = true;
+    document.body.append(renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 2.2, 0);
+    controls.enableDamping = true;
+    controls.update();
+    scene.add(new THREE.HemisphereLight(0xc2eaff, 0x132435, 0.95));
+    const key = new THREE.DirectionalLight(0xe8f6ff, 2.1);
+    key.position.set(4, 8, 6); key.castShadow = true; scene.add(key);
+    const fill = new THREE.DirectionalLight(0x85dfff, 0.65);
+    fill.position.set(-4, 4, 5); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0x72bbdd, 0.48);
+    rim.position.set(-5, 5, -4); scene.add(rim);
+    const coreLight = new THREE.PointLight(0x24d3ff, 0.65, 3, 2);
+    coreLight.position.set(0, 3.1, 1.0); scene.add(coreLight);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(5, 64), new THREE.MeshStandardMaterial({ color: 0x1e3d50, roughness: 0.9 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -0.015; floor.receiveShadow = true; scene.add(floor);
+    let helper, materials = [];
+    const originalAppearance = new Map();
+    const status = document.getElementById('status');
+    new GLTFLoader().load('./ice_golem.glb', gltf => {
+      scene.add(gltf.scene);
+      let triangles = 0, meshes = 0;
+      gltf.scene.traverse(o => {
+        if (!o.isMesh) return;
+        meshes++;
+        o.castShadow = true; o.receiveShadow = true;
+        triangles += (o.geometry.index?.count ?? o.geometry.attributes.position.count) / 3;
+        materials.push(o.material);
+        if (!originalAppearance.has(o.material)) originalAppearance.set(o.material, {
+          color: o.material.color.clone(), emissiveIntensity: o.material.emissiveIntensity,
+        });
+      });
+      helper = new THREE.SkeletonHelper(gltf.scene.getObjectByName('IceGolem_Armature'));
+      helper.visible = false; scene.add(helper);
+      status.textContent = `${meshes} malhas · ${triangles.toLocaleString('pt-BR')} triângulos`;
+    }, undefined, error => { status.textContent = `Falha ao carregar: ${error.message}`; console.error(error); });
+    document.getElementById('wire').onchange = e => { for (const m of materials) m.wireframe = e.target.checked; };
+    document.getElementById('bones').onchange = e => { if (helper) helper.visible = e.target.checked; };
+    document.getElementById('silhouette').onchange = e => {
+      for (const m of materials) {
+        m.color.copy(e.target.checked ? new THREE.Color(0x050b11) : originalAppearance.get(m).color);
+        m.emissiveIntensity = e.target.checked ? 0 : originalAppearance.get(m).emissiveIntensity;
+        m.vertexColors = !e.target.checked;
+        m.needsUpdate = true;
+      }
+      coreLight.visible = !e.target.checked;
+    };
+    addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+    renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+  </script>
+</body>
+</html>
