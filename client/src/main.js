@@ -104,6 +104,7 @@ let gameApp = null;
 let lookController = null;
 let fireController = null;
 let gameSession = null;
+let renderContext = null;
 let xrSessionManager = null;
 let xrSlingshotController = null;
 let xrHudSystem = null;
@@ -600,6 +601,7 @@ function showEncounterOutcome(outcome = gameSession?.enemyState?.outcome) {
 }
 
 function updateWaveState(state) {
+  renderContext?.setWeatherState(state);
   const description = describeWaveState(state, {
     bossReturning: gameSession?.enemyState?.type?.id === 'boss',
   });
@@ -1021,7 +1023,6 @@ function handleLookError({ message }) {
 }
 
 async function enterPrototype() {
-  let renderContext = null;
   const loadId = ++prototypeLoadId;
 
   startSceneButton.disabled = true;
@@ -1062,6 +1063,7 @@ async function enterPrototype() {
     const arenaLoaded = await renderContext.assetLoadPromise;
     if (loadId !== prototypeLoadId || prototypeView.hidden) {
       renderContext.dispose();
+      renderContext = null;
       return false;
     }
     if (!arenaLoaded) {
@@ -1162,6 +1164,7 @@ async function enterPrototype() {
       renderContext?.dispose();
     }
     gameApp = null;
+    renderContext = null;
     fireController = null;
     gameSession = null;
     lookController = null;
@@ -1196,6 +1199,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   xrSessionManager?.dispose();
   gameApp?.dispose();
   gameApp = null;
+  renderContext = null;
   fireController = null;
   gameSession = null;
   lookController = null;
@@ -1321,6 +1325,7 @@ void loadRanking();
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     gameApp?.dispose();
+    renderContext = null;
     startSceneButton.removeEventListener('click', enterPrototype);
     exitSceneButton.removeEventListener('click', exitPrototype);
     pointerLockButton.removeEventListener('click', requestPointerLock);
