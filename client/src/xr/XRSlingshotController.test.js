@@ -136,22 +136,33 @@ test('cancela uma carga ao sair do XR', () => {
 test('substitui a reserva pelo mesmo asset final usado no desktop', async () => {
   const assetScene = new Group();
   const pulls = [];
+  let loadOptions = null;
   let disposeCalls = 0;
   const fixture = createFixture({
     assetLoader: {},
-    slingshotAssetLoader: async () => ({
-      scene: assetScene,
-      setPull: (distance) => pulls.push(distance),
-      dispose: () => {
-        disposeCalls += 1;
-      },
-    }),
+    slingshotAssetLoader: async (options) => {
+      loadOptions = options;
+      return {
+        scene: assetScene,
+        setPull: (distance) => pulls.push(distance),
+        dispose: () => {
+          disposeCalls += 1;
+        },
+      };
+    },
   });
 
   assert.equal(await fixture.controller.assetLoadPromise, true);
   assert.equal(fixture.controller.assetStatus, 'ready');
   assert.equal(assetScene.name, 'xr-slingshot-final-asset');
   assert.equal(assetScene.parent, fixture.controller.slingshotVisual);
+  assert.equal(loadOptions.prepareOptions.pullDirection, 1);
+  assert.ok(Math.abs(assetScene.rotation.y - Math.PI) < 1e-9);
+  assert.ok(
+    new Vector3(0, 0, -1)
+      .applyQuaternion(assetScene.quaternion)
+      .distanceTo(new Vector3(0, 0, 1)) < 1e-9,
+  );
   assert.ok(fixture.controller.fallbackFrame.every(({ visible }) => !visible));
 
   fixture.controllers[1].dispatchEvent({ type: 'selectstart' });

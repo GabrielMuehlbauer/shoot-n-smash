@@ -210,6 +210,7 @@ export class GameSession {
 
       this.enemySystem = primaryEnemySystem;
       this.enemySystems.push(primaryEnemySystem);
+      primaryEnemySystem.preloadBossAsset?.();
       this.enemyEncounters.set(
         primaryEnemySystem,
         this.createEncounterIdentity('enemy', 1),

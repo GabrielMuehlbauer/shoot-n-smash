@@ -169,6 +169,11 @@ test('somente o chefão troca o visual procedural pelo GLB', async () => {
   const enemy = new EnemySystem({ scene: new Scene(), bossAssetLoader: loader });
   assert.equal(enemy.visual.children.length, 17);
   assert.equal(requested.length, 0);
+  assert.equal(enemy.preloadBossAsset(), true);
+  await enemy.bossAssetPromise;
+  assert.deepEqual(requested, [BOSS_GOLEM_URL]);
+  assert.equal(enemy.bossAsset.visible, false);
+  assert.equal(enemy.visual.children.length, 18);
 
   enemy.reset({
     enemyType: GAMEPLAY_CONFIG.boss.type,
@@ -178,7 +183,7 @@ test('somente o chefão troca o visual procedural pelo GLB', async () => {
     spawnHeight: GAMEPLAY_CONFIG.boss.spawnHeight,
   });
   await enemy.bossAssetPromise;
-  assert.deepEqual(requested, [BOSS_GOLEM_URL]);
+  assert.equal(requested.length, 1);
   assert.equal(enemy.visual.children.length, 1);
   assert.equal(enemy.bossAsset.visible, true);
 

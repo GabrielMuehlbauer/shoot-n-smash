@@ -582,7 +582,8 @@ export class EnemySystem extends Group {
   }
 
   requestBossAsset() {
-    if (!this.bossAssetLoader || this.bossAssetPromise) return;
+    if (!this.bossAssetLoader) return null;
+    if (this.bossAssetPromise) return this.bossAssetPromise;
     this.bossAssetPromise = loadBossGolemAsset({ loader: this.bossAssetLoader })
       .then((asset) => {
         if (this.disposed) {
@@ -606,6 +607,16 @@ export class EnemySystem extends Group {
         this.bossAssetError = error;
         console.warn('Falha ao carregar o modelo do chefão:', error);
       });
+    return this.bossAssetPromise;
+  }
+
+  preloadBossAsset() {
+    if (this.disposed) {
+      return false;
+    }
+
+    this.requestBossAsset();
+    return Boolean(this.bossAssetPromise);
   }
 
   requestWeakAsset() {

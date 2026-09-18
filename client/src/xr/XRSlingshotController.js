@@ -359,7 +359,7 @@ export class XRSlingshotController {
         loader,
         prepareOptions: {
           overlay: false,
-          pullDirection: -1,
+          pullDirection: 1,
           scale: 0.58,
         },
       });
@@ -371,6 +371,8 @@ export class XRSlingshotController {
 
       this.asset = asset;
       asset.scene.name = 'xr-slingshot-final-asset';
+      // O GLB foi criado olhando para -Z, enquanto o eixo de disparo XR é +Z.
+      asset.scene.rotation.y = Math.PI;
       this.slingshotVisual.add(asset.scene);
       for (const object of this.fallbackFrame) {
         object.visible = false;

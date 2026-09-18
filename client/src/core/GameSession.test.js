@@ -265,6 +265,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
   };
   const enemySystem = {
     active: false,
+    preloadBossAsset: () => calls.push(['enemy.preloadBoss']),
     update: (delta) => calls.push(['enemy.update', delta]),
     resolvePlayerContact: () => calls.push(['enemy.resolveContact']),
     state: {
@@ -314,6 +315,7 @@ test('coordena sistemas e resolve contato depois das colisões', () => {
   assert.equal(session.dispose(), true);
 
   assert.deepEqual(calls, [
+    ['enemy.preloadBoss'],
     ['slingshot.update', 0.016],
     ['enemy.update', 0.016],
     ['feedback.update', 0.016],

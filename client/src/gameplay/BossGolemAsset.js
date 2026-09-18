@@ -1,7 +1,9 @@
 import { Euler, PointLight, Quaternion } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export const BOSS_GOLEM_URL = '/models/ice-golem/ice_golem.glb';
+// O sufixo acompanha o conteúdo do GLB para invalidar versões antigas em cache.
+export const BOSS_GOLEM_URL =
+  '/models/ice-golem/ice_golem.glb?v=53083bb6';
 export const BOSS_GOLEM_SOURCE_HEIGHT = 4.5;
 export const BOSS_GOLEM_GAME_HEIGHT = 6.2;
 
