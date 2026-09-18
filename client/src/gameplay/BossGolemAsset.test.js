@@ -73,6 +73,17 @@ test('GLB do chefão contém rig, partes, materiais e orçamento geométrico', a
   assert.ok(triangles >= 15000 && triangles <= 22000, `${triangles} triângulos`);
   assert.deepEqual([...materials].sort(),
     ['Ice_Base', 'Ice_Crystal', 'Ice_Dark', 'Ice_Emission', 'Ice_Fissure']);
+  const crystal = root.getObjectByName('Shoulder_L_Ice_Crystal');
+  assert.ok(crystal?.material.isMeshPhysicalMaterial);
+  assert.ok(Math.abs(crystal.material.transmission - 0.22) < 1e-6);
+  assert.ok(Math.abs(crystal.material.ior - 1.31) < 1e-6);
+  assert.ok(Math.abs(crystal.material.thickness - 0.16) < 1e-6);
+  assert.equal(crystal.material.opacity, 1);
+  assert.equal(crystal.material.transparent, false);
+  const crystalColors = crystal.geometry.getAttribute('color');
+  assert.ok(crystalColors?.count > 0);
+  assert.ok(Array.from({ length: crystalColors.count }, (_, i) => crystalColors.getZ(i) - crystalColors.getX(i))
+    .some(delta => delta > 0.05), 'cristais devem conservar a profundidade azul por vértice');
   const body = root.getObjectByName('Body').children.find(
     (object) => object.isSkinnedMesh && object.material.name === 'Ice_Base',
   );

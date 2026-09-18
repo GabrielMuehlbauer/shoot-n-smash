@@ -64,12 +64,12 @@ function render(view) {
       verts[i] = { x: (horizontal + 2.05) / 4.10 * WIDTH,
         y: (4.62 - temp.y) / 4.70 * HEIGHT, z: closeness, world: temp.clone() };
     }
-    const baseColor = ({
-      Ice_Dark: [39, 74, 104], Ice_Base: [170, 207, 224],
-      Ice_Crystal: [199, 241, 255], Ice_Emission: [45, 225, 255],
-      Ice_Fissure: [51, 155, 190],
-    })[mesh.material.name] ?? [158, 210, 235];
+    const base = mesh.material.color.clone().convertLinearToSRGB();
+    const baseColor = [base.r, base.g, base.b].map(channel => channel * 255);
     const colors = geometry.attributes.color;
+    const viewDirection = view === 'front' ? new Vector3(0, 0, 1)
+      : view === 'side' ? new Vector3(1, 0, 0) : new Vector3(sine, 0, cosine);
+    const half = light.clone().add(viewDirection).normalize();
     for (let i = 0; i < (index?.count ?? attr.count); i += 3) {
       const ia = index ? index.getX(i) : i;
       const ib = index ? index.getX(i+1) : i+1;
@@ -84,8 +84,14 @@ function render(view) {
       const minY = Math.max(0, Math.floor(Math.min(a.y,b.y,c.y))), maxY = Math.min(HEIGHT-1, Math.ceil(Math.max(a.y,b.y,c.y)));
       const shade = mesh.material.name === 'Ice_Emission' ? 1.18
         : mesh.material.name === 'Ice_Fissure' ? 1.0
-          : .47 + .53 * Math.max(0, normal.dot(light));
-      const color = colors ? (colors.getX(ia)+colors.getX(ib)+colors.getX(ic))/3 : 1;
+          : .43 + .57 * Math.max(0, normal.dot(light));
+      const gloss = mesh.material.name === 'Ice_Crystal' ? .32
+        : mesh.material.name === 'Ice_Base' ? .12 : 0;
+      const highlight = gloss * Math.pow(Math.max(0, normal.dot(half)), 14)
+        + gloss * .35 * Math.pow(1 - Math.abs(normal.dot(viewDirection)), 3);
+      const color = colors ? [0, 1, 2].map(channel =>
+        (colors.getComponent(ia, channel) + colors.getComponent(ib, channel)
+          + colors.getComponent(ic, channel)) / 3) : [1, 1, 1];
       for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
         const px=x+.5, py=y+.5;
         const u=((b.x-px)*(c.y-py)-(b.y-py)*(c.x-px))/area;
@@ -96,7 +102,8 @@ function render(view) {
         if (z <= depth[at]) continue;
         depth[at] = z;
         const offset = at*4;
-        for (let channel=0;channel<3;channel++) pixels[offset+channel] = Math.min(255, baseColor[channel]*shade*color);
+        for (let channel=0;channel<3;channel++) pixels[offset+channel] = Math.min(255,
+          baseColor[channel] * shade * color[channel] + 255 * highlight);
       }
     }
   }

@@ -21,11 +21,11 @@ const RIG_BONES = [
 ];
 
 const MATERIAL_TUNING = Object.freeze({
-  Ice_Base: Object.freeze({ roughness: 0.33, metalness: 0, envMapIntensity: 1.2 }),
-  Ice_Dark: Object.freeze({ roughness: 0.48, metalness: 0, envMapIntensity: 0.9 }),
-  Ice_Crystal: Object.freeze({ roughness: 0.20, metalness: 0, envMapIntensity: 1.45 }),
-  Ice_Emission: Object.freeze({ roughness: 0.22, metalness: 0, envMapIntensity: 1.0 }),
-  Ice_Fissure: Object.freeze({ roughness: 0.34, metalness: 0, envMapIntensity: 1.0 }),
+  Ice_Base: Object.freeze({ roughness: 0.32, metalness: 0, envMapIntensity: 1.2 }),
+  Ice_Dark: Object.freeze({ roughness: 0.42, metalness: 0, envMapIntensity: 0.9 }),
+  Ice_Crystal: Object.freeze({ roughness: 0.19, metalness: 0, envMapIntensity: 1.45 }),
+  Ice_Emission: Object.freeze({ roughness: 0.20, metalness: 0, envMapIntensity: 1.0 }),
+  Ice_Fissure: Object.freeze({ roughness: 0.30, metalness: 0, envMapIntensity: 1.0 }),
 });
 
 function tuneBossMaterials(root) {

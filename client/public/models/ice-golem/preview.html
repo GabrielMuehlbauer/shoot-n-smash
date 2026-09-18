@@ -9,6 +9,8 @@
     #panel { position: fixed; top: 16px; left: 16px; z-index: 2; padding: 14px 16px; background: #08131edb; border: 1px solid #59819a; border-radius: 10px; line-height: 1.8; }
     #panel strong { display: block; font-size: 18px; }
     label { display: block; cursor: pointer; }
+    select, button { margin-left: 6px; color: #d8f2ff; background: #132a3a; border: 1px solid #59819a; border-radius: 4px; }
+    #debugAngle { width: 110px; vertical-align: middle; }
     #status { color: #8addff; }
     canvas { display: block; }
   </style>
@@ -20,15 +22,39 @@
   <div id="panel">
     <strong>Ice Golem</strong>
     <div id="status">Carregando GLB…</div>
+    <label>Animação
+      <select id="animation">
+        <option value="idle">Idle</option>
+        <option value="walk">Walk</option>
+        <option value="attackHeavy">Attack Heavy</option>
+        <option value="attackSlam">Attack Slam</option>
+        <option value="hit">Hit</option>
+        <option value="death">Death</option>
+      </select>
+    </label>
+    <div id="event">Eventos: aguardando</div>
     <label><input id="wire" type="checkbox"> Wireframe</label>
     <label><input id="bones" type="checkbox"> Esqueleto</label>
+    <label>Teste de osso
+      <select id="debugBone">
+        <option value="">Desligado</option>
+        <option>UpperArm_L</option><option>UpperArm_R</option>
+        <option>Forearm_L</option><option>Forearm_R</option>
+        <option>Thigh_L</option><option>Thigh_R</option>
+        <option>Shin_L</option><option>Shin_R</option><option>Head</option>
+      </select>
+      <input id="debugAngle" type="range" min="-35" max="35" value="0">
+    </label>
     <label><input id="silhouette" type="checkbox"> Silhueta</label>
+    <button id="restart" type="button">Reiniciar</button>
     <small>Arraste para girar · scroll para aproximar</small>
   </div>
   <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { createIceGolemAnimator } from './animator.js';
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x08131e);
@@ -40,29 +66,47 @@
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.10;
+    renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.append(renderer.domElement);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const room = new RoomEnvironment();
+    scene.environment = pmrem.fromScene(room, .04).texture;
+    room.dispose(); pmrem.dispose();
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 2.2, 0);
     controls.enableDamping = true;
     controls.update();
-    scene.add(new THREE.HemisphereLight(0xc2eaff, 0x132435, 0.95));
-    const key = new THREE.DirectionalLight(0xe8f6ff, 2.1);
-    key.position.set(4, 8, 6); key.castShadow = true; scene.add(key);
-    const fill = new THREE.DirectionalLight(0x85dfff, 0.65);
+    scene.add(new THREE.HemisphereLight(0xc2eaff, 0x132435, 0.70));
+    const key = new THREE.DirectionalLight(0xe8f6ff, 1.70);
+    key.position.set(4, 8, 6); key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -4; key.shadow.camera.right = 4;
+    key.shadow.camera.top = 7; key.shadow.camera.bottom = -2;
+    key.shadow.normalBias = .025;
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x85dfff, 0.55);
     fill.position.set(-4, 4, 5); scene.add(fill);
-    const rim = new THREE.DirectionalLight(0x72bbdd, 0.48);
+    const rim = new THREE.DirectionalLight(0x9adfff, 0.78);
     rim.position.set(-5, 5, -4); scene.add(rim);
     const coreLight = new THREE.PointLight(0x24d3ff, 0.65, 3, 2);
     coreLight.position.set(0, 3.1, 1.0); scene.add(coreLight);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(5, 64), new THREE.MeshStandardMaterial({ color: 0x1e3d50, roughness: 0.9 }));
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(5, 64), new THREE.MeshStandardMaterial({ color: 0x142b3b, roughness: 0.9 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -0.015; floor.receiveShadow = true; scene.add(floor);
-    let helper, materials = [];
+    let helper, golem, materials = [];
+    let modelStats = '', frameCount = 0, lastFpsTime = performance.now();
+    let lastFrameTime = null;
+    const debugEuler = new THREE.Euler();
+    const debugQuaternion = new THREE.Quaternion();
     const originalAppearance = new Map();
     const status = document.getElementById('status');
     new GLTFLoader().load('./ice_golem.glb', gltf => {
+      try {
       scene.add(gltf.scene);
+      golem = createIceGolemAnimator(gltf.scene, THREE, {
+        onEvent: name => { document.getElementById('event').textContent = `Evento: ${name}`; },
+      });
       let triangles = 0, meshes = 0;
       gltf.scene.traverse(o => {
         if (!o.isMesh) return;
@@ -70,6 +114,8 @@
         o.castShadow = true; o.receiveShadow = true;
         triangles += (o.geometry.index?.count ?? o.geometry.attributes.position.count) / 3;
         materials.push(o.material);
+        if (o.material.name === 'Ice_Crystal') o.material.envMapIntensity = 1.3;
+        else if (o.material.name === 'Ice_Base') o.material.envMapIntensity = .8;
         if (!originalAppearance.has(o.material)) originalAppearance.set(o.material, {
           color: o.material.color.clone(), emissiveIntensity: o.material.emissiveIntensity,
         });
@@ -77,9 +123,29 @@
       helper = new THREE.SkeletonHelper(gltf.scene.getObjectByName('IceGolem_Armature'));
       helper.visible = false; scene.add(helper);
       status.textContent = `${meshes} malhas · ${triangles.toLocaleString('pt-BR')} triângulos`;
+      modelStats = status.textContent;
+      } catch (error) {
+        golem?.dispose();
+        golem = undefined;
+        status.textContent = `Falha ao preparar animação: ${error.message}`;
+        console.error(error);
+      }
     }, undefined, error => { status.textContent = `Falha ao carregar: ${error.message}`; console.error(error); });
     document.getElementById('wire').onchange = e => { for (const m of materials) m.wireframe = e.target.checked; };
     document.getElementById('bones').onchange = e => { if (helper) helper.visible = e.target.checked; };
+    const animationSelect = document.getElementById('animation');
+    const animationMethods = {
+      idle: 'playIdle', walk: 'playWalk', attackHeavy: 'playAttackHeavy',
+      attackSlam: 'playAttackSlam', hit: 'playHit', death: 'playDeath',
+    };
+    const stateOptions = {
+      IDLE: 'idle', WALK: 'walk', ATTACK_HEAVY: 'attackHeavy',
+      ATTACK_SLAM: 'attackSlam', HIT: 'hit', DEATH: 'death',
+    };
+    animationSelect.onchange = () => {
+      if (golem && !golem[animationMethods[animationSelect.value]]()) animationSelect.value = 'death';
+    };
+    document.getElementById('restart').onclick = () => location.reload();
     document.getElementById('silhouette').onchange = e => {
       for (const m of materials) {
         m.color.copy(e.target.checked ? new THREE.Color(0x050b11) : originalAppearance.get(m).color);
@@ -90,7 +156,30 @@
       coreLight.visible = !e.target.checked;
     };
     addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-    renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+    renderer.setAnimationLoop((time) => {
+      if (golem) {
+        golem.update(lastFrameTime === null ? 0 : Math.min(.05, (time - lastFrameTime) / 1000));
+        if (animationSelect.value !== stateOptions[golem.state]) {
+          animationSelect.value = stateOptions[golem.state];
+        }
+        const name = document.getElementById('debugBone').value;
+        const angle = Number(document.getElementById('debugAngle').value);
+        if (name && angle) {
+          debugEuler.set(angle * Math.PI / 180, 0, 0);
+          debugQuaternion.setFromEuler(debugEuler);
+          golem.bones[name].quaternion.copy(golem.rest[golem.bones[name].name].quaternion)
+            .multiply(debugQuaternion);
+        }
+      }
+      lastFrameTime = time;
+      controls.update(); renderer.render(scene, camera);
+      frameCount++;
+      if (modelStats && time - lastFpsTime >= 1000) {
+        status.textContent = `${modelStats} · ${Math.round(frameCount * 1000 / (time - lastFpsTime))} FPS`;
+        frameCount = 0;
+        lastFpsTime = time;
+      }
+    });
   </script>
 </body>
 </html>

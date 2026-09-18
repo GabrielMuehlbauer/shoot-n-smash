@@ -17,13 +17,13 @@ armature.name = 'IceGolem_Armature';
 root.add(armature);
 
 const materials = {
-  Ice_Base: new THREE.MeshStandardMaterial({ name: 'Ice_Base', color: 0xb0d9eb, roughness: 0.33, metalness: 0, vertexColors: true }),
-  Ice_Dark: new THREE.MeshStandardMaterial({ name: 'Ice_Dark', color: 0x274a68, roughness: 0.48, metalness: 0, vertexColors: true }),
-  Ice_Crystal: new THREE.MeshPhysicalMaterial({ name: 'Ice_Crystal', color: 0xc7efff,
-    roughness: 0.20, metalness: 0, transmission: 0.22, ior: 1.31, thickness: 0.16,
+  Ice_Base: new THREE.MeshStandardMaterial({ name: 'Ice_Base', color: 0xc3e7f3, roughness: 0.32, metalness: 0, vertexColors: true }),
+  Ice_Dark: new THREE.MeshStandardMaterial({ name: 'Ice_Dark', color: 0x244663, roughness: 0.42, metalness: 0, vertexColors: true }),
+  Ice_Crystal: new THREE.MeshPhysicalMaterial({ name: 'Ice_Crystal', color: 0xd7f5ff,
+    roughness: 0.19, metalness: 0, transmission: 0.22, ior: 1.31, thickness: 0.16,
     vertexColors: true }),
-  Ice_Emission: new THREE.MeshStandardMaterial({ name: 'Ice_Emission', color: 0x138eaa, emissive: 0x00abd0, emissiveIntensity: 1.0, roughness: 0.22, vertexColors: true }),
-  Ice_Fissure: new THREE.MeshStandardMaterial({ name: 'Ice_Fissure', color: 0x419ab5, emissive: 0x14acd6, emissiveIntensity: 0.65, roughness: 0.34, vertexColors: true }),
+  Ice_Emission: new THREE.MeshStandardMaterial({ name: 'Ice_Emission', color: 0x19afd0, emissive: 0x00c8ed, emissiveIntensity: 1.15, roughness: 0.20, vertexColors: true }),
+  Ice_Fissure: new THREE.MeshStandardMaterial({ name: 'Ice_Fissure', color: 0x3f9fb9, emissive: 0x12b8de, emissiveIntensity: 0.55, roughness: 0.30, vertexColors: true }),
 };
 const materialNames = Object.keys(materials);
 const parts = new Map();
@@ -74,14 +74,24 @@ function addGeometry(partName, material, positions, indices, boneName, colorFn =
   for (let i = 0; i < n; i++) {
     const x = positions[i * 3], y = positions[i * 3 + 1], z = positions[i * 3 + 2];
     let shade = colorFn ? colorFn(x, y, z) : 0.91 + noise(x * 2, y * 2, z * 2) * 0.48;
+    const tint = Array.isArray(shade) ? shade : null;
+    if (tint) shade = 1;
     if (material === 'Ice_Base' && partName === 'Body' && z > .38) {
-      shade -= .09 * tent((y - 2.86) / .15) * tent((Math.abs(x) - .55) / .38);
-      shade += .045 * tent((y - 3.41) / .19) * tent((Math.abs(x) - .8) / .35);
+      shade -= .15 * tent((y - 2.86) / .15) * tent((Math.abs(x) - .55) / .38);
+      shade += .06 * tent((y - 3.41) / .19) * tent((Math.abs(x) - .8) / .35);
+      shade -= .08 * tent((y - 3.16) / .32) * tent((Math.abs(x) - .98) / .24);
+      shade -= .08 * tent((y - 1.91) / .20);
     }
-    if (material === 'Ice_Base' && partName.startsWith('Arm_') && z < 0) {
-      shade -= .045 * tent((y - 2.95) / .45);
+    if (material === 'Ice_Base' && (partName.startsWith('Arm_') || partName.startsWith('Leg_'))) {
+      const inner = partName.endsWith('_L') ? x > (partName.startsWith('Arm_') ? -1.4 : -.5)
+        : x < (partName.startsWith('Arm_') ? 1.4 : .5);
+      shade += inner ? -.085 : .035;
     }
-    colors.push(shade, shade * (0.98 + 0.025 * Math.sin(i * 0.3)), Math.min(1, shade * 1.03));
+    const depth = material === 'Ice_Base' && !tint ? Math.max(0, -z) * .065 : 0;
+    const mineral = noise(x * 1.6, y * 1.8, z * 1.6) * .28;
+    const rgb = tint ?? [shade * (1 - depth + mineral * .35),
+      shade * (1 - depth * .55 + mineral * .12), shade * (1 + depth * .10 - mineral * .22)];
+    colors.push(...rgb.map(c => THREE.MathUtils.clamp(c, .05, 1)));
     if (skinFn) {
       const influences = skinFn(x, y, z);
       for (let c = 0; c < 4; c++) {
@@ -184,7 +194,7 @@ function createCrystal(name, material, base, tip, radius, joint, seed = 0, sides
   const reference = Math.abs(direction.y) < .9 ? V(0, 1, 0) : V(0, 0, 1);
   const side = new THREE.Vector3().crossVectors(direction, reference).normalize();
   const forward = new THREE.Vector3().crossVectors(side, direction).normalize();
-  const positions = [], indices = [], rings = 5;
+  const positions = [], indices = [], beardBase = [], beardTip = [], rings = 5;
   for (let row = 0; row <= rings; row++) {
     const t = row / rings;
     const r = radius * [0.65, 1, .82, .58, .28, .015][row];
@@ -197,16 +207,27 @@ function createCrystal(name, material, base, tip, radius, joint, seed = 0, sides
       positions.push(p.x, p.y, p.z);
       if (row) {
         const a = (row - 1) * sides + col, b = row * sides + col, next = (col + 1) % sides;
-        indices.push(a, b, (row - 1) * sides + next, (row - 1) * sides + next, b, row * sides + next);
+        const faces = name === 'Beard' ? (row <= 2 ? beardBase : beardTip) : indices;
+        faces.push(a, b, (row - 1) * sides + next, (row - 1) * sides + next, b, row * sides + next);
       }
     }
   }
   const center = positions.length / 3;
   positions.push(base.x, base.y, base.z);
-  for (let col = 0; col < sides; col++) indices.push(center, (col + 1) % sides, col);
-  addGeometry(name, material, positions, indices, joint,
-    (x, y, z) => .85 + .10 * smooth(.28, .95, V(x, y, z).sub(base).dot(direction) / base.distanceTo(tip))
-      + .035 * Math.sin(x * 7 + y * 13 + z * 5 + seed));
+  for (let col = 0; col < sides; col++) (name === 'Beard' ? beardBase : indices).push(center, (col + 1) % sides, col);
+  for (const [sectionMaterial, faces] of name === 'Beard'
+    ? [['Ice_Base', beardBase], ['Ice_Crystal', beardTip]] : [[material, indices]]) {
+    addGeometry(name, sectionMaterial, positions, faces, joint, (x, y, z) => {
+      const offset = V(x, y, z).sub(base);
+      const t = THREE.MathUtils.clamp(offset.dot(direction) / base.distanceTo(tip), 0, 1);
+      const radial = offset.addScaledVector(direction, -offset.dot(direction)).normalize();
+      const facet = .5 + .5 * Math.sin(seed * 1.71 + radial.dot(side) * 5 + radial.dot(forward) * 3);
+      const value = .68 + .21 * smooth(.12, .98, t) + .11 * facet;
+      return sectionMaterial === 'Ice_Crystal'
+        ? [value * (.86 + .12 * facet), value * (.97 + .08 * facet), Math.min(1, value * 1.11)]
+        : value;
+    });
+  }
 }
 
 function createIcePlate(name, material, outline, depth, joint, outward = V(0, 0, 1)) {
@@ -228,7 +249,11 @@ function createIcePlate(name, material, outline, depth, joint, outward = V(0, 0,
   }
   const plane = face.reduce((sum, p) => sum + p.dot(outward), 0) / n;
   addGeometry(name, material, positions, indices, joint,
-    (x, y, z) => .84 + .12 * smooth(-depth*.5, depth*.5, V(x,y,z).dot(outward) - plane));
+    (x, y, z) => {
+      const front = smooth(-depth*.5, depth*.5, V(x,y,z).dot(outward) - plane);
+      const value = .79 + .18 * front;
+      return material === 'Ice_Crystal' ? [value * (.91 + .05 * front), value, Math.min(1, value * 1.08)] : value;
+    });
 }
 
 function smooth(a, b, x) { const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
@@ -381,15 +406,20 @@ function createFootGeometry(label, s) {
       const u = col / columns * 2 - 1;
       const toe = Math.pow(.5 + .5 * Math.cos(5 * Math.PI * u), 1.8);
       const front = .76 + .21 * toe * (1 - .18 * Math.abs(u));
-      const z = -.26 + (front + .26) * t;
-      const width = .23 + .22 * smooth(.02, .78, t) - .035 * smooth(.82, 1, t);
+      const heel = -.28 + .07 * u*u;
+      const z = lerp(heel, front, t);
+      const width = .20 + .25 * smooth(.02, .78, t) - .035 * smooth(.82, 1, t);
       const x = s*.53 + u * width;
       const ankle = .30 * Math.exp(-Math.pow((z - .06) / .30, 2))
         * (.18 + .82 * Math.sqrt(Math.max(0, 1 - u*u)));
-      const instep = .055 * Math.exp(-Math.pow((z - .42) / .30, 2)) * (1-u*u);
-      const toeRidge = .09 * toe * smooth(.55, .86, t) * (1 - .65 * smooth(.90, 1, t));
+      const instep = .095 * Math.exp(-Math.pow((z - .39) / .29, 2)) * (1-u*u);
+      const toeRidge = .105 * toe * smooth(.55, .86, t) * (1 - .65 * smooth(.90, 1, t));
+      const toeJoint = .032 * toe * Math.exp(-Math.pow((t - .78) / .09, 2));
+      const arch = .10 * Math.exp(-Math.pow((z - .35) / .24, 2))
+        * (.65 + .35 * Math.max(0, -s*u));
       const y = layer === 0 ? .08 + ankle + instep + toeRidge
-        : .018 + .018 * (1 - toe) * smooth(.82, 1, t);
+        + toeJoint - .045 * smooth(.86, 1, t)
+        : .018 + arch + .018 * (1 - toe) * smooth(.82, 1, t);
       positions.push(x, y, z);
       if (layer === 0 && row && col) {
         const a = (row-1)*stride+col-1, b = row*stride+col-1;
@@ -409,7 +439,10 @@ function createFootGeometry(label, s) {
     indices.push(a,a+layerSize,b, b,a+layerSize,b+layerSize);
   }
   addGeometry(`Foot_${label}`, 'Ice_Base', positions, indices, `Foot_${label}`,
-    (x, y, z) => .80 + .14 * smooth(.025, .22, y) + noise(x*3,y*3,z*3)*.16);
+    (x, y, z) => {
+      const shade = .75 + .19 * smooth(.035, .23, y) + noise(x*3,y*3,z*3)*.12;
+      return [shade*.94, shade, Math.min(1, shade*1.06)];
+    });
 }
 function createHandGeometry(label, s) {
   const name = `Hand_${label}`, joint = name, x = s * 1.48;
@@ -421,19 +454,22 @@ function createHandGeometry(label, s) {
     const offset = (i - 1.5) * .19;
     const fingerX = x + offset;
     const endY = 1.075 + Math.abs(i - 1.5) * .037 + i*.006;
-    shaft(name, 'Ice_Base', V(fingerX, 1.40, .33), V(fingerX + offset*.11, 1.22, .38),
-      .097, .093, joint, 8, 6, [.92, 1.05, 1, .87]);
-    shaft(name, 'Ice_Base', V(fingerX + offset*.11, 1.25, .38), V(fingerX + offset*.20, endY, .45),
-      .087, .080, joint, 8, 6, [.9, 1.04, .86, .54]);
+    shaft(name, 'Ice_Base', V(fingerX, 1.41, .32), V(fingerX + offset*.11, 1.22, .39),
+      .098, .094, joint, 8, 6, [1, 1.07, .94, .78]);
+    shaft(name, 'Ice_Base', V(fingerX + offset*.11, 1.26, .39), V(fingerX + offset*.20, endY, .45),
+      .086, .078, joint, 8, 6, [.83, 1.04, .76, .40]);
+    ribbon(name, 'Ice_Dark', [V(fingerX-.055, 1.25, .467),
+      V(fingerX, 1.235, .495), V(fingerX+.055, 1.25, .467)],
+      [.003, .005, .003], joint);
     createIcePlate(name, 'Ice_Crystal', [V(fingerX-.075, 1.44, .45),
       V(fingerX+.075, 1.44, .45), V(fingerX+.06, 1.33, .51),
       V(fingerX-.06, 1.33, .51)], .03, joint);
   }
   const thumbX = x - s*.28;
   shaft(name, 'Ice_Base', V(thumbX, 1.58, .32), V(thumbX-s*.14, 1.41, .42),
-    .115, .10, joint, 8, 6, [.78, 1.1, .94, .7]);
-  shaft(name, 'Ice_Base', V(thumbX-s*.12, 1.43, .41), V(thumbX-s*.19, 1.29, .49),
-    .091, .085, joint, 8, 6, [.94, 1, .83, .52]);
+    .115, .10, joint, 8, 6, [.84, 1.12, .96, .76]);
+  shaft(name, 'Ice_Base', V(thumbX-s*.12, 1.43, .41), V(thumbX-s*.21, 1.30, .51),
+    .091, .085, joint, 8, 6, [.91, 1.03, .79, .42]);
 }
 
 function createHeadGeometry() {
@@ -477,7 +513,8 @@ function createHornGeometry(label, s) {
   // Segmented curve, irregular polygonal cross section and progressive taper.
   const curve = new THREE.CatmullRomCurve3([V(s*.29, 4.15, -.02), V(s*.49, 4.22, -.08),
     V(s*.66, 4.34, -.13), V(s*.75, 4.47, -.17), V(s*.67, 4.55, -.16), V(s*.48, 4.61, -.11)]);
-  const positions = [], indices = [], sides = 9, segments = 25;
+  const positions = [], sides = 9, segments = 25;
+  const indices = { Ice_Dark: [], Ice_Base: [], Ice_Crystal: [] };
   for (let i = 0; i <= segments; i++) {
     const t = i / segments, p = curve.getPoint(t), tangent = curve.getTangent(t);
     const side = V(0, 0, 1).cross(tangent).normalize();
@@ -489,11 +526,22 @@ function createHornGeometry(label, s) {
       const v = p.clone().addScaledVector(side, Math.cos(a) * radius * facet)
         .addScaledVector(normal, Math.sin(a) * radius * (1 + .07 * Math.sin(j * 1.7)));
       positions.push(v.x, v.y, v.z);
-      if (i && j) { const a = (i-1)*(sides+1)+j-1, b=a+sides+1; indices.push(a,a+1,b,a+1,b+1,b); }
+      if (i && j) {
+        const a = (i-1)*(sides+1)+j-1, b=a+sides+1;
+        const material = i <= 6 ? 'Ice_Dark' : i <= 19 ? 'Ice_Base' : 'Ice_Crystal';
+        indices[material].push(a,a+1,b,a+1,b+1,b);
+      }
     }
   }
-  addGeometry(`Horn_${label}`, 'Ice_Base', positions, indices, 'Head',
-    (x, y) => .70 + .24 * smooth(4.15, 4.60, y));
+  for (const [material, faces] of Object.entries(indices)) {
+    addGeometry(`Horn_${label}`, material, positions, faces, 'Head',
+      (x, y) => {
+        const t = smooth(4.15, 4.60, y);
+        return material === 'Ice_Dark' ? .82 + .16 * t
+          : material === 'Ice_Crystal' ? [.86 + .12*t, .92 + .08*t, 1]
+            : [.77 + .17*t, .84 + .13*t, .94 + .06*t];
+      });
+  }
 }
 
 createTorsoGeometry();
@@ -583,6 +631,26 @@ function createChestCore() {
   const gem = [V(0, 3.44, .67), V(.15, 3.20, .69), V(.14, 3.07, .71),
     V(0, 2.87, .69), V(-.14, 3.07, .71), V(-.15, 3.20, .69)];
   createIcePlate('Chest_Core', 'Ice_Crystal', gem, .07, 'Chest');
+  // Narrow raised ice lip around the existing dark recess and crystal face.
+  const center = V(0, 3.17, .68);
+  for (let i = 0; i < gem.length; i++) {
+    const next = (i + 1) % gem.length;
+    const outerA = center.clone().lerp(gem[i], 1.18); outerA.z = gem[i].z - .015;
+    const outerB = center.clone().lerp(gem[next], 1.18); outerB.z = gem[next].z - .015;
+    const innerA = center.clone().lerp(gem[i], .91); innerA.z = gem[i].z + .042;
+    const innerB = center.clone().lerp(gem[next], .91); innerB.z = gem[next].z + .042;
+    createIcePlate('Chest_Core', 'Ice_Crystal', [outerA, outerB, innerB, innerA], .015, 'Chest');
+  }
+  for (const s of [-1, 1]) {
+    createIcePlate('Chest_Core', 'Ice_Base', [
+      V(s*.16, 3.40, .70), V(s*.29, 3.34, .62),
+      V(s*.27, 3.17, .65), V(s*.18, 3.18, .74),
+    ], .025, 'Chest');
+    createIcePlate('Chest_Core', 'Ice_Base', [
+      V(s*.18, 3.12, .74), V(s*.27, 3.08, .65),
+      V(s*.19, 2.92, .64), V(s*.13, 3.01, .72),
+    ], .020, 'Chest');
+  }
   createCrystal('Chest_Core', 'Ice_Emission', V(0, 3.00, .74), V(0, 3.37, .84), .075, 'Chest', 170, 6);
 }
 
@@ -642,8 +710,13 @@ function createFissures() {
     for (let i = 0; i < chestPaths.length; i++) {
       const path = chestPaths[i];
       ribbon('Chest_Fissures', 'Ice_Fissure', surfacePath('Body', path),
-        path.map((_, j) => (.022-i*.004) * (1-j/(path.length+1))), 'Chest', torsoSkin);
+        path.map((_, j) => (.020-i*.004) * (1-j/(path.length+1)) * (j % 2 ? .74 : 1)), 'Chest', torsoSkin);
     }
+    for (const branch of [
+      [[s*.36,3.25],[s*.40,3.19],[s*.47,3.18]],
+      [[s*.53,2.97],[s*.58,2.93],[s*.62,2.88]],
+    ]) ribbon('Chest_Fissures', 'Ice_Fissure', surfacePath('Body', branch, .028),
+      [.004,.006,.002], 'Chest', torsoSkin);
     const arm = `Arm_${s < 0 ? 'L' : 'R'}`, leg = `Leg_${s < 0 ? 'L' : 'R'}`;
     ribbon('Arm_Fissures', 'Ice_Fissure', surfacePath(arm,
       [[s*1.42,2.26],[s*1.50,2.18],[s*1.45,2.06],[s*1.56,1.99]]),
