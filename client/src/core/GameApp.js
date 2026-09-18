@@ -172,6 +172,10 @@ export class GameApp {
     this.previousTimestamp = timestamp;
     this.xrController?.update?.(deltaSeconds);
     this.gameSession?.update?.(deltaSeconds);
+    this.audioSystem?.updateEnemyProximity?.(
+      this.gameSession?.enemyAudioStates ?? [],
+      deltaSeconds,
+    );
     this.renderContext.update(deltaSeconds);
     this.xrHud?.update?.(deltaSeconds);
     this.renderContext.render();

@@ -114,6 +114,7 @@ let xrActive = false;
 let pointerLocked = false;
 let announcedChargeStage = -1;
 let lastStretchSoundStep = -1;
+let lastEnemySpawnSoundKey = '';
 let currentPlayerName = normalizePlayerName('');
 let activeMatch = null;
 let lastCompletedMatch = null;
@@ -638,6 +639,21 @@ function updateWaveState(state) {
   }
 
   if (state.status === 'active') {
+    const enemyTypeId = gameSession.enemyState.type.id;
+    const spawnSoundKey = `${state.wave}:${state.enemy}:${enemyTypeId}`;
+
+    if (spawnSoundKey !== lastEnemySpawnSoundKey) {
+      lastEnemySpawnSoundKey = spawnSoundKey;
+      gameAudioSystem?.play(state.enemy === 1 ? 'wave-start' : 'enemy-spawn', {
+        pitchScale:
+          enemyTypeId === 'weak'
+            ? 1.12
+            : enemyTypeId === 'resistant'
+              ? 0.86
+              : 1,
+      });
+    }
+
     updateEnemyState(gameSession.enemyState);
     setShotStatus(
       pointerLocked || xrActive ? 'ready' : 'idle',
@@ -1070,6 +1086,7 @@ async function enterPrototype() {
       throw renderContext.assetError ?? new Error('Não foi possível carregar a arena de gelo.');
     }
     prototypeView.dataset.gameState = 'PLAYING';
+    lastEnemySpawnSoundKey = '';
     gameAudioSystem = new GameAudioSystem();
     gameAudioSystem.unlock();
     activeMatch = {
@@ -1174,6 +1191,7 @@ async function enterPrototype() {
     xrHudSystem = null;
     xrPerformanceMonitor = null;
     gameAudioSystem = null;
+    lastEnemySpawnSoundKey = '';
     xrActive = false;
     activeMatch = null;
     lastCompletedMatch = null;
@@ -1208,6 +1226,7 @@ function exitPrototype({ focusMenu = true } = {}) {
   xrHudSystem = null;
   xrPerformanceMonitor = null;
   gameAudioSystem = null;
+  lastEnemySpawnSoundKey = '';
   xrActive = false;
   pointerLocked = false;
   activeMatch = null;

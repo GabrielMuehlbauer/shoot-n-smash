@@ -112,6 +112,7 @@ export class GameSession {
 
     validateBossConfig(config?.boss);
     this.config = config;
+    this.camera = camera;
     this.scene = scene;
     this.enemyRandom = enemyRandom;
     this.enemyTypeRandom = enemyTypeRandom;
@@ -145,6 +146,11 @@ export class GameSession {
     this.bossHitboxCenter = new Vector3();
     this.projectileContactCenter = new Vector3();
     this.itemCenter = new Vector3();
+    this.audioCameraPosition = new Vector3();
+    this.audioCameraForward = new Vector3();
+    this.audioCameraRight = new Vector3();
+    this.audioEnemyPosition = new Vector3();
+    this.audioEnemyDirection = new Vector3();
     this.pendingProjectileImpacts = [];
     this.enemySystems = [];
     this.enemyEncounters = new Map();
@@ -316,6 +322,49 @@ export class GameSession {
 
   get activeEnemyCount() {
     return this.enemySystems.filter((enemy) => enemy.active).length;
+  }
+
+  get enemyAudioStates() {
+    this.camera?.getWorldPosition?.(this.audioCameraPosition);
+    this.camera?.getWorldDirection?.(this.audioCameraForward);
+    this.audioCameraForward.y = 0;
+
+    if (this.audioCameraForward.lengthSq() <= Number.EPSILON) {
+      this.audioCameraForward.set(0, 0, -1);
+    } else {
+      this.audioCameraForward.normalize();
+    }
+
+    this.audioCameraRight
+      .set(-this.audioCameraForward.z, 0, this.audioCameraForward.x)
+      .normalize();
+
+    return Object.freeze(
+      this.enemySystems
+        .map((enemy, index) => {
+          if (!enemy.active) {
+            return null;
+          }
+
+          enemy.getCenter(this.audioEnemyPosition);
+          this.audioEnemyDirection
+            .subVectors(this.audioEnemyPosition, this.audioCameraPosition);
+          this.audioEnemyDirection.y = 0;
+          const distance = this.audioEnemyDirection.length();
+          const pan = distance > Number.EPSILON
+            ? this.audioEnemyDirection.dot(this.audioCameraRight) / distance
+            : 0;
+
+          return Object.freeze({
+            active: true,
+            distance,
+            id: `enemy-${index}`,
+            pan: Math.min(Math.max(pan, -1), 1),
+            typeId: enemy.enemyType.id,
+          });
+        })
+        .filter(Boolean),
+    );
   }
 
   get playerState() {
