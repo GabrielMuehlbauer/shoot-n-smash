@@ -15,6 +15,8 @@
     "db:migrate": "npm run db:migrate --workspace server",
     "build": "npm run build --workspace client",
     "check:bundle": "node scripts/check-build-budget.js",
+    "generate:ice-golem": "node scripts/generate-ice-golem.js",
+    "render:ice-golem": "node scripts/render-ice-golem-preview.js",
     "start": "npm run start --workspace server",
     "test": "npm run test --workspaces --if-present",
     "check": "npm run test && npm run build && npm run check:bundle"

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { Box3, Scene, Vector3 } from 'three';
+import { Box3, Raycaster, Scene, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
@@ -15,11 +15,43 @@ import {
 import { EnemySystem } from './EnemySystem.js';
 
 async function parseGameAsset() {
-  const bytes = await readFile(new URL('../../public/assets/models/ice_golem.glb', import.meta.url));
+  const bytes = await readFile(new URL('../../public/models/ice-golem/ice_golem.glb', import.meta.url));
   return new GLTFLoader().parseAsync(
     bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
     '',
   );
+}
+
+function boundaryEdges(geometry) {
+  const counts = new Map();
+  const index = geometry.index, position = geometry.attributes.position;
+  const vertex = i => {
+    const at = index ? index.getX(i) : i;
+    return [position.getX(at), position.getY(at), position.getZ(at)]
+      .map(value => value.toFixed(5)).join(',');
+  };
+  const count = index?.count ?? position.count;
+  for (let i = 0; i < count; i += 3) {
+    const triangle = [vertex(i), vertex(i + 1), vertex(i + 2)];
+    for (let edge = 0; edge < 3; edge++) {
+      const a = triangle[edge], b = triangle[(edge + 1) % 3];
+      const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return [...counts.values()].filter(count => count !== 2).length;
+}
+
+function widthAtY(geometry, y, tolerance = 0.025) {
+  const position = geometry.attributes.position;
+  let min = Infinity, max = -Infinity;
+  for (let i = 0; i < position.count; i++) {
+    if (Math.abs(position.getY(i) - y) > tolerance) continue;
+    min = Math.min(min, position.getX(i));
+    max = Math.max(max, position.getX(i));
+  }
+  assert.ok(Number.isFinite(min) && Number.isFinite(max));
+  return max - min;
 }
 
 test('GLB do chefão contém rig, partes, materiais e orçamento geométrico', async () => {
@@ -37,10 +69,21 @@ test('GLB do chefão contém rig, partes, materiais e orçamento geométrico', a
     assert.ok(object.skeleton.bones.length >= 18);
   });
   const box = new Box3().setFromObject(scene);
-  assert.ok(skinnedMeshes >= 20 && skinnedMeshes <= 60);
-  assert.ok(triangles >= 80000 && triangles <= 100000, `${triangles} triângulos`);
+  assert.ok(skinnedMeshes >= 30 && skinnedMeshes <= 60);
+  assert.ok(triangles >= 15000 && triangles <= 22000, `${triangles} triângulos`);
   assert.deepEqual([...materials].sort(),
-    ['Ice_Base', 'Ice_Dark', 'Ice_Emission', 'Ice_Light']);
+    ['Ice_Base', 'Ice_Crystal', 'Ice_Dark', 'Ice_Emission', 'Ice_Fissure']);
+  const crystal = root.getObjectByName('Shoulder_L_Ice_Crystal');
+  assert.ok(crystal?.material.isMeshPhysicalMaterial);
+  assert.ok(Math.abs(crystal.material.transmission - 0.22) < 1e-6);
+  assert.ok(Math.abs(crystal.material.ior - 1.31) < 1e-6);
+  assert.ok(Math.abs(crystal.material.thickness - 0.16) < 1e-6);
+  assert.equal(crystal.material.opacity, 1);
+  assert.equal(crystal.material.transparent, false);
+  const crystalColors = crystal.geometry.getAttribute('color');
+  assert.ok(crystalColors?.count > 0);
+  assert.ok(Array.from({ length: crystalColors.count }, (_, i) => crystalColors.getZ(i) - crystalColors.getX(i))
+    .some(delta => delta > 0.05), 'cristais devem conservar a profundidade azul por vértice');
   const body = root.getObjectByName('Body').children.find(
     (object) => object.isSkinnedMesh && object.material.name === 'Ice_Base',
   );
@@ -57,7 +100,37 @@ test('GLB do chefão contém rig, partes, materiais e orçamento geométrico', a
   assert.deepEqual([...boneNames].sort(), ['Chest', 'Pelvis', 'Spine']);
   assert.ok(Math.abs(box.getSize(new Vector3()).y - 4.5) < 0.05);
   assert.ok(Math.abs(box.min.y) < 0.05);
+  for (const name of ['Beard', 'Shoulder_L', 'Shoulder_R', 'Back_Crystals',
+    'Chest_Core', 'Chest_Plates', 'Chest_Fissures', 'Waist_Armor', 'Arm_Armor_L', 'Leg_Armor_L']) {
+    assert.ok(root.getObjectByName(name), `${name} deve existir`);
+  }
+  for (const name of ['Head', 'Chest_Core']) {
+    const mesh = root.getObjectByName(`${name}_Ice_Emission`);
+    assert.ok(mesh?.isSkinnedMesh && mesh.material.name === 'Ice_Emission',
+      `${name} deve usar o material emissivo`);
+  }
+  const fissures = root.getObjectByName('Chest_Fissures_Ice_Fissure');
+  assert.ok(fissures?.isSkinnedMesh);
+  assert.ok(fissures.material.emissiveIntensity <
+    root.getObjectByName('Chest_Core_Ice_Emission').material.emissiveIntensity);
   assert.ok(root.getObjectByName('IceGolem_CoreLight')?.isPointLight);
+  const center = root.localToWorld(new Vector3(0, 3.05, 2));
+  const chestHit = new Raycaster(center, new Vector3(0, 0, -1), 0, 3)
+    .intersectObject(root.getObjectByName('Body'), true);
+  assert.ok(chestHit.length > 0, 'o esterno deve cobrir o centro do peito');
+  for (const name of ['Body', 'Arm_L', 'Arm_R', 'Leg_L', 'Leg_R', 'Foot_L', 'Foot_R']) {
+    const mesh = root.getObjectByName(`${name}_Ice_Base`);
+    assert.equal(boundaryEdges(mesh.geometry), 0, `${name} não deve ter bordas abertas`);
+  }
+  const bodyGeometry = root.getObjectByName('Body').children[0].geometry;
+  assert.ok(widthAtY(bodyGeometry, 3.19) > widthAtY(bodyGeometry, 1.90) * 1.8,
+    'o peito deve ser muito mais largo que a cintura');
+  const armGeometry = root.getObjectByName('Arm_L').children[0].geometry;
+  assert.ok(widthAtY(armGeometry, 1.98) > widthAtY(armGeometry, 3.05) * 1.3,
+    'o antebraço deve dominar o braço');
+  const legGeometry = root.getObjectByName('Leg_L').children[0].geometry;
+  assert.ok(widthAtY(legGeometry, .93) < widthAtY(legGeometry, 1.34) * .75,
+    'o joelho deve ser mais estreito que a coxa');
 });
 
 test('rig do chefão coordena passada, contrabalanço e retorno ao repouso', async () => {

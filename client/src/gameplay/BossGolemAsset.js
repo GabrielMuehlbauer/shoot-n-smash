@@ -1,15 +1,15 @@
 import { Euler, PointLight, Quaternion } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export const BOSS_GOLEM_URL = '/assets/models/ice_golem.glb';
+export const BOSS_GOLEM_URL = '/models/ice-golem/ice_golem.glb';
 export const BOSS_GOLEM_SOURCE_HEIGHT = 4.5;
 export const BOSS_GOLEM_GAME_HEIGHT = 6.2;
 
 const REQUIRED_PARTS = [
-  'Body', 'Head', 'Beard', 'Horn_L', 'Horn_R', 'Shoulder_L',
-  'Shoulder_R', 'Arm_L', 'Arm_R', 'Hand_L', 'Hand_R', 'Leg_L',
-  'Leg_R', 'Foot_L', 'Foot_R', 'Back_Crystals', 'Arm_Crystals',
-  'Leg_Crystals', 'Waist_Armor', 'Chest_Core',
+  'Body', 'Head', 'Beard', 'Horn_L', 'Horn_R',
+  'Shoulder_L', 'Shoulder_R', 'Back_Crystals', 'Chest_Core', 'Chest_Plates', 'Chest_Fissures',
+  'Arm_L', 'Arm_R', 'Arm_Armor_L', 'Arm_Armor_R', 'Hand_L', 'Hand_R',
+  'Leg_L', 'Leg_R', 'Leg_Armor_L', 'Leg_Armor_R', 'Foot_L', 'Foot_R', 'Waist_Armor',
 ];
 
 const RIG_BONES = [
@@ -21,10 +21,11 @@ const RIG_BONES = [
 ];
 
 const MATERIAL_TUNING = Object.freeze({
-  Ice_Base: Object.freeze({ roughness: 0.3, metalness: 0.04, envMapIntensity: 1.2 }),
-  Ice_Dark: Object.freeze({ roughness: 0.4, metalness: 0.02, envMapIntensity: 0.9 }),
-  Ice_Light: Object.freeze({ roughness: 0.22, metalness: 0.03, envMapIntensity: 1.35 }),
-  Ice_Emission: Object.freeze({ roughness: 0.24, metalness: 0, envMapIntensity: 1.1 }),
+  Ice_Base: Object.freeze({ roughness: 0.32, metalness: 0, envMapIntensity: 1.2 }),
+  Ice_Dark: Object.freeze({ roughness: 0.42, metalness: 0, envMapIntensity: 0.9 }),
+  Ice_Crystal: Object.freeze({ roughness: 0.19, metalness: 0, envMapIntensity: 1.45 }),
+  Ice_Emission: Object.freeze({ roughness: 0.20, metalness: 0, envMapIntensity: 1.0 }),
+  Ice_Fissure: Object.freeze({ roughness: 0.30, metalness: 0, envMapIntensity: 1.0 }),
 });
 
 function tuneBossMaterials(root) {
@@ -40,9 +41,6 @@ function tuneBossMaterials(root) {
       const tuning = MATERIAL_TUNING[material.name];
       if (!tuning) continue;
       Object.assign(material, tuning);
-      if (material.name === 'Ice_Emission') {
-        material.emissiveIntensity = 2.65;
-      }
       material.needsUpdate = true;
     }
   });
@@ -50,9 +48,9 @@ function tuneBossMaterials(root) {
 
 function addChestCoreLight(root) {
   if (root.getObjectByName('IceGolem_CoreLight')) return;
-  const light = new PointLight(0x35cfff, 1.45, 5.2, 2);
+  const light = new PointLight(0x2acfff, 0.7, 3.6, 2);
   light.name = 'IceGolem_CoreLight';
-  light.position.set(0, 3.02, 0.46);
+  light.position.set(0, 3.13, .83);
   light.castShadow = false;
   root.add(light);
 }
@@ -169,11 +167,9 @@ export function updateBossGolemPose(rig, { phase = 0, moving = false } = {}) {
   poseBone(rig, 'LowerLeg_R', rightLift * 0.2);
   poseBone(rig, 'Foot_R', -stride * 0.12 - rightLift * 0.08);
 
-  const corePulse = 0.5 + 0.5 * Math.sin(phase * 2);
-  if (rig.coreLight) rig.coreLight.intensity = 1.35 + corePulse * 0.28;
-  for (const material of rig.emissiveMaterials) {
-    material.emissiveIntensity = 2.45 + corePulse * 0.4;
-  }
+  const pulse = 0.5 + 0.5 * Math.sin(phase * 2);
+  if (rig.coreLight) rig.coreLight.intensity = .65 + pulse * .15;
+  for (const material of rig.emissiveMaterials) material.emissiveIntensity = .95 + pulse * .15;
 
   return {
     stride,
