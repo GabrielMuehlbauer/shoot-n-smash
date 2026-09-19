@@ -115,7 +115,7 @@ function createRenderContextClass(fixture) {
   };
 }
 
-test('repassa o delta ao cenário e ao farol de gelo', () => {
+test('repassa o delta ao cenário, ao farol e ao easter egg', () => {
   const fixture = createFixture();
   const TestRenderContext = createRenderContextClass(fixture);
   const context = new TestRenderContext(fixture.container, {
@@ -124,9 +124,12 @@ test('repassa o delta ao cenário e ao farol de gelo', () => {
   });
 
   context.update(0.5);
+  context.setWeatherState({ status: 'active', wave: 1 });
+  context.update(4.6);
 
-  assert.deepEqual(fixture.counters.worldUpdates, [0.5]);
+  assert.deepEqual(fixture.counters.worldUpdates, [0.5, 4.6]);
   assert.ok(context.iceBeacon.rotation.y > 0);
+  assert.equal(context.easterEggSystem.phase, 'flying');
   assert.equal(fixture.renderer.xr.enabled, true);
   assert.deepEqual(fixture.counters.xrReferenceSpaceTypes, ['local-floor']);
   assert.equal(context.isXRPresenting, false);

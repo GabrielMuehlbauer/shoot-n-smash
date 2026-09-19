@@ -21,6 +21,7 @@ import { loadFinalTextureSet } from '../assets/final-assets.js';
 import { RENDER_CONFIG } from '../config/render-config.js';
 import { SNOW_ARENA_CONFIG } from '../config/snow-arena-config.js';
 import { resizeRendererToContainer } from '../utils/viewport.js';
+import { SenacBlimpSystem } from '../world/SenacBlimpSystem.js';
 import { SnowArena } from '../world/SnowArena.js';
 import { disposeScenario, loadIceScenario } from '../world/IceScenario.js';
 import { SnowstormSystem } from '../world/SnowstormSystem.js';
@@ -67,6 +68,10 @@ export class RenderContext {
       this.weatherSystem = new SnowstormSystem({
         scene: this.scene,
         camera: this.camera,
+      });
+      this.easterEggSystem = new SenacBlimpSystem({
+        scene: this.scene,
+        textureLoader: this.textureLoader,
       });
       this.loadFinalAssets();
       this.iceBeacon = this.createIceBeacon();
@@ -316,12 +321,17 @@ export class RenderContext {
   update(deltaSeconds) {
     this.snowArena?.update(deltaSeconds);
     this.weatherSystem?.update(deltaSeconds);
+    this.easterEggSystem?.update(deltaSeconds);
     this.iceBeacon.rotation.y +=
       deltaSeconds * RENDER_CONFIG.loop.beaconRotationRadiansPerSecond;
   }
 
   setWeatherState(waveState) {
-    return this.weatherSystem?.setWaveState(waveState) ?? false;
+    const weatherChanged =
+      this.weatherSystem?.setWaveState(waveState) ?? false;
+    const easterEggChanged =
+      this.easterEggSystem?.setWaveState(waveState) ?? false;
+    return weatherChanged || easterEggChanged;
   }
 
   render() {
@@ -340,6 +350,7 @@ export class RenderContext {
     this.windowRef?.removeEventListener?.('resize', this.resize);
     this.assetLoadId += 1;
     this.weatherSystem?.dispose();
+    this.easterEggSystem?.dispose();
 
     for (const texture of Object.values(this.finalTextures ?? {})) {
       texture.dispose?.();

@@ -39,7 +39,11 @@ const initialScript = await readFile(initialScriptPath);
 const files = await listFiles(DIST_PATH);
 const javaScriptFiles = files.filter((file) => file.endsWith('.js'));
 const textureFiles = files.filter((file) => /assets\/textures\/.*\.jpe?g$/i.test(file));
-assert.equal(textureFiles.length, 3, 'O build deve conter as três texturas finais.');
+assert.equal(
+  textureFiles.length,
+  4,
+  'O build deve conter as três texturas finais e a logo do easter egg.',
+);
 const javaScriptBuffers = await Promise.all(javaScriptFiles.map((file) => readFile(file)));
 const textureStats = await Promise.all(textureFiles.map((file) => stat(file)));
 
