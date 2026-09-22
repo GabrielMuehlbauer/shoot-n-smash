@@ -1,6 +1,10 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import { createBossGolemRig } from './BossGolemAsset.js';
+import {
+  createGolemAssetCache,
+  disposeGolemAsset,
+} from './GolemAssetCache.js';
 
 export const WEAK_GOLEM_URL = '/assets/models/ice_golem_weak.glb';
 export const WEAK_GOLEM_SOURCE_HEIGHT = 4.5;
@@ -14,16 +18,7 @@ const REQUIRED_PARTS = [
 ];
 
 export function disposeWeakGolemAsset(scene) {
-  const geometries = new Set();
-  const materials = new Set();
-  scene.traverse((object) => {
-    if (object.geometry) geometries.add(object.geometry);
-    for (const material of [object.material].flat().filter(Boolean)) {
-      materials.add(material);
-    }
-  });
-  for (const geometry of geometries) geometry.dispose();
-  for (const material of materials) material.dispose();
+  disposeGolemAsset(scene);
 }
 
 export function prepareWeakGolemAsset(scene) {
@@ -57,12 +52,19 @@ export function createWeakGolemRig(scene) {
   return createBossGolemRig(scene);
 }
 
+const assetCache = createGolemAssetCache({
+  url: WEAK_GOLEM_URL,
+  prepare: prepareWeakGolemAsset,
+});
+
+export function createCachedWeakGolemAsset() {
+  return assetCache.create();
+}
+
+export function preloadWeakGolemAsset({ loader = new GLTFLoader() } = {}) {
+  return assetCache.preload(loader);
+}
+
 export async function loadWeakGolemAsset({ loader = new GLTFLoader() } = {}) {
-  const { scene } = await loader.loadAsync(WEAK_GOLEM_URL);
-  try {
-    return prepareWeakGolemAsset(scene);
-  } catch (error) {
-    if (scene) disposeWeakGolemAsset(scene);
-    throw error;
-  }
+  return assetCache.load(loader);
 }

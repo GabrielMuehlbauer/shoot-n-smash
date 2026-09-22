@@ -5,7 +5,10 @@ import {
   intersectMovingSpheres,
   intersectSegmentSphere,
 } from '../gameplay/CollisionSystem.js';
-import { EnemySystem } from '../gameplay/EnemySystem.js';
+import {
+  EnemySystem,
+  preloadEnemyAssets,
+} from '../gameplay/EnemySystem.js';
 import { validateEnemyTypes } from '../gameplay/EnemyTypes.js';
 import { GameStateManager } from '../gameplay/GameStateManager.js';
 import { ImpactFeedbackSystem } from '../gameplay/ImpactFeedbackSystem.js';
@@ -15,6 +18,8 @@ import { ProjectileSystem } from '../gameplay/ProjectileSystem.js';
 import { ScoreManager } from '../gameplay/ScoreManager.js';
 import { SlingshotSystem } from '../gameplay/SlingshotSystem.js';
 import { WaveManager } from '../gameplay/WaveManager.js';
+
+export { preloadEnemyAssets };
 
 function validateBossConfig(config) {
   validateEnemyTypes([config?.type]);
@@ -215,6 +220,7 @@ export class GameSession {
       this.enemySystem = primaryEnemySystem;
       this.enemySystems.push(primaryEnemySystem);
       primaryEnemySystem.preloadBossAsset?.();
+      primaryEnemySystem.preloadModelAssets?.();
       this.enemyEncounters.set(
         primaryEnemySystem,
         this.createEncounterIdentity('enemy', 1),

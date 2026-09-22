@@ -13,38 +13,64 @@ import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
 import {
   BOSS_GOLEM_GAME_HEIGHT,
   BOSS_GOLEM_SOURCE_HEIGHT,
+  createCachedBossGolemAsset,
   createBossGolemRig,
   disposeBossGolemAsset,
   loadBossGolemAsset,
+  preloadBossGolemAsset,
   updateBossGolemPose,
 } from './BossGolemAsset.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
 import { FlyingEnemyController } from './FlyingEnemyController.js';
 import { FlyingIceEnemyVisual } from './FlyingIceEnemyVisual.js';
 import {
+  createCachedMediumGolemAsset,
   createMediumGolemRig,
   disposeMediumGolemAsset,
   loadMediumGolemAsset,
   MEDIUM_GOLEM_GAME_HEIGHT,
   MEDIUM_GOLEM_SOURCE_HEIGHT,
+  preloadMediumGolemAsset,
 } from './MediumGolemAsset.js';
 import {
+  createCachedResistantGolemAsset,
   createResistantGolemRig,
   disposeResistantGolemAsset,
   loadResistantGolemAsset,
+  preloadResistantGolemAsset,
   RESISTANT_GOLEM_GAME_HEIGHT,
   RESISTANT_GOLEM_SOURCE_HEIGHT,
 } from './ResistantGolemAsset.js';
 import {
+  createCachedWeakGolemAsset,
   createWeakGolemRig,
   disposeWeakGolemAsset,
   loadWeakGolemAsset,
+  preloadWeakGolemAsset,
   WEAK_GOLEM_GAME_HEIGHT,
   WEAK_GOLEM_SOURCE_HEIGHT,
 } from './WeakGolemAsset.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const FULL_CIRCLE = Math.PI * 2;
+
+export async function preloadEnemyAssets({
+  bossAssetLoader = new GLTFLoader(),
+  weakAssetLoader = new GLTFLoader(),
+  mediumAssetLoader = new GLTFLoader(),
+  resistantAssetLoader = new GLTFLoader(),
+} = {}) {
+  const requests = [
+    [bossAssetLoader, preloadBossGolemAsset],
+    [weakAssetLoader, preloadWeakGolemAsset],
+    [mediumAssetLoader, preloadMediumGolemAsset],
+    [resistantAssetLoader, preloadResistantGolemAsset],
+  ]
+    .filter(([loader]) => loader)
+    .map(([loader, preload]) => preload({ loader }));
+  const results = await Promise.allSettled(requests);
+  return results.every(({ status }) => status === 'fulfilled');
+}
 
 function assertCallback(name, callback) {
   if (typeof callback !== 'function') {
@@ -632,30 +658,44 @@ export class EnemySystem extends Group {
   requestBossAsset() {
     if (!this.bossAssetLoader) return null;
     if (this.bossAssetPromise) return this.bossAssetPromise;
+    const cachedAsset = createCachedBossGolemAsset();
+    if (cachedAsset) {
+      this.bossAssetPromise = Promise.resolve(cachedAsset);
+      try {
+        this.attachBossAsset(cachedAsset);
+      } catch (error) {
+        this.bossAssetError = error;
+        this.bossAssetPromise = Promise.resolve();
+        console.warn('Falha ao preparar o modelo do chefão:', error);
+      }
+      return this.bossAssetPromise;
+    }
     this.bossAssetPromise = loadBossGolemAsset({ loader: this.bossAssetLoader })
       .then((asset) => {
         if (this.disposed) {
           disposeBossGolemAsset(asset);
           return;
         }
-        let rig;
-        try {
-          rig = createBossGolemRig(asset);
-        } catch (error) {
-          disposeBossGolemAsset(asset);
-          throw error;
-        }
-        this.bossAsset = asset;
-        this.bossRig = rig;
-        this.visual.add(asset);
-        this.syncModelAssets();
-        this.updateMotionVisual();
+        this.attachBossAsset(asset);
       })
       .catch((error) => {
         this.bossAssetError = error;
         console.warn('Falha ao carregar o modelo do chefão:', error);
       });
     return this.bossAssetPromise;
+  }
+
+  attachBossAsset(asset) {
+    try {
+      this.bossRig = createBossGolemRig(asset);
+    } catch (error) {
+      disposeBossGolemAsset(asset);
+      throw error;
+    }
+    this.bossAsset = asset;
+    this.visual.add(asset);
+    this.syncModelAssets();
+    this.updateMotionVisual();
   }
 
   preloadBossAsset() {
@@ -667,26 +707,36 @@ export class EnemySystem extends Group {
     return Boolean(this.bossAssetPromise);
   }
 
+  preloadModelAssets() {
+    if (this.disposed) return false;
+    this.requestWeakAsset();
+    this.requestMediumAsset();
+    this.requestResistantAsset();
+    this.requestBossAsset();
+    return true;
+  }
+
   requestWeakAsset() {
     if (!this.weakAssetLoader || this.weakAssetPromise) return;
+    const cachedAsset = createCachedWeakGolemAsset();
+    if (cachedAsset) {
+      this.weakAssetPromise = Promise.resolve(cachedAsset);
+      try {
+        this.attachWeakAsset(cachedAsset);
+      } catch (error) {
+        this.weakAssetError = error;
+        this.weakAssetPromise = Promise.resolve();
+        console.warn('Falha ao preparar o modelo do golem fraco:', error);
+      }
+      return;
+    }
     this.weakAssetPromise = loadWeakGolemAsset({ loader: this.weakAssetLoader })
       .then((asset) => {
         if (this.disposed) {
           disposeWeakGolemAsset(asset);
           return;
         }
-        let rig;
-        try {
-          rig = createWeakGolemRig(asset);
-        } catch (error) {
-          disposeWeakGolemAsset(asset);
-          throw error;
-        }
-        this.weakAsset = asset;
-        this.weakRig = rig;
-        this.visual.add(asset);
-        this.syncModelAssets();
-        this.updateMotionVisual();
+        this.attachWeakAsset(asset);
       })
       .catch((error) => {
         this.weakAssetError = error;
@@ -694,26 +744,40 @@ export class EnemySystem extends Group {
       });
   }
 
+  attachWeakAsset(asset) {
+    try {
+      this.weakRig = createWeakGolemRig(asset);
+    } catch (error) {
+      disposeWeakGolemAsset(asset);
+      throw error;
+    }
+    this.weakAsset = asset;
+    this.visual.add(asset);
+    this.syncModelAssets();
+    this.updateMotionVisual();
+  }
+
   requestMediumAsset() {
     if (!this.mediumAssetLoader || this.mediumAssetPromise) return;
+    const cachedAsset = createCachedMediumGolemAsset();
+    if (cachedAsset) {
+      this.mediumAssetPromise = Promise.resolve(cachedAsset);
+      try {
+        this.attachMediumAsset(cachedAsset);
+      } catch (error) {
+        this.mediumAssetError = error;
+        this.mediumAssetPromise = Promise.resolve();
+        console.warn('Falha ao preparar o modelo do golem médio:', error);
+      }
+      return;
+    }
     this.mediumAssetPromise = loadMediumGolemAsset({ loader: this.mediumAssetLoader })
       .then((asset) => {
         if (this.disposed) {
           disposeMediumGolemAsset(asset);
           return;
         }
-        let rig;
-        try {
-          rig = createMediumGolemRig(asset);
-        } catch (error) {
-          disposeMediumGolemAsset(asset);
-          throw error;
-        }
-        this.mediumAsset = asset;
-        this.mediumRig = rig;
-        this.visual.add(asset);
-        this.syncModelAssets();
-        this.updateMotionVisual();
+        this.attachMediumAsset(asset);
       })
       .catch((error) => {
         this.mediumAssetError = error;
@@ -721,31 +785,58 @@ export class EnemySystem extends Group {
       });
   }
 
+  attachMediumAsset(asset) {
+    try {
+      this.mediumRig = createMediumGolemRig(asset);
+    } catch (error) {
+      disposeMediumGolemAsset(asset);
+      throw error;
+    }
+    this.mediumAsset = asset;
+    this.visual.add(asset);
+    this.syncModelAssets();
+    this.updateMotionVisual();
+  }
+
   requestResistantAsset() {
     if (!this.resistantAssetLoader || this.resistantAssetPromise) return;
+    const cachedAsset = createCachedResistantGolemAsset();
+    if (cachedAsset) {
+      this.resistantAssetPromise = Promise.resolve(cachedAsset);
+      try {
+        this.attachResistantAsset(cachedAsset);
+      } catch (error) {
+        this.resistantAssetError = error;
+        this.resistantAssetPromise = Promise.resolve();
+        console.warn('Falha ao preparar o modelo do golem resistente:', error);
+      }
+      return;
+    }
     this.resistantAssetPromise = loadResistantGolemAsset({ loader: this.resistantAssetLoader })
       .then((asset) => {
         if (this.disposed) {
           disposeResistantGolemAsset(asset);
           return;
         }
-        let rig;
-        try {
-          rig = createResistantGolemRig(asset);
-        } catch (error) {
-          disposeResistantGolemAsset(asset);
-          throw error;
-        }
-        this.resistantAsset = asset;
-        this.resistantRig = rig;
-        this.visual.add(asset);
-        this.syncModelAssets();
-        this.updateMotionVisual();
+        this.attachResistantAsset(asset);
       })
       .catch((error) => {
         this.resistantAssetError = error;
         console.warn('Falha ao carregar o modelo do golem resistente:', error);
       });
+  }
+
+  attachResistantAsset(asset) {
+    try {
+      this.resistantRig = createResistantGolemRig(asset);
+    } catch (error) {
+      disposeResistantGolemAsset(asset);
+      throw error;
+    }
+    this.resistantAsset = asset;
+    this.visual.add(asset);
+    this.syncModelAssets();
+    this.updateMotionVisual();
   }
 
   syncModelAssets() {

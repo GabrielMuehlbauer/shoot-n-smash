@@ -5,6 +5,7 @@ import {
   disposeWeakGolemAsset,
   prepareWeakGolemAsset,
 } from './WeakGolemAsset.js';
+import { createGolemAssetCache } from './GolemAssetCache.js';
 
 export const RESISTANT_GOLEM_URL = '/assets/models/ice_golem_resistant.glb';
 export const RESISTANT_GOLEM_SOURCE_HEIGHT = 4.5;
@@ -17,12 +18,19 @@ export function prepareResistantGolemAsset(scene) {
   return prepareWeakGolemAsset(scene);
 }
 
+const assetCache = createGolemAssetCache({
+  url: RESISTANT_GOLEM_URL,
+  prepare: prepareResistantGolemAsset,
+});
+
+export function createCachedResistantGolemAsset() {
+  return assetCache.create();
+}
+
+export function preloadResistantGolemAsset({ loader = new GLTFLoader() } = {}) {
+  return assetCache.preload(loader);
+}
+
 export async function loadResistantGolemAsset({ loader = new GLTFLoader() } = {}) {
-  const { scene } = await loader.loadAsync(RESISTANT_GOLEM_URL);
-  try {
-    return prepareResistantGolemAsset(scene);
-  } catch (error) {
-    if (scene) disposeResistantGolemAsset(scene);
-    throw error;
-  }
+  return assetCache.load(loader);
 }

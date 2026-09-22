@@ -5,6 +5,7 @@ import {
   disposeWeakGolemAsset,
   prepareWeakGolemAsset,
 } from './WeakGolemAsset.js';
+import { createGolemAssetCache } from './GolemAssetCache.js';
 
 export const MEDIUM_GOLEM_URL = '/assets/models/ice_golem_medium.glb';
 export const MEDIUM_GOLEM_SOURCE_HEIGHT = 4.5;
@@ -17,12 +18,19 @@ export function prepareMediumGolemAsset(scene) {
   return prepareWeakGolemAsset(scene);
 }
 
+const assetCache = createGolemAssetCache({
+  url: MEDIUM_GOLEM_URL,
+  prepare: prepareMediumGolemAsset,
+});
+
+export function createCachedMediumGolemAsset() {
+  return assetCache.create();
+}
+
+export function preloadMediumGolemAsset({ loader = new GLTFLoader() } = {}) {
+  return assetCache.preload(loader);
+}
+
 export async function loadMediumGolemAsset({ loader = new GLTFLoader() } = {}) {
-  const { scene } = await loader.loadAsync(MEDIUM_GOLEM_URL);
-  try {
-    return prepareMediumGolemAsset(scene);
-  } catch (error) {
-    if (scene) disposeMediumGolemAsset(scene);
-    throw error;
-  }
+  return assetCache.load(loader);
 }

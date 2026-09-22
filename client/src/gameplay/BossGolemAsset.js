@@ -1,5 +1,9 @@
 import { Euler, PointLight, Quaternion } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {
+  createGolemAssetCache,
+  disposeGolemAsset,
+} from './GolemAssetCache.js';
 
 // O sufixo acompanha o conteúdo do GLB para invalidar versões antigas em cache.
 export const BOSS_GOLEM_URL =
@@ -58,16 +62,7 @@ function addChestCoreLight(root) {
 }
 
 export function disposeBossGolemAsset(scene) {
-  const geometries = new Set();
-  const materials = new Set();
-  scene.traverse((object) => {
-    if (object.geometry) geometries.add(object.geometry);
-    for (const material of [object.material].flat().filter(Boolean)) {
-      materials.add(material);
-    }
-  });
-  for (const geometry of geometries) geometry.dispose();
-  for (const material of materials) material.dispose();
+  disposeGolemAsset(scene);
 }
 
 export function prepareBossGolemAsset(scene) {
@@ -179,12 +174,19 @@ export function updateBossGolemPose(rig, { phase = 0, moving = false } = {}) {
   };
 }
 
+const assetCache = createGolemAssetCache({
+  url: BOSS_GOLEM_URL,
+  prepare: prepareBossGolemAsset,
+});
+
+export function createCachedBossGolemAsset() {
+  return assetCache.create();
+}
+
+export function preloadBossGolemAsset({ loader = new GLTFLoader() } = {}) {
+  return assetCache.preload(loader);
+}
+
 export async function loadBossGolemAsset({ loader = new GLTFLoader() } = {}) {
-  const { scene } = await loader.loadAsync(BOSS_GOLEM_URL);
-  try {
-    return prepareBossGolemAsset(scene);
-  } catch (error) {
-    if (scene) disposeBossGolemAsset(scene);
-    throw error;
-  }
+  return assetCache.load(loader);
 }

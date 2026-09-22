@@ -153,6 +153,7 @@ function loadGameplayModules() {
         GameAudioSystem: audioModule.GameAudioSystem,
         GameApp: appModule.GameApp,
         GameSession: sessionModule.GameSession,
+        preloadEnemyAssets: sessionModule.preloadEnemyAssets,
         RenderContext: renderModule.RenderContext,
         DesktopFireController: fireModule.DesktopFireController,
         DesktopLookController: lookModule.DesktopLookController,
@@ -1057,6 +1058,8 @@ function handleLookError({ message }) {
 
 async function enterPrototype() {
   const loadId = ++prototypeLoadId;
+  let pendingRenderContext = null;
+  let pendingGameSession = null;
 
   startSceneButton.disabled = true;
   currentPlayerName = normalizePlayerName(playerNameInput.value);
@@ -1081,6 +1084,7 @@ async function enterPrototype() {
       GameApp,
       GameAudioSystem,
       GameSession,
+      preloadEnemyAssets,
       RenderContext,
       XRHudSystem,
       XRPerformanceMonitor,
@@ -1092,18 +1096,51 @@ async function enterPrototype() {
       return false;
     }
 
-    renderContext = new RenderContext(sceneContainer);
-    const arenaLoaded = await renderContext.assetLoadPromise;
+    pendingRenderContext = new RenderContext(sceneContainer);
+    renderContext = pendingRenderContext;
+    const [arenaLoaded] = await Promise.all([
+      pendingRenderContext.assetLoadPromise,
+      preloadEnemyAssets(),
+    ]);
     if (loadId !== prototypeLoadId || prototypeView.hidden) {
-      renderContext.dispose();
-      renderContext = null;
+      pendingRenderContext.dispose();
+      if (renderContext === pendingRenderContext) renderContext = null;
       return false;
     }
     if (!arenaLoaded) {
       throw renderContext.assetError ?? new Error('Não foi possível carregar a arena de gelo.');
     }
-    prototypeView.dataset.gameState = 'PLAYING';
     lastEnemySpawnSoundKey = '';
+    pendingGameSession = new GameSession({
+      camera: renderContext.camera,
+      scene: renderContext.scene,
+      onChargeChange: updateChargeState,
+      onEnemyEliminate: handleEnemyEliminate,
+      onEnemyAttack: handleEnemyAttack,
+      onEnemyHit: handleEnemyHit,
+      onEnemyPlayerContact: handleEnemyPlayerContact,
+      onEnemyResistanceChange: handleEnemyResistanceChange,
+      onGameStateChange: handleGameStateChange,
+      onItemCollected: handleItemCollected,
+      onItemStateChange: updateItemState,
+      onWaveChange: updateWaveState,
+      onPlayerHealthChange: updatePlayerState,
+      onScoreChange: updateScoreState,
+      onShot: handleShot,
+      onSpecialAmmoChange: updateSpecialAmmoState,
+    });
+    gameSession = pendingGameSession;
+    await pendingRenderContext.renderer.compileAsync?.(
+      pendingRenderContext.scene,
+      pendingRenderContext.camera,
+    );
+    if (loadId !== prototypeLoadId || prototypeView.hidden) {
+      pendingGameSession.dispose();
+      pendingRenderContext.dispose();
+      if (gameSession === pendingGameSession) gameSession = null;
+      if (renderContext === pendingRenderContext) renderContext = null;
+      return false;
+    }
     gameAudioSystem = new GameAudioSystem();
     gameAudioSystem.unlock();
     activeMatch = {
@@ -1123,24 +1160,7 @@ async function enterPrototype() {
       onLockChange: updateLookState,
       onError: handleLookError,
     });
-    gameSession = new GameSession({
-      camera: renderContext.camera,
-      scene: renderContext.scene,
-      onChargeChange: updateChargeState,
-      onEnemyEliminate: handleEnemyEliminate,
-      onEnemyAttack: handleEnemyAttack,
-      onEnemyHit: handleEnemyHit,
-      onEnemyPlayerContact: handleEnemyPlayerContact,
-      onEnemyResistanceChange: handleEnemyResistanceChange,
-      onGameStateChange: handleGameStateChange,
-      onItemCollected: handleItemCollected,
-      onItemStateChange: updateItemState,
-      onWaveChange: updateWaveState,
-      onPlayerHealthChange: updatePlayerState,
-      onScoreChange: updateScoreState,
-      onShot: handleShot,
-      onSpecialAmmoChange: updateSpecialAmmoState,
-    });
+    prototypeView.dataset.gameState = 'PLAYING';
     updateEnemyState(gameSession.enemyState);
     updateWaveState(gameSession.waveState);
     updatePlayerState(gameSession.playerState);
@@ -1195,8 +1215,10 @@ async function enterPrototype() {
       gameAudioSystem?.dispose();
       fireController?.dispose();
       gameSession?.dispose();
+      if (pendingGameSession !== gameSession) pendingGameSession?.dispose();
       lookController?.dispose();
       renderContext?.dispose();
+      if (pendingRenderContext !== renderContext) pendingRenderContext?.dispose();
     }
     gameApp = null;
     renderContext = null;
