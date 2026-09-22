@@ -69,12 +69,13 @@ export class GameStateManager {
     }
 
     this.currentState = GAME_STATES.PLAYING;
+    this.defeatReason = null;
     this.onStateChange = onStateChange;
     this.disposed = false;
   }
 
   get state() {
-    return Object.freeze({
+    const state = {
       status: this.currentState,
       terminal:
         this.currentState === GAME_STATES.VICTORY ||
@@ -85,7 +86,13 @@ export class GameStateManager {
           : this.currentState === GAME_STATES.GAME_OVER
             ? 'defeat'
             : null,
-    });
+    };
+
+    if (this.defeatReason) {
+      state.defeatReason = this.defeatReason;
+    }
+
+    return Object.freeze(state);
   }
 
   get isTerminal() {
@@ -107,6 +114,29 @@ export class GameStateManager {
 
     const previousStatus = this.currentState;
     this.currentState = nextState;
+    const change = Object.freeze({
+      ...this.state,
+      previousStatus,
+    });
+
+    this.onStateChange(change);
+    return change;
+  }
+
+  defeat(reason) {
+    this.assertNotDisposed();
+
+    if (this.isTerminal) {
+      return false;
+    }
+
+    if (typeof reason !== 'string' || reason.trim() === '') {
+      throw new TypeError('A derrota forçada requer um motivo preenchido.');
+    }
+
+    const previousStatus = this.currentState;
+    this.currentState = GAME_STATES.GAME_OVER;
+    this.defeatReason = reason.trim();
     const change = Object.freeze({
       ...this.state,
       previousStatus,

@@ -84,6 +84,42 @@ test('não deixa o easter egg escapar para ondas posteriores', () => {
   blimp.dispose();
 });
 
+test('detecta o disparo e anima a queda até o chão', () => {
+  const blimp = new SenacBlimpSystem({
+    scene: new Scene(),
+    textureLoader: null,
+  });
+  blimp.setWaveState({ status: 'active', wave: 1 });
+  blimp.update(SENAC_BLIMP_CONFIG.delaySeconds + 0.5);
+  const center = blimp.root.position.clone();
+  const collision = blimp.intersectProjectile(
+    center.clone().add(new Vector3(-10, 0, 0)),
+    center.clone().add(new Vector3(10, 0, 0)),
+    0.2,
+  );
+
+  assert.equal(collision.hit, true);
+  assert.equal(blimp.hit(collision.point), true);
+  assert.equal(blimp.hit(collision.point), false);
+  assert.equal(blimp.phase, 'falling');
+  assert.ok(blimp.smokeParticles.some(({ visible }) => visible));
+
+  blimp.update(SENAC_BLIMP_CONFIG.crashDurationSeconds / 2);
+  assert.equal(blimp.phase, 'falling');
+  assert.ok(blimp.root.position.y < center.y);
+  assert.notEqual(blimp.root.rotation.z, 0);
+
+  blimp.update(SENAC_BLIMP_CONFIG.crashDurationSeconds / 2);
+  assert.equal(blimp.phase, 'crashed');
+  assert.equal(blimp.root.visible, true);
+  assert.equal(blimp.root.position.y, SENAC_BLIMP_CONFIG.crashGroundY);
+  assert.equal(
+    blimp.intersectProjectile(center, center, 0.2),
+    null,
+  );
+  blimp.dispose();
+});
+
 test('valida cena e percurso antes de criar recursos', () => {
   assert.throws(() => new SenacBlimpSystem(), /cena Three\.js válida/);
   assert.throws(

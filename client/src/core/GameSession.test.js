@@ -179,6 +179,63 @@ test('expõe distância e direção estéreo dos inimigos para o áudio', () => 
   session.dispose();
 });
 
+test('derrubar o dirigível congela o combate e encerra em derrota especial', () => {
+  const hits = [];
+  const gameStates = [];
+  const camera = createCamera();
+  const easterEggSystem = {
+    phase: 'flying',
+    intersectProjectile(start, end) {
+      return {
+        hit: true,
+        point: start.clone().lerp(end, 0.5),
+        t: 0.5,
+      };
+    },
+    hit() {
+      if (this.phase !== 'flying') return false;
+      this.phase = 'falling';
+      return true;
+    },
+  };
+  const session = new GameSession({
+    camera,
+    scene: new Scene(),
+    easterEggSystem,
+    enemyRandom: () => 0,
+    onEasterEggHit: (hit) => hits.push(hit),
+    onGameStateChange: (state) => gameStates.push(state),
+  });
+  session.projectileSystem.spawn({
+    origin: new Vector3(0, 8, 0),
+    direction: new Vector3(1, 0, 0),
+    speed: 20,
+  });
+
+  assert.equal(session.update(0.1), true);
+  assert.equal(easterEggSystem.phase, 'falling');
+  assert.equal(session.isEnding, true);
+  assert.equal(session.activeProjectileCount, 0);
+  assert.equal(hits.length, 1);
+  assert.equal(session.beginCharge(), false);
+  assert.equal(session.gameState.status, 'PLAYING');
+
+  const slingshotX = session.slingshotSystem.visualSystem.root.position.x;
+  camera.position.x += 2;
+  assert.equal(session.update(0.1), true);
+  assertAlmostEqual(
+    session.slingshotSystem.visualSystem.root.position.x,
+    slingshotX + 2,
+  );
+
+  easterEggSystem.phase = 'crashed';
+  assert.equal(session.update(0.1), true);
+  assert.equal(session.gameState.status, 'GAME_OVER');
+  assert.equal(session.gameState.defeatReason, 'senac-blimp');
+  assert.equal(gameStates.length, 1);
+  session.dispose();
+});
+
 test('clique rápido usa velocidade mínima e cancelamento não dispara', () => {
   const chargeStates = [];
   const projectileSystem = createProjectileSystem();

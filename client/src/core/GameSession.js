@@ -61,6 +61,7 @@ export class GameSession {
     onEnemyHit = () => {},
     onEnemyPlayerContact = () => {},
     onEnemyResistanceChange = () => {},
+    onEasterEggHit = () => {},
     onGameStateChange = () => {},
     onItemCollected = () => {},
     onItemStateChange = () => {},
@@ -75,6 +76,7 @@ export class GameSession {
     enemyTypeRandom = Math.random,
     itemRandom = Math.random,
     enemySystem = null,
+    easterEggSystem = null,
     gameStateManager = null,
     impactFeedbackSystem = null,
     itemSystem = null,
@@ -90,6 +92,7 @@ export class GameSession {
       ['onEnemyPlayerContact', onEnemyPlayerContact],
       ['onEnemyEliminate', onEnemyEliminate],
       ['onEnemyResistanceChange', onEnemyResistanceChange],
+      ['onEasterEggHit', onEasterEggHit],
       ['onGameStateChange', onGameStateChange],
       ['onItemCollected', onItemCollected],
       ['onItemStateChange', onItemStateChange],
@@ -123,12 +126,14 @@ export class GameSession {
     this.scene = scene;
     this.enemyRandom = enemyRandom;
     this.enemyTypeRandom = enemyTypeRandom;
+    this.easterEggSystem = easterEggSystem;
     this.encounterActive = encounterActive;
     this.onEnemyHit = onEnemyHit;
     this.onEnemyAttack = onEnemyAttack;
     this.onEnemyEliminate = onEnemyEliminate;
     this.onEnemyPlayerContact = onEnemyPlayerContact;
     this.onEnemyResistanceChange = onEnemyResistanceChange;
+    this.onEasterEggHit = onEasterEggHit;
     this.onItemCollected = onItemCollected;
     this.onShot = onShot;
     this.onSpecialAmmoChange = onSpecialAmmoChange;
@@ -415,10 +420,17 @@ export class GameSession {
     return this.gameStateManager.isTerminal;
   }
 
+  get isEnding() {
+    return (
+      this.isTerminal ||
+      ['falling', 'crashed'].includes(this.easterEggSystem?.phase)
+    );
+  }
+
   beginCharge({ mode = 'time' } = {}) {
     this.assertNotDisposed();
 
-    if (this.isTerminal) {
+    if (this.isEnding) {
       return false;
     }
 
@@ -431,7 +443,7 @@ export class GameSession {
   releaseShot({ origin = null, direction = null } = {}) {
     this.assertNotDisposed();
 
-    if (this.isTerminal) {
+    if (this.isEnding) {
       return false;
     }
 
@@ -450,7 +462,7 @@ export class GameSession {
   setChargeRatio(ratio) {
     this.assertNotDisposed();
 
-    if (this.isTerminal) {
+    if (this.isEnding) {
       return false;
     }
 
@@ -559,6 +571,19 @@ export class GameSession {
       return false;
     }
 
+    if (this.easterEggSystem?.phase === 'crashed') {
+      this.gameStateManager.defeat('senac-blimp');
+      return true;
+    }
+
+    if (this.easterEggSystem?.phase === 'falling') {
+      this.cancelCharge();
+      // O combate fica pausado, mas o visual em primeira pessoa ainda precisa
+      // acompanhar a câmera para não parecer congelado no espaço.
+      this.slingshotSystem.update(0);
+      return true;
+    }
+
     const numericDelta = Number(deltaSeconds);
     const delta = Number.isFinite(numericDelta)
       ? Math.max(0, numericDelta)
@@ -610,15 +635,17 @@ export class GameSession {
       this.projectileSystem.update(delta, this.handleProjectileStep);
       this.resolveProjectileImpacts();
 
-      for (const enemySystem of this.enemySystems) {
-        if (this.isTerminal) {
-          break;
-        }
+      if (this.easterEggSystem?.phase !== 'falling') {
+        for (const enemySystem of this.enemySystems) {
+          if (this.isTerminal) {
+            break;
+          }
 
-        try {
-          enemySystem.resolvePlayerContact();
-        } catch (error) {
-          this.queueObserverError(error);
+          try {
+            enemySystem.resolvePlayerContact();
+          } catch (error) {
+            this.queueObserverError(error);
+          }
         }
       }
     } catch (error) {
@@ -812,6 +839,28 @@ export class GameSession {
       }
     }
 
+    const easterEggCollision = this.easterEggSystem?.intersectProjectile?.(
+      previousPosition,
+      currentPosition,
+      radius,
+    );
+
+    if (
+      easterEggCollision?.hit &&
+      (!nearestImpact || easterEggCollision.t < nearestImpact.impactRatio)
+    ) {
+      nearestImpact = {
+        kind: 'senac-blimp',
+        collision: {
+          ...easterEggCollision,
+          projectileCenter: easterEggCollision.point,
+        },
+        impactRatio: easterEggCollision.t,
+        mesh,
+        projectile,
+      };
+    }
+
     if (nearestImpact) {
       this.pendingProjectileImpacts.push(nearestImpact);
     }
@@ -834,6 +883,16 @@ export class GameSession {
     } of this.pendingProjectileImpacts) {
       if (kind === 'item') {
         this.resolveItemImpact({ collision, impactRatio, mesh, projectile });
+        continue;
+      }
+
+      if (kind === 'senac-blimp') {
+        this.resolveEasterEggImpact({
+          collision,
+          impactRatio,
+          mesh,
+          projectile,
+        });
         continue;
       }
 
@@ -885,6 +944,36 @@ export class GameSession {
     }
 
     this.pendingProjectileImpacts.length = 0;
+  }
+
+  resolveEasterEggImpact({ collision, impactRatio, mesh, projectile }) {
+    this.projectileSystem.removeProjectile(projectile);
+
+    const startedCrash = this.easterEggSystem?.hit?.(
+      collision.projectileCenter,
+    );
+    if (!startedCrash) {
+      return false;
+    }
+
+    try {
+      this.impactFeedbackSystem.spawn(collision.projectileCenter);
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+
+    try {
+      this.onEasterEggHit(Object.freeze({
+        impactPoint: collision.projectileCenter.clone(),
+        impactRatio,
+        projectile: mesh,
+      }));
+    } catch (error) {
+      this.queueObserverError(error);
+    }
+
+    this.cancelCharge();
+    return true;
   }
 
   resolveItemImpact({ collision, impactRatio, mesh, projectile }) {
@@ -1214,6 +1303,7 @@ export class GameSession {
     this.onEnemyEliminate = () => {};
     this.onEnemyPlayerContact = () => {};
     this.onEnemyResistanceChange = () => {};
+    this.onEasterEggHit = () => {};
     this.onItemCollected = () => {};
     this.onShot = () => {};
     this.onSpecialAmmoChange = () => {};

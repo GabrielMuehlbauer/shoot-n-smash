@@ -56,6 +56,22 @@ test('descreve derrota sem confundir pontuacao acumulada', () => {
   assert.equal(Object.isFrozen(result), true);
 });
 
+test('explica a derrota causada pelo ataque ao dirigível do Senac', () => {
+  const result = describeMatchResult({
+    gameState: {
+      status: GAME_STATES.GAME_OVER,
+      defeatReason: 'senac-blimp',
+    },
+    playerName: 'Bia',
+    scenario: 'Neve',
+    score: 250,
+  });
+
+  assert.equal(result.title, 'Você atacou o Senac!');
+  assert.match(result.message, /dirigível caiu/);
+  assert.equal(result.kind, 'defeat');
+});
+
 test('rejeita resultados incompletos ou nao terminais', () => {
   assert.throws(
     () => describeMatchResult({ gameState: GAME_STATES.PLAYING }),

@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   CylinderGeometry,
+  Euler,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -12,27 +13,46 @@ import {
   Vector3,
 } from 'three';
 
+import { intersectSegmentSphere } from '../gameplay/CollisionSystem.js';
+
 export const SENAC_LOGO_URL = '/assets/textures/senac-logo.jpg';
 
 export const SENAC_BLIMP_CONFIG = Object.freeze({
   delaySeconds: 4.5,
   flightDurationSeconds: 16,
-  start: Object.freeze({ x: -58, y: 22, z: -44 }),
-  end: Object.freeze({ x: 58, y: 20, z: -38 }),
+  crashDurationSeconds: 3.2,
+  crashGroundY: 2.15,
+  crashDriftDistance: 9,
+  start: Object.freeze({ x: -58, y: 18, z: -28 }),
+  end: Object.freeze({ x: 58, y: 17, z: -24 }),
 });
+
+const HIT_SPHERES = Object.freeze([
+  Object.freeze({ x: -3.35, y: 0, z: 0, radius: 2.15 }),
+  Object.freeze({ x: 0, y: -0.1, z: 0, radius: 2.35 }),
+  Object.freeze({ x: 3.35, y: 0, z: 0, radius: 2.15 }),
+]);
 
 function validateConfig(config) {
   for (const [name, value] of [
     ['delaySeconds', config?.delaySeconds],
     ['flightDurationSeconds', config?.flightDurationSeconds],
+    ['crashDurationSeconds', config?.crashDurationSeconds],
+    ['crashDriftDistance', config?.crashDriftDistance],
   ]) {
     if (!Number.isFinite(value) || value < 0) {
       throw new RangeError(`senacBlimp.${name} deve ser finito e não negativo.`);
     }
   }
 
-  if (config.flightDurationSeconds <= 0) {
-    throw new RangeError('senacBlimp.flightDurationSeconds deve ser positivo.');
+  for (const name of ['flightDurationSeconds', 'crashDurationSeconds']) {
+    if (config[name] <= 0) {
+      throw new RangeError(`senacBlimp.${name} deve ser positivo.`);
+    }
+  }
+
+  if (!Number.isFinite(config.crashGroundY)) {
+    throw new RangeError('senacBlimp.crashGroundY deve ser finito.');
   }
 
   for (const pointName of ['start', 'end']) {
@@ -68,7 +88,14 @@ export class SenacBlimpSystem {
     this.start = new Vector3(config.start.x, config.start.y, config.start.z);
     this.end = new Vector3(config.end.x, config.end.y, config.end.z);
     this.flightDirection = new Vector3().subVectors(this.end, this.start);
+    this.crashDirection = this.flightDirection.clone().setY(0).normalize();
+    this.crashStart = new Vector3();
+    this.crashStartRotation = new Euler();
+    this.hitboxCenter = new Vector3();
+    this.smokeEmissionSeconds = 0;
+    this.nextSmokeParticle = 0;
     this.root = this.createBlimp();
+    this.smokeGroup = this.createSmoke();
     this.root.visible = false;
     this.scene.add(this.root);
     this.logoStatus = textureLoader ? 'loading' : 'fallback';
@@ -184,6 +211,31 @@ export class SenacBlimpSystem {
     return root;
   }
 
+  createSmoke() {
+    const group = new Group();
+    group.name = 'senac-blimp-crash-smoke';
+    const geometry = new SphereGeometry(0.72, 8, 6);
+    this.resources.add(geometry);
+    this.smokeParticles = Array.from({ length: 14 }, (_, index) => {
+      const material = new MeshBasicMaterial({
+        color: index % 3 === 0 ? 0x2b3138 : 0x59616a,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      const particle = new Mesh(geometry, material);
+      particle.visible = false;
+      particle.userData.age = 0;
+      particle.userData.life = 1.35;
+      particle.userData.velocity = new Vector3();
+      this.resources.add(material);
+      group.add(particle);
+      return particle;
+    });
+    this.scene.add(group);
+    return group;
+  }
+
   async loadLogo(loader) {
     try {
       const texture = await loader.loadAsync(SENAC_LOGO_URL);
@@ -238,7 +290,10 @@ export class SenacBlimpSystem {
   }
 
   update(deltaSeconds) {
-    if (this.disposed || !['scheduled', 'flying'].includes(this.phase)) {
+    if (
+      this.disposed ||
+      !['scheduled', 'flying', 'falling'].includes(this.phase)
+    ) {
       return false;
     }
 
@@ -246,6 +301,11 @@ export class SenacBlimpSystem {
       ? Math.max(0, deltaSeconds)
       : 0;
     this.elapsedSeconds += delta;
+
+    if (this.phase === 'falling') {
+      this.updateCrash(delta);
+      return true;
+    }
 
     if (this.phase === 'scheduled') {
       if (this.elapsedSeconds < this.config.delaySeconds) {
@@ -274,6 +334,125 @@ export class SenacBlimpSystem {
     return true;
   }
 
+  intersectProjectile(start, end, projectileRadius = 0) {
+    if (
+      this.disposed ||
+      this.phase !== 'flying' ||
+      !this.root.visible ||
+      !Number.isFinite(projectileRadius) ||
+      projectileRadius < 0
+    ) {
+      return null;
+    }
+
+    this.root.updateWorldMatrix(true, false);
+    let nearest = null;
+
+    for (const hitSphere of HIT_SPHERES) {
+      this.hitboxCenter
+        .set(hitSphere.x, hitSphere.y, hitSphere.z)
+        .applyMatrix4(this.root.matrixWorld);
+      const collision = intersectSegmentSphere(
+        start,
+        end,
+        this.hitboxCenter,
+        hitSphere.radius * this.root.scale.x + projectileRadius,
+      );
+
+      if (collision.hit && (!nearest || collision.t < nearest.t)) {
+        nearest = collision;
+      }
+    }
+
+    return nearest;
+  }
+
+  hit(impactPoint = this.root.position) {
+    if (this.disposed || this.phase !== 'flying') {
+      return false;
+    }
+
+    this.phase = 'falling';
+    this.elapsedSeconds = 0;
+    this.smokeEmissionSeconds = 0;
+    this.crashStart.copy(this.root.position);
+    this.crashStartRotation.copy(this.root.rotation);
+    this.emitSmoke(impactPoint);
+    return true;
+  }
+
+  updateCrash(deltaSeconds) {
+    const progress = Math.min(
+      this.elapsedSeconds / this.config.crashDurationSeconds,
+      1,
+    );
+    const fallProgress = progress * progress;
+    this.root.position
+      .copy(this.crashStart)
+      .addScaledVector(
+        this.crashDirection,
+        this.config.crashDriftDistance * progress,
+      );
+    this.root.position.y =
+      this.crashStart.y +
+      (this.config.crashGroundY - this.crashStart.y) * fallProgress;
+    this.root.rotation.x = this.crashStartRotation.x + progress * 0.55;
+    this.root.rotation.y = this.crashStartRotation.y + progress * 0.2;
+    this.root.rotation.z =
+      this.crashStartRotation.z - progress * Math.PI * 3.4;
+    this.propeller.rotation.x += deltaSeconds * 15 * (1 - progress);
+
+    this.smokeEmissionSeconds += deltaSeconds;
+    while (this.smokeEmissionSeconds >= 0.11 && progress < 0.96) {
+      this.smokeEmissionSeconds -= 0.11;
+      this.emitSmoke(this.root.position);
+    }
+    this.updateSmoke(deltaSeconds);
+
+    if (progress >= 1) {
+      this.root.position.y = this.config.crashGroundY;
+      this.phase = 'crashed';
+    }
+  }
+
+  emitSmoke(position) {
+    const particle = this.smokeParticles[this.nextSmokeParticle];
+    const index = this.nextSmokeParticle;
+    this.nextSmokeParticle = (index + 1) % this.smokeParticles.length;
+    particle.position.copy(position);
+    particle.position.x += ((index % 3) - 1) * 0.28;
+    particle.position.z += (((index * 2) % 3) - 1) * 0.24;
+    particle.scale.setScalar(0.45 + (index % 4) * 0.08);
+    particle.material.opacity = 0.72;
+    particle.visible = true;
+    particle.userData.age = 0;
+    particle.userData.life = 1.2 + (index % 5) * 0.1;
+    particle.userData.velocity.set(
+      -this.crashDirection.x * 1.5 + ((index % 3) - 1) * 0.2,
+      1.4 + (index % 4) * 0.16,
+      -this.crashDirection.z * 1.5,
+    );
+  }
+
+  updateSmoke(deltaSeconds) {
+    for (const particle of this.smokeParticles) {
+      if (!particle.visible) continue;
+      particle.userData.age += deltaSeconds;
+      const progress = particle.userData.age / particle.userData.life;
+      if (progress >= 1) {
+        particle.visible = false;
+        particle.material.opacity = 0;
+        continue;
+      }
+      particle.position.addScaledVector(
+        particle.userData.velocity,
+        deltaSeconds,
+      );
+      particle.scale.multiplyScalar(1 + deltaSeconds * 0.7);
+      particle.material.opacity = (1 - progress) * 0.72;
+    }
+  }
+
   finish() {
     this.phase = 'complete';
     this.root.visible = false;
@@ -285,6 +464,7 @@ export class SenacBlimpSystem {
     }
 
     this.root.removeFromParent();
+    this.smokeGroup?.removeFromParent();
     this.logoTexture?.dispose?.();
     for (const resource of this.resources) {
       resource.dispose?.();

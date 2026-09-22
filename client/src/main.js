@@ -542,7 +542,9 @@ function handleGameStateChange(state) {
     state.result === 'victory' ? 'ready' : 'idle',
     state.result === 'victory'
       ? 'Partida concluída com vitória.'
-      : 'Partida encerrada: a vida chegou a zero.',
+      : state.defeatReason === 'senac-blimp'
+        ? 'Partida encerrada: você derrubou o dirigível do Senac.'
+        : 'Partida encerrada: a vida chegou a zero.',
   );
   const completedMatch = completeActiveMatch(state);
   showResultScreen(state, completedMatch);
@@ -798,6 +800,15 @@ function handleEnemyHit({ maxResistance, outcome, resistance, type }) {
   setShotStatus(
     'ready',
     `Impacto no inimigo ${type.label.toLocaleLowerCase('pt-BR')}. Restam ${resistance} de ${maxResistance} pontos de resistência.`,
+  );
+}
+
+function handleEasterEggHit() {
+  gameAudioSystem?.play('hit');
+  resetSlingshotHud('idle');
+  setShotStatus(
+    'error',
+    'Você atingiu o dirigível do Senac! Ele está caindo…',
   );
 }
 
@@ -1114,12 +1125,14 @@ async function enterPrototype() {
     pendingGameSession = new GameSession({
       camera: renderContext.camera,
       scene: renderContext.scene,
+      easterEggSystem: renderContext.easterEggSystem,
       onChargeChange: updateChargeState,
       onEnemyEliminate: handleEnemyEliminate,
       onEnemyAttack: handleEnemyAttack,
       onEnemyHit: handleEnemyHit,
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,
+      onEasterEggHit: handleEasterEggHit,
       onGameStateChange: handleGameStateChange,
       onItemCollected: handleItemCollected,
       onItemStateChange: updateItemState,

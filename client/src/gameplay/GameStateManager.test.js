@@ -128,6 +128,24 @@ test('preserva a transicao quando o observador falha', () => {
   assert.equal(manager.isTerminal, true);
 });
 
+test('permite derrota forçada com motivo preservado', () => {
+  const changes = [];
+  const manager = new GameStateManager({
+    onStateChange: (state) => changes.push(state),
+  });
+
+  assert.deepEqual(manager.defeat('senac-blimp'), {
+    status: 'GAME_OVER',
+    terminal: true,
+    result: 'defeat',
+    defeatReason: 'senac-blimp',
+    previousStatus: 'PLAYING',
+  });
+  assert.equal(manager.defeat('outro-motivo'), false);
+  assert.equal(manager.state.defeatReason, 'senac-blimp');
+  assert.equal(changes.length, 1);
+});
+
 test('valida snapshots, callback e lifecycle', () => {
   assert.throws(
     () => new GameStateManager({ onStateChange: null }),

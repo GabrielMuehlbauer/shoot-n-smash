@@ -47,13 +47,25 @@ export function describeMatchResult({
   }
 
   const victory = status === GAME_STATES.VICTORY;
+  const senacBlimpDefeat =
+    !victory && gameState?.defeatReason === 'senac-blimp';
 
   return Object.freeze({
     kind: victory ? 'victory' : 'defeat',
-    eyebrow: victory ? 'Região de neve concluída' : 'A ilha venceu esta rodada',
-    title: victory ? 'Vitória!' : 'Fim de jogo',
+    eyebrow: victory
+      ? 'Região de neve concluída'
+      : senacBlimpDefeat
+        ? 'O easter egg tinha consequências'
+        : 'A ilha venceu esta rodada',
+    title: victory
+      ? 'Vitória!'
+      : senacBlimpDefeat
+        ? 'Você atacou o Senac!'
+        : 'Fim de jogo',
     message: victory
       ? 'Você sobreviveu às quatro ondas e derrotou o chefão de gelo.'
+      : senacBlimpDefeat
+        ? 'O dirigível caiu após o seu disparo. Missão encerrada com derrota.'
       : 'Sua vida chegou a zero. Reorganize sua mira e tente novamente.',
     playerName: normalizePlayerName(playerName),
     resultText: victory ? 'Vitória' : 'Derrota',
