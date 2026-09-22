@@ -93,6 +93,9 @@ export function describeEnemyState(state) {
   }
 
   const damaged = resistance < maxResistance;
+  const flyingMessage = type.id === 'flying'
+    ? `${subject} em voo. Mire acima e interrompa seus mergulhos e projéteis de gelo.`
+    : null;
 
   return Object.freeze({
     ...sharedDescription,
@@ -100,6 +103,6 @@ export function describeEnemyState(state) {
     hudState: damaged ? 'damaged' : 'active',
     message: damaged
       ? `Impacto em ${subject.toLocaleLowerCase('pt-BR')}. Restam ${resistance} de ${maxResistance} pontos de resistência.`
-      : `${subject} se aproximando. Localize-o em 360° e acerte antes do contato.`,
+      : flyingMessage ?? `${subject} se aproximando. Localize-o em 360° e acerte antes do contato.`,
   });
 }

@@ -145,6 +145,7 @@ test('cria o monstro de gelo com visual, collider e estado inicial coerentes', (
       { id: 'weak', maxResistance: 1 },
       { id: 'medium', maxResistance: 2 },
       { id: 'resistant', maxResistance: 3 },
+      { id: 'flying', maxResistance: 2 },
     ],
   );
   assert.equal(GAMEPLAY_CONFIG.enemy.moveSpeed, 1.6);
@@ -254,6 +255,51 @@ test('sorteia um tipo uma vez sem alterar as duas amostras do spawn', () => {
     });
     enemy.dispose();
   }
+});
+
+test('mantém collider, visual e estados do Alado de Gelo na posição aérea', () => {
+  const type = GAMEPLAY_CONFIG.enemy.types.find(({ id }) => id === 'flying');
+  const config = createConfig({ types: [{ ...type }] });
+  const { enemy, scene } = createEnemy({ config });
+
+  assert.equal(enemy.isFlying, true);
+  assert.equal(enemy.radius, config.flying.collisionRadius);
+  assert.equal(enemy.position.y, config.flying.spawnHeight);
+  assert.equal(enemy.getCenter().y, config.flying.spawnHeight);
+  assert.equal(enemy.flyingVisual.root.visible, true);
+  assert.equal(enemy.visual.children.length, 0);
+  assert.equal(enemy.state.flightState, 'hover');
+
+  enemy.update(0.5);
+  assert.ok(enemy.position.y >= config.flying.minAltitude);
+  assert.equal(enemy.parent, scene);
+  enemy.dispose();
+});
+
+test('projétil congelante do Alado de Gelo alcança o jogador', () => {
+  const attacks = [];
+  const type = GAMEPLAY_CONFIG.enemy.types.find(({ id }) => id === 'flying');
+  const config = createConfig({ types: [{ ...type }] });
+  const { enemy } = createEnemy({
+    config,
+    onAttack: (state) => attacks.push(state),
+  });
+
+  enemy.flyingController.nextAttack = 'ranged';
+  enemy.flyingController.beginAttack(
+    enemy.position,
+    config.playerPosition,
+    enemy.currentMoveSpeed,
+  );
+  enemy.update(config.flying.rangedFireDelaySeconds + 0.01);
+  assert.equal(enemy.flyingProjectileActive, true);
+  enemy.update(2);
+
+  assert.equal(enemy.flyingProjectileActive, false);
+  assert.equal(attacks.length, 1);
+  assert.equal(attacks[0].attackKind, 'ice-projectile');
+  assert.equal(attacks[0].damage, config.flying.projectileDamage);
+  enemy.dispose();
 });
 
 test('aproxima-se do jogador sem depender da subdivisão dos frames', () => {
@@ -393,7 +439,7 @@ test('aplica resistência configurável e remove o inimigo ao eliminá-lo', () =
   enemy.dispose();
 });
 
-test('exige exatamente 1, 2 e 3 acertos nos tipos fraco, médio e resistente', () => {
+test('exige a resistência configurada e conclui a queda do inimigo voador', () => {
   for (const type of GAMEPLAY_CONFIG.enemy.types) {
     const eliminations = [];
     const { enemy, scene } = createEnemy({
@@ -413,6 +459,11 @@ test('exige exatamente 1, 2 e 3 acertos nos tipos fraco, médio e resistente', (
         assert.equal(enemy.parent, scene);
         assert.equal(eliminations.length, 0);
       }
+    }
+
+    if (type.id === 'flying') {
+      assert.equal(enemy.parent, scene);
+      enemy.update(GAMEPLAY_CONFIG.enemy.flying.deathDurationSeconds);
     }
 
     assert.equal(enemy.active, false);

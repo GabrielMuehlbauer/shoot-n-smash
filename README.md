@@ -77,7 +77,9 @@ e o servidor. Para testar o recorte jogável:
 5. confirme que cada impacto válido cria um burst branco, consome o projétil e
    reduz a resistência em um acerto; o tipo Fraco exige 1, o Médio 2 e o
    Resistente 3 impactos. Se alcançarem o jogador, eles causam respectivamente
-   5, 10 e 15 de dano;
+   5, 10 e 15 de dano. A partir da segunda onda, o **Alado de Gelo** pode surgir
+   acima da arena: ele exige 2 impactos, alterna mergulho de 12 de dano e
+   projétil congelante de 8 de dano, e concede 350 pontos quando eliminado;
 6. procure itens brilhantes durante as ondas e acerte-os: o verde recupera até
    20 de vida, sem superar 100, e o dourado concede 3 disparos de dano 2;
 7. acompanhe no HUD quantos disparos especiais restam; cada tiro dourado consome
@@ -140,8 +142,15 @@ O chefão preserva o modelo em `client/public/assets/models/ice_golem.glb`. O
 inimigo fraco da primeira onda usa a variante baseada na referência chibi em
 `client/public/assets/models/ice_golem_weak.glb`. O inimigo médio (monstro 2)
 usa `client/public/assets/models/ice_golem_medium.glb` e o resistente (monstro 3)
-usa `client/public/assets/models/ice_golem_resistant.glb`. Para regenerar os
-modelos na raiz do projeto, instale o Blender no Windows e abra um novo terminal:
+usa `client/public/assets/models/ice_golem_resistant.glb`.
+
+O Alado de Gelo é um modelo procedural low-poly construído em Three.js por
+`client/src/gameplay/FlyingIceEnemyVisual.js`; ele não depende de Blender ou de
+um download GLB e usa os materiais `Ice_Base`, `Ice_Dark`, `Ice_Crystal` e
+`Ice_Emission`.
+
+Para regenerar os modelos GLB na raiz do projeto, instale o Blender no Windows e
+abra um novo terminal:
 
 ```powershell
 winget install --id BlenderFoundation.Blender --exact

@@ -14,18 +14,20 @@ test('centraliza e aplica todos os valores de pontuacao da fase', () => {
     weak: 100,
     medium: 250,
     resistant: 500,
+    flying: 350,
     boss: 2000,
   });
   manager.recordEnemyEliminated({ eventId: 'enemy:1:1', typeId: 'weak' });
   manager.recordEnemyEliminated({ eventId: 'enemy:2:1', typeId: 'medium' });
   manager.recordEnemyEliminated({ eventId: 'enemy:3:1', typeId: 'resistant' });
+  manager.recordEnemyEliminated({ eventId: 'enemy:4:1', typeId: 'flying' });
   manager.recordWaveCompleted({ eventId: 'wave:1' });
   manager.recordEnemyEliminated({ eventId: 'boss:eliminated', typeId: 'boss' });
   manager.recordPhaseCompleted({ eventId: 'phase:completed' });
 
-  assert.equal(manager.score, 4350);
-  assert.equal(manager.state.eventCount, 6);
-  assert.equal(changes.length, 6);
+  assert.equal(manager.score, 4700);
+  assert.equal(manager.state.eventCount, 7);
+  assert.equal(changes.length, 7);
   assert.equal(changes.every(Object.isFrozen), true);
   assert.equal(Object.isFrozen(manager.state.lastEvent), true);
   assert.deepEqual(manager.state.lastEvent, {

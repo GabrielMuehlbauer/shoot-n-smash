@@ -312,6 +312,17 @@ test('sinaliza a aproximação do monstro mais próximo com identidade e direç�
     ], 10),
     true,
   );
+  const voicesBeforeFlying = audio.context.oscillators.length;
+  assert.equal(
+    audio.updateEnemyProximity([
+      { active: true, distance: 4, pan: -0.25, typeId: 'flying' },
+    ], 10),
+    true,
+  );
+  assert.equal(
+    audio.context.oscillators.length - voicesBeforeFlying,
+    SOUND_RECIPES['monster-flying'].voices.length,
+  );
   audio.dispose();
 });
 

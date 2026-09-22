@@ -166,7 +166,11 @@ test('somente o chefão troca o visual procedural pelo GLB', async () => {
       return gltf;
     },
   };
-  const enemy = new EnemySystem({ scene: new Scene(), bossAssetLoader: loader });
+  const enemy = new EnemySystem({
+    scene: new Scene(),
+    bossAssetLoader: loader,
+    typeRandom: () => 0,
+  });
   assert.equal(enemy.visual.children.length, 17);
   assert.equal(requested.length, 0);
   assert.equal(enemy.preloadBossAsset(), true);

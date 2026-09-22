@@ -54,6 +54,11 @@ const SOUND_RECIPES = Object.freeze({
     { type: 'square', startHz: 54, endHz: 38, duration: 0.36, volume: 0.055, delay: 0.035 },
     { type: 'triangle', startHz: 1_050, endHz: 280, duration: 0.15, volume: 0.035, delay: 0.13 },
   ),
+  'monster-flying': createRecipe(
+    { type: 'triangle', startHz: 1_460, endHz: 540, duration: 0.19, volume: 0.065 },
+    { type: 'sawtooth', startHz: 240, endHz: 96, duration: 0.27, volume: 0.045, delay: 0.025 },
+    { type: 'sine', startHz: 2_100, endHz: 1_080, duration: 0.12, volume: 0.025, delay: 0.08 },
+  ),
   'monster-boss': createRecipe(
     { type: 'sawtooth', startHz: 55, endHz: 31, duration: 0.62, volume: 0.12 },
     { type: 'square', startHz: 39, endHz: 27, duration: 0.56, volume: 0.07, delay: 0.04 },
@@ -66,6 +71,14 @@ const SOUND_RECIPES = Object.freeze({
   'player-damage': createRecipe(
     { type: 'square', startHz: 112, endHz: 42, duration: 0.34, volume: 0.12 },
     { type: 'sawtooth', startHz: 210, endHz: 65, duration: 0.25, volume: 0.065 },
+  ),
+  'flying-dive': createRecipe(
+    { type: 'sawtooth', startHz: 760, endHz: 92, duration: 0.38, volume: 0.09 },
+    { type: 'triangle', startHz: 1_680, endHz: 360, duration: 0.22, volume: 0.045, delay: 0.04 },
+  ),
+  'ice-projectile': createRecipe(
+    { type: 'sine', startHz: 1_240, endHz: 280, duration: 0.3, volume: 0.08 },
+    { type: 'triangle', startHz: 2_300, endHz: 620, duration: 0.2, volume: 0.04, delay: 0.025 },
   ),
   item: createRecipe(
     { type: 'sine', startHz: 440, endHz: 920, duration: 0.3, volume: 0.1 },
@@ -302,7 +315,7 @@ export class GameAudioSystem {
       ),
       1,
     );
-    const typeId = ['weak', 'medium', 'resistant', 'boss'].includes(
+    const typeId = ['weak', 'medium', 'resistant', 'flying', 'boss'].includes(
       nearest.typeId,
     )
       ? nearest.typeId

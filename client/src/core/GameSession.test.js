@@ -4,6 +4,7 @@ import test from 'node:test';
 import { PerspectiveCamera, Scene, Vector3 } from 'three';
 
 import { GAMEPLAY_CONFIG } from '../config/gameplay-config.js';
+import { describeScoreState } from '../score-hud.js';
 import { GameSession } from './GameSession.js';
 
 function createCamera() {
@@ -542,10 +543,12 @@ test('contato com o jogador encerra o inimigo exatamente uma vez', () => {
   session.dispose();
 });
 
-test('contatos aplicam dano 5, 10 e 15 antes de notificar o desfecho', () => {
+test('contatos dos inimigos terrestres aplicam dano antes de notificar o desfecho', () => {
   const expectedHealth = [95, 90, 85];
 
-  for (const [index, type] of GAMEPLAY_CONFIG.enemy.types.entries()) {
+  for (const [index, type] of GAMEPLAY_CONFIG.enemy.types
+    .filter(({ id }) => id !== 'flying')
+    .entries()) {
     const events = [];
     const config = createGameplayConfig({
       enemy: {
@@ -583,6 +586,96 @@ test('contatos aplicam dano 5, 10 e 15 antes de notificar o desfecho', () => {
     assert.equal(Object.isFrozen(events[1].state), true);
     session.dispose();
   }
+});
+
+test('ataques aéreos causam dano sem encerrar o encontro', () => {
+  const attacks = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      types: [{ ...GAMEPLAY_CONFIG.enemy.types.find(({ id }) => id === 'flying') }],
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyAttack: (state) => attacks.push(state),
+  });
+
+  session.enemySystem.flyingController.beginAttack(
+    session.enemySystem.position,
+    config.enemy.playerPosition,
+    2,
+  );
+  session.update(1.5);
+
+  assert.equal(attacks.length, 1);
+  assert.equal(attacks[0].attackKind, 'dive');
+  assert.equal(attacks[0].appliedDamage, 12);
+  assert.equal(session.playerState.health, 88);
+  assert.equal(session.enemyState.outcome, null);
+  assert.equal(session.waveState.status, 'active');
+  session.dispose();
+});
+
+test('tiro elevado acerta o collider móvel do Alado de Gelo', () => {
+  const hits = [];
+  const config = createGameplayConfig({
+    enemy: {
+      moveSpeed: 2,
+      types: [{ ...GAMEPLAY_CONFIG.enemy.types.find(({ id }) => id === 'flying') }],
+    },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onEnemyHit: (state) => hits.push(state),
+  });
+
+  assert.equal(session.enemySystem.position.y, config.enemy.flying.spawnHeight);
+  spawnShotAlongPositiveX(session, { speed: 24 });
+  session.update(0.5);
+
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].type.id, 'flying');
+  assert.equal(session.enemyState.resistance, 1);
+  session.dispose();
+});
+
+test('eliminar o Alado de Gelo atualiza placar e continua o loop da onda', () => {
+  const scoreDescriptions = [];
+  const flyingType = GAMEPLAY_CONFIG.enemy.types.find(
+    ({ id }) => id === 'flying',
+  );
+  const config = createGameplayConfig({
+    enemy: { types: [{ ...flyingType }] },
+  });
+  const session = new GameSession({
+    camera: createCamera(),
+    scene: new Scene(),
+    config,
+    enemyRandom: () => 0,
+    onScoreChange: (state) => scoreDescriptions.push(describeScoreState(state)),
+  });
+
+  assert.equal(session.enemySystem.applyHit(2), true);
+  assert.doesNotThrow(() => {
+    session.update(config.enemy.flying.deathDurationSeconds);
+  });
+  assert.equal(session.scoreState.score, 350);
+  assert.equal(session.waveState.status, 'between-enemies');
+  assert.match(scoreDescriptions.at(-1).message, /Alado de Gelo eliminado/);
+
+  assert.doesNotThrow(() => {
+    session.update(config.waves.definitions[0].spawnIntervalSeconds);
+  });
+  assert.equal(session.enemyState.active, true);
+  assert.equal(session.enemyState.type.id, 'flying');
+  session.dispose();
 });
 
 test('impacto anterior ao contato vence no mesmo frame', () => {
@@ -831,6 +924,7 @@ test('valida callbacks da sessão antes de criar recursos', () => {
   const scene = new Scene();
 
   for (const callback of [
+    'onEnemyAttack',
     'onEnemyEliminate',
     'onEnemyHit',
     'onEnemyPlayerContact',

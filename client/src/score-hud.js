@@ -2,6 +2,7 @@ const EVENT_LABELS = Object.freeze({
   'enemy-eliminated:weak': 'Monstro fraco eliminado',
   'enemy-eliminated:medium': 'Monstro médio eliminado',
   'enemy-eliminated:resistant': 'Monstro resistente eliminado',
+  'enemy-eliminated:flying': 'Alado de Gelo eliminado',
   'enemy-eliminated:boss': 'Chefão eliminado',
   'wave-completed': 'Onda concluída',
   'phase-completed': 'Fase concluída',

@@ -37,6 +37,13 @@ test('configura tipos normais com resistência, dano e altura crescentes', () =>
         damage: 15,
         visualScale: 1.25,
       },
+      {
+        id: 'flying',
+        label: 'Alado de Gelo',
+        maxResistance: 2,
+        damage: 12,
+        visualScale: 0.92,
+      },
     ],
   );
   assert.equal(Object.isFrozen(GAMEPLAY_CONFIG.enemy.types), true);
@@ -46,14 +53,16 @@ test('configura tipos normais com resistência, dano e altura crescentes', () =>
   );
 });
 
-test('seleciona os tipos uniformemente nas fronteiras dos três intervalos', () => {
+test('seleciona os tipos uniformemente nas fronteiras dos quatro intervalos', () => {
   const cases = [
     [0, 'weak'],
-    [1 / 3 - Number.EPSILON, 'weak'],
-    [1 / 3, 'medium'],
-    [2 / 3 - Number.EPSILON, 'medium'],
-    [2 / 3, 'resistant'],
-    [1 - Number.EPSILON, 'resistant'],
+    [1 / 4 - Number.EPSILON, 'weak'],
+    [1 / 4, 'medium'],
+    [1 / 2 - Number.EPSILON, 'medium'],
+    [1 / 2, 'resistant'],
+    [3 / 4 - Number.EPSILON, 'resistant'],
+    [3 / 4, 'flying'],
+    [1 - Number.EPSILON, 'flying'],
   ];
 
   for (const [value, expectedId] of cases) {

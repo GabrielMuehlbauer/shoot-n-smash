@@ -52,8 +52,8 @@ test('configura quatro ondas com dificuldade progressiva e dados imutaveis', () 
     [1.25, 1.1, 0.95, 0.8],
   );
   assert.deepEqual(definitions[0].typeIds, ['weak']);
-  assert.deepEqual(definitions[1].typeIds, ['weak', 'medium']);
-  assert.deepEqual(definitions[3].typeIds, ['weak', 'medium', 'resistant']);
+  assert.deepEqual(definitions[1].typeIds, ['weak', 'medium', 'flying']);
+  assert.deepEqual(definitions[3].typeIds, ['weak', 'medium', 'resistant', 'flying']);
   assert.equal(definitions.every(Object.isFrozen), true);
   assert.equal(definitions.every(({ typeIds }) => Object.isFrozen(typeIds)), true);
 });

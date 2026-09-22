@@ -52,6 +52,7 @@ export class GameSession {
     scene,
     onChargeChange = () => {},
     onEnemyEliminate = () => {},
+    onEnemyAttack = () => {},
     onEnemyHit = () => {},
     onEnemyPlayerContact = () => {},
     onEnemyResistanceChange = () => {},
@@ -80,6 +81,7 @@ export class GameSession {
   } = {}) {
     for (const [name, callback] of [
       ['onEnemyHit', onEnemyHit],
+      ['onEnemyAttack', onEnemyAttack],
       ['onEnemyPlayerContact', onEnemyPlayerContact],
       ['onEnemyEliminate', onEnemyEliminate],
       ['onEnemyResistanceChange', onEnemyResistanceChange],
@@ -118,6 +120,7 @@ export class GameSession {
     this.enemyTypeRandom = enemyTypeRandom;
     this.encounterActive = encounterActive;
     this.onEnemyHit = onEnemyHit;
+    this.onEnemyAttack = onEnemyAttack;
     this.onEnemyEliminate = onEnemyEliminate;
     this.onEnemyPlayerContact = onEnemyPlayerContact;
     this.onEnemyResistanceChange = onEnemyResistanceChange;
@@ -201,6 +204,7 @@ export class GameSession {
           moveSpeed: this.waveManager.spawnSettings.moveSpeed,
           onEliminate: (state) =>
             this.handleEnemyEliminate(state, primaryEnemySystem),
+          onAttack: (state) => this.handleEnemyAttack(state),
           onPlayerContact: (state) =>
             this.handleEnemyPlayerContact(state, primaryEnemySystem),
           onResistanceChange: (state) =>
@@ -488,6 +492,7 @@ export class GameSession {
       typeIds: this.waveManager.spawnSettings.typeIds,
       moveSpeed: this.waveManager.spawnSettings.moveSpeed,
       onEliminate: (state) => this.handleEnemyEliminate(state, enemySystem),
+      onAttack: (state) => this.handleEnemyAttack(state),
       onPlayerContact: (state) =>
         this.handleEnemyPlayerContact(state, enemySystem),
       onResistanceChange: (state) =>
@@ -1035,6 +1040,38 @@ export class GameSession {
     }
   }
 
+  handleEnemyAttack(enemyState) {
+    let observerError = null;
+    let healthChange = false;
+
+    try {
+      healthChange = this.playerHealthSystem.applyDamage(enemyState.damage);
+    } catch (error) {
+      observerError = error;
+    }
+
+    const attackState = Object.freeze({
+      ...enemyState,
+      appliedDamage: healthChange?.damage ?? 0,
+      player: this.playerState,
+    });
+
+    try {
+      this.onEnemyAttack(attackState);
+    } catch (error) {
+      observerError ??= error;
+    }
+
+    try {
+      this.syncGameState();
+    } catch (error) {
+      observerError ??= error;
+    }
+
+    if (observerError) throw observerError;
+    return attackState;
+  }
+
   recordScoreForOutcome(
     enemyState,
     encounterState,
@@ -1167,6 +1204,7 @@ export class GameSession {
     }
 
     this.onEnemyHit = () => {};
+    this.onEnemyAttack = () => {};
     this.onEnemyEliminate = () => {};
     this.onEnemyPlayerContact = () => {};
     this.onEnemyResistanceChange = () => {};

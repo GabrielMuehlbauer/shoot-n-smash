@@ -19,6 +19,8 @@ import {
   updateBossGolemPose,
 } from './BossGolemAsset.js';
 import { selectEnemyType, validateEnemyTypes } from './EnemyTypes.js';
+import { FlyingEnemyController } from './FlyingEnemyController.js';
+import { FlyingIceEnemyVisual } from './FlyingIceEnemyVisual.js';
 import {
   createMediumGolemRig,
   disposeMediumGolemAsset,
@@ -89,6 +91,22 @@ function validateConfig(config) {
 
   if (!Number.isFinite(spawn.height) || spawn.height < 0) {
     throw new RangeError('enemy.spawn.height não pode ser negativo.');
+  }
+
+  for (const [name, value] of [
+    ['collisionRadius', config.flying?.collisionRadius],
+    ['spawnHeight', config.flying?.spawnHeight],
+    ['projectileSpeed', config.flying?.projectileSpeed],
+    ['projectileLifetimeSeconds', config.flying?.projectileLifetimeSeconds],
+    ['projectileRadius', config.flying?.projectileRadius],
+  ]) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(`enemy.flying.${name} deve ser maior que zero.`);
+    }
+  }
+
+  if (!Number.isInteger(config.flying?.projectileDamage) || config.flying.projectileDamage <= 0) {
+    throw new RangeError('enemy.flying.projectileDamage deve ser um inteiro positivo.');
   }
 
   for (const [name, value] of [
@@ -186,6 +204,7 @@ export class EnemySystem extends Group {
     typeIds = null,
     moveSpeed = config.moveSpeed,
     onEliminate = () => {},
+    onAttack = () => {},
     onPlayerContact = () => {},
     onResistanceChange = () => {},
     bossAssetLoader = globalThis.document ? new GLTFLoader() : null,
@@ -203,6 +222,7 @@ export class EnemySystem extends Group {
     assertCallback('random', random);
     assertCallback('typeRandom', typeRandom);
     assertCallback('onEliminate', onEliminate);
+    assertCallback('onAttack', onAttack);
     assertCallback('onPlayerContact', onPlayerContact);
     assertCallback('onResistanceChange', onResistanceChange);
 
@@ -217,8 +237,10 @@ export class EnemySystem extends Group {
     this.currentSpawnHeight = config.spawn.height;
     this.typeIds = null;
     this.selectType(typeIds);
+    this.syncSpatialConfig();
     this.currentVisualScale = this.enemyType.visualScale ?? 1;
     this.onEliminate = onEliminate;
+    this.onAttack = onAttack;
     this.onPlayerContact = onPlayerContact;
     this.onResistanceChange = onResistanceChange;
     this.currentResistance = this.enemyType.maxResistance;
@@ -232,6 +254,10 @@ export class EnemySystem extends Group {
     this.previousPosition = new Vector3();
     this.initialPosition = new Vector3();
     this.toPlayer = new Vector3();
+    this.projectilePreviousPosition = new Vector3();
+    this.projectileDirection = new Vector3();
+    this.projectileToPlayer = new Vector3();
+    this.projectileClosestPoint = new Vector3();
     this.geometries = new Set();
     this.materials = new Set();
     this.bossAssetLoader = bossAssetLoader;
@@ -254,8 +280,17 @@ export class EnemySystem extends Group {
     this.resistantAsset = null;
     this.resistantRig = null;
     this.resistantAssetError = null;
+    this.flyingController = new FlyingEnemyController(config.flying);
+    this.flyingVisual = null;
+    this.flyingProjectile = null;
+    this.flyingProjectileActive = false;
+    this.flyingProjectileRemainingSeconds = 0;
+    this.flyingEliminationNotified = false;
 
     this.createVisual();
+    this.flyingVisual = new FlyingIceEnemyVisual();
+    this.add(this.flyingVisual.root);
+    this.flyingProjectile = this.flyingVisual.createProjectile();
     this.syncModelAssets();
     this.placeAtSpawn();
     this.scene.add(this);
@@ -273,6 +308,19 @@ export class EnemySystem extends Group {
     }
 
     return moveSpeed;
+  }
+
+  get isFlying() {
+    return this.enemyType?.id === 'flying';
+  }
+
+  syncSpatialConfig() {
+    this.currentRadius = this.isFlying
+      ? this.config.flying.collisionRadius
+      : this.config.radius;
+    this.currentSpawnHeight = this.isFlying
+      ? this.config.flying.spawnHeight
+      : this.config.spawn.height;
   }
 
   selectType(typeIds = this.typeIds) {
@@ -705,11 +753,13 @@ export class EnemySystem extends Group {
     const weak = this.enemyType.id === 'weak';
     const medium = this.enemyType.id === 'medium';
     const resistant = this.enemyType.id === 'resistant';
+    const flying = this.isFlying;
     if (boss) this.requestBossAsset();
     if (weak) this.requestWeakAsset();
     if (medium) this.requestMediumAsset();
     if (resistant) this.requestResistantAsset();
     const externalAssetVisible =
+      flying ||
       (boss && this.bossAsset) ||
       (weak && this.weakAsset) ||
       (medium && this.mediumAsset) ||
@@ -720,6 +770,9 @@ export class EnemySystem extends Group {
       } else if (part.parent !== this.visual) {
         this.visual.add(part);
       }
+    }
+    if (this.flyingVisual) {
+      this.flyingVisual.root.visible = flying;
     }
     if (this.bossAsset) {
       this.bossAsset.visible = boss;
@@ -973,7 +1026,7 @@ export class EnemySystem extends Group {
   }
 
   get state() {
-    return Object.freeze({
+    const state = {
       active: this.active,
       outcome: this.outcome,
       resistance: this.currentResistance,
@@ -981,7 +1034,9 @@ export class EnemySystem extends Group {
       ratio: this.currentResistance / this.maxResistance,
       type: this.typeState,
       distanceToPlayer: this.distanceToPlayer,
-    });
+    };
+    if (this.isFlying) state.flightState = this.flyingController.state;
+    return Object.freeze(state);
   }
 
   placeAtSpawn() {
@@ -993,6 +1048,9 @@ export class EnemySystem extends Group {
     this.initialPosition.y = this.currentSpawnHeight;
     this.position.copy(this.initialPosition);
     this.previousPosition.copy(this.initialPosition);
+    if (this.isFlying) {
+      this.flyingController.reset(this.position, this.config.playerPosition);
+    }
     this.facePlayer();
     this.updateMotionVisual();
   }
@@ -1052,6 +1110,25 @@ export class EnemySystem extends Group {
       this.hitPulseRemainingSeconds - delta,
     );
 
+    if (this.isFlying) {
+      this.elapsedMovementSeconds += delta;
+      this.updateFlyingProjectile(delta);
+      this.flyingController.update(delta, {
+        position: this.position,
+        playerPosition: this.config.playerPosition,
+        moveSpeed: this.currentMoveSpeed,
+        onDiveImpact: () => this.emitFlyingAttack(
+          'dive',
+          this.enemyType.damage,
+        ),
+        onRangedFire: () => this.launchFlyingProjectile(),
+        onDeathComplete: () => this.completeFlyingElimination(),
+      });
+      if (this.flyingController.state !== 'death') this.facePlayer();
+      this.updateMotionVisual();
+      return true;
+    }
+
     if (!this.isMoving) {
       this.updateMotionVisual();
       return true;
@@ -1090,7 +1167,120 @@ export class EnemySystem extends Group {
     return true;
   }
 
+  emitFlyingAttack(attackKind, damage) {
+    if (!this.active || !this.isFlying) return false;
+    this.onAttack(Object.freeze({
+      ...this.state,
+      attackKind,
+      damage,
+    }));
+    return true;
+  }
+
+  launchFlyingProjectile() {
+    if (!this.active || !this.isFlying || this.flyingProjectileActive) {
+      return false;
+    }
+
+    this.flyingProjectile.position.copy(this.position);
+    this.flyingProjectile.position.y += 0.1;
+    this.projectileDirection.set(
+      this.config.playerPosition.x - this.flyingProjectile.position.x,
+      this.config.playerPosition.y - this.flyingProjectile.position.y,
+      this.config.playerPosition.z - this.flyingProjectile.position.z,
+    ).normalize();
+    this.flyingProjectile.visible = true;
+    this.flyingProjectileActive = true;
+    this.flyingProjectileRemainingSeconds =
+      this.config.flying.projectileLifetimeSeconds;
+    this.scene.add(this.flyingProjectile);
+    return true;
+  }
+
+  updateFlyingProjectile(delta) {
+    if (!this.flyingProjectileActive) return false;
+
+    this.projectilePreviousPosition.copy(this.flyingProjectile.position);
+    this.flyingProjectile.position.addScaledVector(
+      this.projectileDirection,
+      this.config.flying.projectileSpeed * delta,
+    );
+    this.flyingProjectile.rotation.x += delta * 8;
+    this.flyingProjectile.rotation.y += delta * 11;
+    this.flyingProjectileRemainingSeconds -= delta;
+
+    const segment = this.projectileClosestPoint.subVectors(
+      this.flyingProjectile.position,
+      this.projectilePreviousPosition,
+    );
+    const segmentLengthSq = segment.lengthSq();
+    this.projectileToPlayer.set(
+      this.config.playerPosition.x - this.projectilePreviousPosition.x,
+      this.config.playerPosition.y - this.projectilePreviousPosition.y,
+      this.config.playerPosition.z - this.projectilePreviousPosition.z,
+    );
+    const ratio = segmentLengthSq > 0
+      ? Math.min(Math.max(this.projectileToPlayer.dot(segment) / segmentLengthSq, 0), 1)
+      : 0;
+    segment.multiplyScalar(ratio).add(this.projectilePreviousPosition);
+    const hitDistance =
+      this.config.playerContactRadius + this.config.flying.projectileRadius;
+    const hit = segment.distanceToSquared(this.config.playerPosition) <= hitDistance ** 2;
+
+    if (hit) {
+      this.clearFlyingProjectile();
+      this.emitFlyingAttack(
+        'ice-projectile',
+        this.config.flying.projectileDamage,
+      );
+      return true;
+    }
+
+    if (this.flyingProjectileRemainingSeconds <= 0) {
+      this.clearFlyingProjectile();
+    }
+    return true;
+  }
+
+  clearFlyingProjectile() {
+    if (!this.flyingProjectile) return false;
+    this.scene.remove(this.flyingProjectile);
+    this.flyingProjectile.visible = false;
+    this.flyingProjectileActive = false;
+    this.flyingProjectileRemainingSeconds = 0;
+    return true;
+  }
+
+  completeFlyingElimination() {
+    if (this.flyingEliminationNotified || this.outcome !== 'eliminated') {
+      return false;
+    }
+    this.flyingEliminationNotified = true;
+    this.clearFlyingProjectile();
+    this.scene.remove(this);
+    this.onEliminate(this.state);
+    return true;
+  }
+
   updateMotionVisual() {
+    if (this.isFlying && this.flyingVisual) {
+      const duration = this.config.animation.hitPulseDurationSeconds;
+      const hitRatio = duration > 0
+        ? this.hitPulseRemainingSeconds / duration
+        : 0;
+      this.visual.position.y = 0;
+      this.flyingVisual.root.scale.setScalar(
+        this.currentVisualScale * (1 + hitRatio * this.config.animation.hitPulseScale),
+      );
+      this.flyingVisual.update({
+        elapsed: this.elapsedMovementSeconds,
+        stateElapsed: this.flyingController.elapsed,
+        state: this.flyingController.state,
+        hitRatio,
+      });
+      return;
+    }
+
     const { animation } = this.config;
     const phase = this.elapsedMovementSeconds * animation.bobAngularSpeed;
     const motion = this.isMoving ? Math.sin(phase) : 0;
@@ -1186,11 +1376,16 @@ export class EnemySystem extends Group {
       this.outcome = 'eliminated';
       this.pendingPlayerContact = false;
       this.pendingContactFrameRatio = null;
+      if (this.isFlying) {
+        this.clearFlyingProjectile();
+        this.flyingController.beginDeath();
+      }
     }
 
     if (this.currentResistance > 0) {
       this.hitPulseRemainingSeconds =
         this.config.animation.hitPulseDurationSeconds;
+      if (this.isFlying) this.flyingController.registerHit();
     }
 
     this.updateVisualState();
@@ -1203,7 +1398,7 @@ export class EnemySystem extends Group {
       callbackError = error;
     }
 
-    if (this.outcome === 'eliminated') {
+    if (this.outcome === 'eliminated' && !this.isFlying) {
       this.scene.remove(this);
 
       try {
@@ -1237,6 +1432,12 @@ export class EnemySystem extends Group {
   updateVisualState() {
     this.syncTypeVisual();
     this.syncModelAssets();
+
+    if (this.isFlying) {
+      this.flyingVisual.root.scale.setScalar(this.currentVisualScale);
+      this.visual.rotation.z = 0;
+      return;
+    }
 
     if (this.currentResistance === 0) {
       this.iceMaterial.color.setHex(this.config.colors.destroyed);
@@ -1304,9 +1505,13 @@ export class EnemySystem extends Group {
     }
 
     this.currentMoveSpeed = nextMoveSpeed;
-    this.currentRadius = radius;
+    this.currentRadius = this.isFlying
+      ? this.config.flying.collisionRadius
+      : radius;
     this.currentVisualScale = nextVisualScale;
-    this.currentSpawnHeight = spawnHeight;
+    this.currentSpawnHeight = this.isFlying
+      ? this.config.flying.spawnHeight
+      : spawnHeight;
 
     this.currentResistance = this.maxResistance;
     this.outcome = null;
@@ -1315,6 +1520,8 @@ export class EnemySystem extends Group {
     this.elapsedMovementSeconds = 0;
     this.previousElapsedMovementSeconds = 0;
     this.hitPulseRemainingSeconds = 0;
+    this.flyingEliminationNotified = false;
+    this.clearFlyingProjectile();
     this.updateVisualState();
     this.placeAtSpawn();
 
@@ -1331,6 +1538,7 @@ export class EnemySystem extends Group {
     }
 
     this.scene.remove(this);
+    this.clearFlyingProjectile();
 
     if (this.bossAsset) {
       disposeBossGolemAsset(this.bossAsset);
@@ -1365,7 +1573,10 @@ export class EnemySystem extends Group {
       material.dispose();
     }
 
+    this.flyingVisual?.dispose();
+
     this.onEliminate = () => {};
+    this.onAttack = () => {};
     this.onPlayerContact = () => {};
     this.onResistanceChange = () => {};
     this.disposed = true;

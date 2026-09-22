@@ -770,6 +770,23 @@ function handleEnemyPlayerContact(state) {
   showEncounterOutcome(state.outcome);
 }
 
+function handleEnemyAttack(state) {
+  gameAudioSystem?.play(
+    state.attackKind === 'ice-projectile' ? 'ice-projectile' : 'flying-dive',
+  );
+  gameAudioSystem?.play('player-damage', { volumeScale: 0.72 });
+  updateEnemyState(state);
+  if (!showEncounterOutcome()) {
+    const attackLabel = state.attackKind === 'ice-projectile'
+      ? 'projÃ©til congelante'
+      : 'mergulho do Alado de Gelo';
+    setShotStatus(
+      'ready',
+      `VocÃª sofreu ${state.appliedDamage} de dano por ${attackLabel}.`,
+    );
+  }
+}
+
 function handleEnemyHit({ maxResistance, outcome, resistance, type }) {
   if (outcome !== null) {
     return;
@@ -1111,6 +1128,7 @@ async function enterPrototype() {
       scene: renderContext.scene,
       onChargeChange: updateChargeState,
       onEnemyEliminate: handleEnemyEliminate,
+      onEnemyAttack: handleEnemyAttack,
       onEnemyHit: handleEnemyHit,
       onEnemyPlayerContact: handleEnemyPlayerContact,
       onEnemyResistanceChange: handleEnemyResistanceChange,

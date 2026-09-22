@@ -29,6 +29,23 @@ test('descreve o placar inicial e recompensas da partida', () => {
       valueText: '2.350',
     },
   );
+
+  assert.deepEqual(
+    describeScoreState({
+      score: 350,
+      eventCount: 1,
+      lastEvent: {
+        id: 'enemy:2:1',
+        type: 'enemy-eliminated:flying',
+        points: 350,
+      },
+    }),
+    {
+      eventType: 'enemy-eliminated:flying',
+      message: '+350 · Alado de Gelo eliminado',
+      valueText: '350',
+    },
+  );
 });
 
 test('rejeita estados e eventos de pontuacao invalidos', () => {

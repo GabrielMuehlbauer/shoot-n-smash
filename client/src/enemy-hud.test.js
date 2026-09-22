@@ -7,6 +7,7 @@ const WEAK_TYPE = { id: 'weak', label: 'Fraco', damage: 1 };
 const MEDIUM_TYPE = { id: 'medium', label: 'Médio', damage: 2 };
 const RESISTANT_TYPE = { id: 'resistant', label: 'Resistente', damage: 3 };
 const BOSS_TYPE = { id: 'boss', label: 'Chefão', damage: 10 };
+const FLYING_TYPE = { id: 'flying', label: 'Alado de Gelo', damage: 12 };
 
 test('descreve o tipo fraco ativo com dano da Fase 10', () => {
   assert.deepEqual(
@@ -55,6 +56,20 @@ test('identifica tipos e calcula resistências intermediárias', () => {
   assert.equal(resistant.percent, 67);
   assert.equal(resistant.typeId, 'resistant');
   assert.match(resistant.ariaText, /Inimigo resistente com 2 de 3/);
+});
+
+test('orienta o jogador a mirar acima contra o inimigo voador', () => {
+  const flying = describeEnemyState({
+    active: true,
+    maxResistance: 2,
+    outcome: null,
+    resistance: 2,
+    type: FLYING_TYPE,
+  });
+
+  assert.equal(flying.typeId, 'flying');
+  assert.match(flying.message, /Mire acima/);
+  assert.match(flying.message, /mergulhos e projéteis de gelo/);
 });
 
 test('distingue eliminação de contato com o jogador e preserva o tipo', () => {
