@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang='pt-BR'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Morcego de gelo - preview</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #07111b; color: #dff8ff; font: 14px system-ui, sans-serif; }
+    canvas { display: block; }
+    #panel { position: fixed; z-index: 2; top: 16px; left: 16px; padding: 14px 16px; border: 1px solid #4b7891; border-radius: 10px; background: #07111be8; line-height: 1.7; }
+    strong { display: block; font-size: 18px; }
+    button { margin: 8px 4px 0 0; padding: 5px 9px; color: inherit; border: 1px solid #4b7891; border-radius: 5px; background: #102b3c; cursor: pointer; }
+    label { display: block; margin-top: 7px; }
+    #status { color: #62e7ff; }
+  </style>
+</head>
+<body>
+  <aside id='panel'>
+    <strong>Morcego / gargula elemental de gelo</strong>
+    <div id='status'>Carregando...</div>
+    <button data-view='front'>Frente</button>
+    <button data-view='side'>Lado</button>
+    <button data-view='back'>Costas</button>
+    <label><input id='silhouette' type='checkbox'> Silhueta</label>
+    <label><input id='animate' type='checkbox' checked> Hover animado</label>
+  </aside>
+  <script type='module' src='./src/flying-enemy-preview.js'></script>
+</body>
+</html>
